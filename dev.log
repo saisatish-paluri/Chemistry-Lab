@@ -1,0 +1,113 @@
+
+> chem-lab-app@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.31.234:3000
+✓ Ready in 1888ms
+
+○ Compiling / ...
+ GET / 200 in 12.3s (next.js: 10.8s, application-code: 1475ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <RedirectBoundary>
+      <RedirectErrorBoundary router={{...}}>
+        <InnerLayoutRouter url="/" tree={[...]} params={{}} cacheNode={{rsc:{...}, ...}} segmentPath={[...]} ...>
+          <SegmentViewNode type="page" pagePath="page.tsx">
+            <SegmentTrieNode>
+            <HomePage>
+              <Navbar>
+              <main>
+                <HeroSection>
+                  <section className="relative m..." style={{...}}>
+                    <AnimatedBackground>
+                      <div aria-hidden="true" className="pointer-ev...">
+                        <div>
+                        <div>
+                        <div>
+                        <MoleculeBenzene style={{top:"8%", ...}}>
+                          <svg width="110" height="110" viewBox="0 0 110 110" className="absolute" ...>
+                            <line>
+                            <line>
+                            <line>
+                            <line
+                              x1={19}
+                              y1={55.00000000000001}
+                              x2={36.999999999999986}
++                             y2={23.82308546376022}
+-                             y2="23.823085463760215"
+                              stroke="#2563eb"
+                              strokeWidth="2"
+                            >
+                            <line
+                              x1={36.999999999999986}
++                             y1={23.82308546376022}
+-                             y1="23.823085463760215"
+                              x2={73}
+                              y2={23.82308546376021}
+                              stroke="#2563eb"
+                              strokeWidth="2"
+                            >
+                            ...
+                            <circle>
+                            <circle>
+                            <circle>
+                            <circle>
+                            <circle
+                              cx={36.999999999999986}
++                             cy={23.82308546376022}
+-                             cy="23.823085463760215"
+                              r="4"
+                              fill="#2563eb"
+                            >
+                            ...
+                        <MoleculeWater>
+                        <MoleculeChain>
+                        <MoleculeRing style={{top:"30%", ...}}>
+                          <svg width="90" height="90" viewBox="0 0 90 90" className="absolute" ...>
+                            <circle>
+                            <circle>
+                            <circle>
+                            <circle>
+                            <circle
++                             cx={17.49342219125178}
+-                             cx="17.49342219125179"
+                              cy={25.015301422055916}
+                              r="4"
+                              fill="#0ea5e9"
+                            >
+                            ...
+                        ...
+                    ...
+                ...
+              ...
+          ...
+        ...
+ 
+✓ Compiled in 312ms
+ GET / 200 in 290ms (next.js: 177ms, application-code: 113ms)
+✓ Compiled in 153ms
+ GET / 200 in 195ms (next.js: 116ms, application-code: 78ms)
+ GET / 200 in 1122ms (next.js: 49ms, application-code: 1073ms)
+ GET / 200 in 73ms (next.js: 20ms, application-code: 53ms)
+ GET / 200 in 39ms (next.js: 14ms, application-code: 25ms)
+ GET / 200 in 40ms (next.js: 15ms, application-code: 26ms)
+ GET / 200 in 30ms (next.js: 11ms, application-code: 19ms)
+ GET / 200 in 43ms (next.js: 19ms, application-code: 25ms)
+ GET / 200 in 36ms (next.js: 13ms, application-code: 23ms)
+ GET / 200 in 31ms (next.js: 10ms, application-code: 21ms)
+ GET / 200 in 29ms (next.js: 9ms, application-code: 19ms)
+ GET / 200 in 34ms (next.js: 13ms, application-code: 21ms)
+ GET / 200 in 38ms (next.js: 12ms, application-code: 26ms)
