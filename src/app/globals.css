@@ -171,6 +171,65 @@ body {
   from { stroke-dashoffset: var(--ring-max); }
   to   { stroke-dashoffset: var(--ring-offset); }
 }
+@keyframes orbit-x {
+  0%   { transform: rotateX(0deg)   rotateY(0deg); }
+  100% { transform: rotateX(360deg) rotateY(0deg); }
+}
+@keyframes orbit-y {
+  0%   { transform: rotateX(0deg) rotateY(0deg); }
+  100% { transform: rotateX(0deg) rotateY(360deg); }
+}
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes metric-update {
+  0%   { opacity: 1; }
+  30%  { opacity: 0.4; }
+  100% { opacity: 1; }
+}
+@keyframes scan-line {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  10%  { opacity: 0.5; }
+  90%  { opacity: 0.5; }
+  100% { transform: translateY(400%); opacity: 0; }
+}
+@keyframes ripple {
+  0%   { transform: scale(1); opacity: 0.4; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+@keyframes slide-right {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50%       { background-position: 100% 50%; }
+}
+@keyframes bubble-rise {
+  0%   { transform: translateY(0px) scale(1);   opacity: 0.8; }
+  60%  { opacity: 0.55; }
+  100% { transform: translateY(-48px) scale(0.5); opacity: 0; }
+}
+@keyframes drip-fall {
+  0%   { transform: translateY(0) scaleY(1); opacity: 1; }
+  70%  { opacity: 0.7; }
+  100% { transform: translateY(var(--drip-dist, 60px)) scaleY(0.6); opacity: 0; }
+}
+@keyframes lab-glow-pulse {
+  0%, 100% { opacity: 0.18; transform: scale(1);   }
+  50%       { opacity: 0.40; transform: scale(1.08); }
+}
+@keyframes liquid-slosh {
+  0%, 100% { transform: skewX(0deg)   translateX(0px);  }
+  25%       { transform: skewX(1.5deg) translateX(2px);  }
+  75%       { transform: skewX(-1deg)  translateX(-2px); }
+}
+@keyframes flask-color-shift {
+  0%   { filter: hue-rotate(0deg);   }
+  50%  { filter: hue-rotate(180deg); }
+  100% { filter: hue-rotate(360deg); }
+}
 
 /* ─── Utilities ──────────────────────────────────────── */
 .glass {
@@ -232,9 +291,10 @@ body {
   justify-content: center;
   position: relative;
   cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease, z-index 0s;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
   z-index: 1;
   overflow: hidden;
+  animation: elem-tile-in 0.38s ease both;
 }
 .elem-tile::before {
   content: '';
@@ -247,10 +307,13 @@ body {
 }
 .elem-tile:hover,
 .elem-tile:focus-visible {
-  transform: scale(1.18);
+  transform: perspective(260px) rotateX(-4deg) rotateY(4deg) scale(1.18) translateY(-2px);
   z-index: 30;
-  border-color: var(--lab-blue-400);
-  box-shadow: 0 4px 20px rgba(59,130,246,0.22), 0 2px 8px rgba(15,23,42,0.12);
+  border-color: var(--tile-border, var(--lab-blue-400));
+  box-shadow:
+    0 0 0 1px var(--tile-border, rgba(148,163,184,0.50)),
+    0 8px 24px rgba(15,23,42,0.14),
+    0 2px 8px rgba(15,23,42,0.08);
   outline: none;
 }
 .elem-tile:hover::before,
@@ -517,6 +580,67 @@ body {
 .animate-fade-up-delay-2 { animation: fade-up 0.5s ease 0.2s both; }
 .animate-fade-up-delay-3 { animation: fade-up 0.5s ease 0.3s both; }
 
+/* ─── Live metrics pulse ─────────────────────────────── */
+.metric-live {
+  animation: metric-update 2s ease-in-out infinite;
+}
+
+/* ─── Difficulty tier badges ─────────────────────────── */
+.diff-beginner     { background: rgba(5,150,105,0.09);  color: #059669; border-color: rgba(5,150,105,0.22);  }
+.diff-intermediate { background: rgba(37,99,235,0.09);  color: #2563eb; border-color: rgba(37,99,235,0.22);  }
+.diff-advanced     { background: rgba(124,58,237,0.09); color: #7c3aed; border-color: rgba(124,58,237,0.22); }
+
+/* ─── Experiment card hover glow ─────────────────────── */
+.exp-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.exp-card:hover {
+  transform: translateY(-3px);
+}
+
+/* ─── Gradient animated bar ─────────────────────────── */
+.gradient-animate {
+  background-size: 200% 200%;
+  animation: gradient-shift 4s ease infinite;
+}
+
+/* ─── Section divider ────────────────────────────────── */
+.section-rule {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--lab-glass-border) 20%, var(--lab-glass-border) 80%, transparent 100%);
+  margin: 0;
+}
+
+/* ─── Live dot indicator ─────────────────────────────── */
+.live-dot {
+  animation: blink-dot 1.6s ease-in-out infinite;
+}
+.live-dot-ring::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  animation: ripple 2s ease-out infinite;
+  opacity: 0;
+}
+
+/* ─── Difficulty group header ────────────────────────── */
+.diff-group-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.diff-group-header::before,
+.diff-group-header::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--lab-glass-border);
+}
+.diff-group-header::before { flex: 0 0 0; }
+
 /* ─── Lab layout — responsive body & side panel ──────── */
 /* Mobile-first: workspace + panel stack vertically       */
 .lab-body {
@@ -528,20 +652,27 @@ body {
 }
 .lab-right-panel {
   width: 100%;
-  max-height: 44vh;
+  /* Mobile: fixed height so workspace always has room above */
+  height: 48vh;
+  max-height: 420px;
+  min-height: 260px;
   flex-shrink: 0;
   border-top: 1px solid var(--lab-glass-border);
   border-left: none;
   overflow: hidden;
 }
-/* Desktop: side-by-side */
+/* Tablet & up: 30 % controls / 70 % workspace split */
 @media (min-width: 768px) {
   .lab-body {
     flex-direction: row;
   }
   .lab-right-panel {
-    width: 320px;
+    /* clamp: never narrower than 280 px, never wider than 440 px,
+       targets exactly 30 % of the flex container width         */
+    width: clamp(280px, 30%, 440px);
+    height: auto;
     max-height: none;
+    min-height: 0;
     border-top: none;
     border-left: 1px solid var(--lab-glass-border);
   }
@@ -549,11 +680,16 @@ body {
 
 /* ─── Observations panel — responsive max-height ────────*/
 .lab-obs-panel {
-  max-height: 130px;
+  max-height: 120px;
 }
 @media (min-width: 768px) {
   .lab-obs-panel {
-    max-height: 220px;
+    max-height: 210px;
+  }
+}
+@media (min-width: 1280px) {
+  .lab-obs-panel {
+    max-height: 260px;
   }
 }
 
@@ -576,3 +712,2044 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--lab-slate-200); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--lab-slate-400); }
+
+/* ─── Lab bench visual utilities ─────────────────────── */
+.lab-bench-card {
+  background:     linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+  border-radius:  var(--radius-2xl);
+  box-shadow:
+    0 10px 30px rgba(15, 23, 42, 0.05),
+    0 1px 3px rgba(15, 23, 42, 0.02),
+    0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+}
+.bubble-rise {
+  animation: bubble-rise 2.4s ease-out infinite;
+}
+.lab-glow-pulse {
+  animation: lab-glow-pulse 3s ease-in-out infinite;
+}
+
+/* ─── Experiment card hover glow (accent-aware) ──────── */
+.exp-card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.exp-card-hover:hover {
+  transform:    translateY(-3px);
+  box-shadow:   var(--lab-shadow-lg);
+}
+
+/* ─── Hero lab atmosphere ─────────────────────────────── */
+.hero-lab-bg {
+  background:
+    radial-gradient(circle at 18% 10%, rgba(37,99,235,0.15), transparent 42%),
+    radial-gradient(circle at 82% 7%,  rgba(14,165,233,0.11), transparent 40%),
+    radial-gradient(circle at 55% 90%, rgba(124,58,237,0.08), transparent 50%),
+    linear-gradient(180deg, #eef4ff 0%, #ffffff 55%, #f7fafc 100%);
+}
+
+/* ─── Premium lab workspace area ──────────────────────── */
+.lab-workspace-surface {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(59,130,246,0.05) 0%, transparent 60%),
+    var(--lab-off-white);
+}
+
+/* ─── Experiment index hero ────────────────────────────── */
+.exp-index-hero {
+  background: linear-gradient(180deg, #e8f0ff 0%, #f0f5ff 60%, #f8fafc 100%);
+  border-bottom: 1px solid var(--lab-glass-border);
+}
+
+/* ─── Lab panel accent tab indicator ─────────────────── */
+.lab-tab-active {
+  color: var(--lab-blue-600);
+  background: rgba(37,99,235,0.06);
+}
+
+/* ─── Responsive experiment cards grid ───────────────── */
+.exp-cards-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+.exp-cards-grid-4 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+@media (min-width: 640px) {
+  .exp-cards-grid-3 { grid-template-columns: repeat(2, 1fr); }
+  .exp-cards-grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 1024px) {
+  .exp-cards-grid-3 { grid-template-columns: repeat(3, 1fr); }
+  .exp-cards-grid-4 { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* ─── ExperimentsIndex responsive grids (correct columns per group) ── */
+/* Auto-fill: cards always fill the full row width.
+   Min 260px per card — scales from 1 col on mobile to 3-4 cols on desktop.
+   The only difference between -3 and -4 is the minimum card width:
+   exp-grid-3 caps at 3 cols (wider cards), exp-grid-4 at 4 cols. */
+.exp-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 20px;
+  align-items: stretch;
+}
+.exp-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  gap: 20px;
+  align-items: stretch;
+}
+/* Hard cap: never more than 3 or 4 columns at any viewport */
+@media (min-width: 1200px) {
+  .exp-grid-3 { grid-template-columns: repeat(3, 1fr); }
+  .exp-grid-4 { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* ─── Premium experiment card ─────────────────────────── */
+.exp-card-premium {
+  background:     var(--lab-glass-heavy);
+  border:         1px solid var(--lab-glass-border);
+  border-radius:  var(--radius-xl);
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  box-shadow:     var(--lab-shadow-md);
+  transition:     transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+  overflow:       hidden;
+}
+.exp-card-premium:hover {
+  transform:  translateY(-5px);
+  box-shadow: var(--lab-shadow-lg);
+}
+
+/* ─── Lab info card ───────────────────────────────────── */
+.lab-info-card {
+  background:     var(--lab-glass-heavy);
+  border-radius:  var(--radius-lg);
+  border:         1px solid var(--lab-glass-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow:     var(--lab-shadow-sm);
+  overflow:       hidden;
+}
+
+/* ─── Prevent content overflow on all screen sizes ────── */
+.lab-body > * {
+  min-width: 0;
+  min-height: 0;
+}
+
+/* ─── Mobile: stack experiment cards neatly ─────────────*/
+@media (max-width: 639px) {
+  .exp-cards-grid-3,
+  .exp-cards-grid-4 {
+    grid-template-columns: 1fr;
+  }
+  /* Tighten page padding on mobile */
+  .page-section,
+  .page-section-wide {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+/* ─── Prevent horizontal overflow at any zoom ─────────── */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* ─── Experiment card min-height so short content fills properly ── */
+.exp-grid-3 > *,
+.exp-grid-4 > * {
+  min-height: 0;
+}
+
+/* ─── ExperimentsIndex section separator ──────────────── */
+.exp-section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--lab-glass-border) 30%, var(--lab-glass-border) 70%, transparent);
+  margin: 0;
+}
+
+/* ─── Typography scale for readability at 100% zoom ─────*/
+@media (min-width: 1024px) {
+  .exp-card-title  { font-size: 15px; }
+  .exp-card-desc   { font-size: 13px; }
+  .exp-card-detail { font-size: 12.5px; }
+  .exp-chip        { font-size: 11px; }
+}
+
+/* ─── Lab education panel styles ─────────────────────────*/
+.lab-edu-panel {
+  flex-shrink: 0;
+  background: #ffffff;
+  border-bottom: 1px solid var(--lab-glass-border);
+}
+
+/* ─── Reaction note styles ───────────────────────────────*/
+.lab-reaction-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 16px;
+  margin: 0 16px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.65;
+  flex-shrink: 0;
+}
+
+/* ─── Lab controls section header ────────────────────────*/
+.lab-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.65);
+  border-bottom: 1px solid var(--lab-glass-border);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.lab-section-header span {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--lab-text-muted);
+}
+
+/* ─── Enhanced experiment cards (index page) ─────────────*/
+.exp-card-v2 {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-radius: 20px;
+  border: 1px solid var(--lab-glass-border);
+  background: var(--lab-glass-heavy);
+  box-shadow: var(--lab-shadow-md);
+  overflow: hidden;
+  text-decoration: none;
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+.exp-card-v2:hover {
+  transform: translateY(-6px);
+}
+
+/* ─── Workspace bench background ─────────────────────────*/
+.lab-workspace-bench {
+  background:
+    radial-gradient(ellipse at 30% 100%, rgba(148,163,184,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse at 70% 100%, rgba(148,163,184,0.04) 0%, transparent 50%),
+    linear-gradient(180deg, var(--lab-surface) 0%, #f1f5f9 100%);
+}
+
+/* ─── Reaction step explanation ──────────────────────────*/
+@keyframes reaction-note-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.reaction-note-animate {
+  animation: reaction-note-in 0.35s ease both;
+}
+
+/* ─── Lab info ribbon (thin top stripe) ──────────────────*/
+.lab-info-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 16px;
+  background: linear-gradient(90deg, rgba(37,99,235,0.04) 0%, transparent 100%);
+  border-bottom: 1px solid var(--lab-glass-border);
+  font-size: 11px;
+  color: var(--lab-text-muted);
+}
+
+/* ─── Experiment page hero redesign ──────────────────────*/
+.exp-hero-v2 {
+  background: linear-gradient(165deg, #e8f0ff 0%, #f0f5ff 55%, #f8fafc 100%);
+  border-bottom: 1px solid var(--lab-glass-border);
+  position: relative;
+  overflow: hidden;
+}
+.exp-hero-v2::before {
+  content: '';
+  position: absolute;
+  top: -80px; left: 50%;
+  transform: translateX(-50%);
+  width: 700px; height: 280px;
+  background: radial-gradient(ellipse at center, rgba(37,99,235,0.09) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* ─── Difficulty group badge v2 ──────────────────────────*/
+.diff-group-v2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 16px 5px 10px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+}
+
+/* ─── Feature chip ───────────────────────────────────────*/
+.feature-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid;
+  white-space: nowrap;
+}
+
+/* ─── Lab status bar enhanced ────────────────────────────*/
+.status-bar-v2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 7px 16px;
+  border-bottom: 1px solid var(--lab-glass-border);
+  background: var(--lab-glass-heavy);
+  backdrop-filter: blur(16px) saturate(1.5);
+  -webkit-backdrop-filter: blur(16px) saturate(1.5);
+  flex-shrink: 0;
+  min-height: 40px;
+}
+
+/* ─── Metric display chip ────────────────────────────────*/
+.metric-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.65);
+  border: 1px solid var(--lab-glass-border);
+  font-size: 11.5px;
+}
+.metric-chip .metric-label {
+  color: var(--lab-text-subtle);
+  font-weight: 500;
+}
+.metric-chip .metric-value {
+  color: var(--lab-text-secondary);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono, monospace);
+}
+
+/* ─── Periodic Table — dark cosmic theme removed ─────────── */
+/* All tiles now use the light cat-* color tokens defined above */
+
+/* ─── Element tile stagger entrance ─────────────────────── */
+@keyframes elem-tile-in {
+  from { opacity: 0; transform: scale(0.68) translateY(10px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0px);  }
+}
+
+/* ─── Atom glow pulse (detail panel icon) ─────────────────── */
+@keyframes atom-glow {
+  0%,100% { filter: drop-shadow(0 0 4px rgba(96,165,250,0.4));  }
+  50%     { filter: drop-shadow(0 0 12px rgba(96,165,250,0.8)); }
+}
+.atom-icon-glow { animation: atom-glow 3s ease-in-out infinite; }
+
+/* ─── Hero redesign helpers ──────────────────────────────── */
+.hero-section-v2 {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(37,99,235,0.16), transparent 44%),
+    radial-gradient(circle at 82% 8%,  rgba(14,165,233,0.12), transparent 42%),
+    radial-gradient(circle at 55% 92%, rgba(124,58,237,0.09), transparent 52%),
+    linear-gradient(180deg, #eef4ff 0%, #ffffff 55%, #f7fafc 100%);
+}
+
+/* ─── Premium section tag ────────────────────────────────── */
+.section-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 100px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.section-tag-blue {
+  background:  rgba(37,99,235,0.08);
+  border:      1px solid rgba(37,99,235,0.20);
+  color:       #2563eb;
+}
+/* .section-tag-cosmic is an alias for .section-tag-blue — use .section-tag-blue */
+
+/* ─── Feature card premium v2 ────────────────────────────── */
+.feature-card-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 28px 28px 28px;
+  border-radius: 20px;
+  border: 1px solid var(--lab-glass-border);
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: blur(14px) saturate(1.5);
+  -webkit-backdrop-filter: blur(14px) saturate(1.5);
+  box-shadow: var(--lab-shadow-md), 0 0 0 1px rgba(255,255,255,0.7) inset;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+  height: 100%;
+}
+.feature-card-v2:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--lab-shadow-lg), 0 0 0 1px rgba(255,255,255,0.9) inset;
+}
+
+/* ─── Gradient border card ───────────────────────────────── */
+.grad-border-card {
+  position: relative;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.grad-border-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(37,99,235,0.3), rgba(6,182,212,0.2), rgba(124,58,237,0.15));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════
+   LAB WORKSPACE LAYOUT SYSTEM
+   Consistent sizing across all experiment pages at all
+   landscape breakpoints (1366×768, 1536×864, 1920×1080,
+   tablet landscape, mobile landscape).
+   ═══════════════════════════════════════════════════════ */
+
+/* ─── Workspace cell — center column fill area ─────── */
+/*
+  Replaces the old overflow-auto + w-full h-full wrapper.
+  Direct child (workspace component) must carry its own
+  aspect-ratio + the sizing rules below.
+*/
+.lab-ws-area {
+  flex: 1 1 0%;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px 8px;
+  /* Subtle lab-bench surface so space around workspace looks intentional */
+  background:
+    radial-gradient(ellipse at 50% 108%, rgba(148,163,184,0.07) 0%, transparent 52%),
+    radial-gradient(ellipse at 20% 50%,  rgba(59,130,246,0.025) 0%, transparent 60%),
+    linear-gradient(175deg, #f8fafc 0%, #eef1f7 100%);
+}
+
+/*
+  Workspace component sizing rule — applied via inline style
+  on each experiment's outermost workspace div:
+
+    width: "100%"
+    height: "auto"
+    maxHeight: "100%"
+    aspectRatio: "W/H"        (the SVG viewBox ratio)
+
+  CSS Sizing Level 3: when width:100% produces a height
+  that exceeds max-height:100%, the browser retroactively
+  reduces width to satisfy the aspect-ratio + max-height
+  constraint simultaneously. This handles both portrait
+  (480/600) and landscape (480/320) SVG workspaces in a
+  single unified rule.
+*/
+
+/* ─── Workspace active/running state border pulse ─── */
+@keyframes ws-border-pulse {
+  0%, 100% { box-shadow: inset 0 0 0 2px var(--ws-accent, rgba(37,99,235,0.3)), 0 0 20px var(--ws-accent, rgba(37,99,235,0.08)); }
+  50%       { box-shadow: inset 0 0 0 2px var(--ws-accent, rgba(37,99,235,0.55)), 0 0 36px var(--ws-accent, rgba(37,99,235,0.14)); }
+}
+.lab-ws-area--active {
+  animation: ws-border-pulse 2.4s ease-in-out infinite;
+}
+
+/* ─── centerBottom graph/data panel ────────────────── */
+.lab-center-bottom {
+  flex-shrink: 0;
+  overflow: hidden;
+  border-top: 2px solid var(--lab-glass-border);
+  background: rgba(248, 250, 252, 0.97);
+  padding: 12px 18px 14px;
+  max-height: 260px;
+}
+@media (min-width: 1280px) {
+  .lab-center-bottom {
+    max-height: 300px;
+  }
+}
+
+/* ─── Landscape breakpoint tuning ──────────────────── */
+/* Tighter right panel + obs area on short landscape screens */
+@media (orientation: landscape) and (max-height: 700px) {
+  .lab-right-panel {
+    width: clamp(260px, 28%, 380px) !important;
+  }
+  .lab-obs-panel {
+    max-height: 110px !important;
+  }
+  .lab-ws-area {
+    padding: 8px 12px 6px;
+  }
+  .lab-center-bottom {
+    max-height: 150px !important;
+    padding: 8px 12px 10px;
+  }
+}
+/* Mobile landscape (phones) */
+@media (orientation: landscape) and (max-height: 500px) {
+  .lab-right-panel {
+    /* On very short screens keep a sensible minimum */
+    width: clamp(230px, 28%, 320px) !important;
+  }
+  .lab-obs-panel {
+    max-height: 80px !important;
+  }
+  .lab-ws-area {
+    padding: 6px 10px 4px;
+  }
+  .lab-center-bottom {
+    max-height: 110px !important;
+    padding: 6px 10px 8px;
+  }
+}
+
+/* ─── Tablet-specific tweak — keep min-width safe ──── */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .lab-right-panel {
+    /* 30 % on tablet but floor at 280 px, cap at 380 px */
+    width: clamp(280px, 30%, 380px);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   THREE-ZONE LAB LAYOUT SYSTEM
+   Left context (optional) | Center workspace | Right panel
+   ═══════════════════════════════════════════════════════ */
+
+/* ─── Optional left context panel ──────────────────── */
+/* Hidden on all screens ≤ 1919 px so workspace keeps its  */
+/* full 70 % allocation on standard laptop / desktop sizes. */
+.lab-left-panel {
+  width: 220px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--lab-glass-border);
+  overflow-y: auto;
+  background: linear-gradient(180deg, var(--lab-glass-heavy) 0%, rgba(255,255,255,0.94) 100%);
+  backdrop-filter: blur(16px) saturate(1.5);
+  -webkit-backdrop-filter: blur(16px) saturate(1.5);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 1px 0 0 var(--lab-glass-border);
+}
+@media (max-width: 1919px) { .lab-left-panel { display: none; } }
+@media (min-width: 1920px) { .lab-left-panel { width: 240px; } }
+@media (min-width: 2200px) { .lab-left-panel { width: 260px; } }
+
+/* ─── Center column — owns its own flex-direction ──── */
+/*
+  Replaces ad-hoc `flex flex-col` on the center div.
+  Manages flex-direction so landscape has-graph can switch
+  to row without fighting Tailwind.
+*/
+.lab-center-col {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0%;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Center "main" sub-zone — workspace + reaction note    */
+.lab-center-main {
+  position: relative;   /* for .lab-popup-overlay */
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0%;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* ─── Landscape: graph panel shifts right of workspace  */
+/*
+  When centerBottom (graph/data) is present and the screen is
+  landscape ≥ 1024 px, lay out workspace + graph side-by-side
+  so workspace gets the full column height instead of sharing
+  it with a stacked graph panel.
+*/
+@media (orientation: landscape) and (min-width: 1024px) {
+  .lab-center-col.has-graph {
+    flex-direction: row;
+    align-items: stretch;
+  }
+  .lab-center-col.has-graph .lab-center-main {
+    flex: 1 1 0%;
+    min-width: 0;
+    min-height: 0;
+  }
+  .lab-center-col.has-graph .lab-center-bottom {
+    width: 260px !important;
+    max-height: none !important;
+    /* Fill the full column height so there's no dead space below the graph */
+    height: 100%;
+    flex-shrink: 0;
+    border-top: none !important;
+    border-left: 2px solid var(--lab-glass-border);
+    overflow-y: auto;
+    padding: 14px 14px 16px !important;
+    background: rgba(248, 250, 252, 0.97);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 12px;
+  }
+}
+@media (orientation: landscape) and (min-width: 1280px) {
+  .lab-center-col.has-graph .lab-center-bottom {
+    width: 290px !important;
+  }
+}
+@media (orientation: landscape) and (min-width: 1440px) {
+  .lab-center-col.has-graph .lab-center-bottom {
+    width: 320px !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   CONTROLS PANEL — PARAMETER SECTION DESIGN SYSTEM
+   Section header: icon · CAPS TITLE
+   Parameter rows: label | [value] unit  +  slider  +  range
+   ═══════════════════════════════════════════════════════ */
+
+/* Section card */
+.lab-ctrl-section {
+  border: 1px solid var(--lab-glass-border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+/* Section header */
+.lab-ctrl-section-hdr {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid var(--lab-glass-border);
+}
+.lab-ctrl-section-hdr-icon {
+  display: flex;
+  align-items: center;
+  color: var(--lab-blue-600);
+  flex-shrink: 0;
+}
+.lab-ctrl-section-hdr-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--lab-text-muted);
+  flex: 1;
+}
+
+/* Parameter row */
+.lab-ctrl-param {
+  padding: 9px 12px 8px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+.lab-ctrl-param:last-child { border-bottom: none; }
+
+/* Top line: label | [value] unit */
+.lab-ctrl-param-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.lab-ctrl-param-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--lab-text-secondary);
+  flex: 1;
+}
+.lab-ctrl-param-value {
+  width: 52px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--lab-slate-200);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--lab-blue-600);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  padding: 0 4px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  -moz-appearance: textfield;
+}
+.lab-ctrl-param-value::-webkit-outer-spin-button,
+.lab-ctrl-param-value::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.lab-ctrl-param-value:focus {
+  border-color: var(--lab-blue-400);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.14);
+}
+.lab-ctrl-param-unit {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--lab-text-muted);
+  white-space: nowrap;
+  min-width: 20px;
+}
+
+/* Slider track — accent via --slider-accent CSS var */
+.lab-ctrl-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--slider-accent, var(--lab-blue-500)) 0%,
+    var(--slider-accent, var(--lab-blue-500)) var(--slider-pct, 50%),
+    var(--lab-slate-200) var(--slider-pct, 50%),
+    var(--lab-slate-200) 100%
+  );
+  outline: none;
+  cursor: pointer;
+  margin: 2px 0 1px;
+  display: block;
+}
+.lab-ctrl-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid var(--slider-accent, var(--lab-blue-500));
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.22);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.lab-ctrl-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.18);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.38);
+}
+.lab-ctrl-slider::-moz-range-thumb {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid var(--slider-accent, var(--lab-blue-500));
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.22);
+  cursor: pointer;
+}
+.lab-ctrl-slider:disabled { opacity: 0.42; cursor: not-allowed; }
+
+.lab-ctrl-range-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2px;
+  font-size: 9.5px;
+  color: var(--lab-text-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ═══════════════════════════════════════════════════════
+   ELEMENT DETAILS MODAL — tabbed educational interface
+   ═══════════════════════════════════════════════════════ */
+
+/* Backdrop — blurred dark scrim */
+.atom-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: rgba(15, 23, 42, 0.52);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+/* Dialog card — taller to accommodate tab content */
+.atom-modal-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.98);
+  border-radius: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.20);
+  box-shadow:
+    0 40px 100px rgba(15, 23, 42, 0.20),
+    0 10px 30px  rgba(15, 23, 42, 0.10),
+    0 0 0 1px rgba(255, 255, 255, 0.95) inset;
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(680px, calc(100svh - 40px));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Close button */
+.modal-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  background: rgba(248, 250, 252, 0.92);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--lab-text-muted);
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  flex-shrink: 0;
+}
+.modal-close-btn:hover {
+  background: #ffffff;
+  transform: scale(1.08);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.10);
+}
+
+/* Application cards — subtle hover lift */
+.app-card {
+  transition: box-shadow 0.16s ease, transform 0.16s ease;
+}
+.app-card:hover {
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+
+/* Orbit ring base */
+.atom-orbit-ring {
+  position: absolute;
+  border-radius: 50%;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+/* Electron that orbits on the ring */
+.atom-electron {
+  position: absolute;
+  border-radius: 50%;
+  top: -4px;
+  left: 50%;
+  margin-left: -4px;
+  width: 8px;
+  height: 8px;
+  pointer-events: none;
+}
+
+/* Orbit arm keyframes — slow, calm scientific rotation */
+@keyframes orbit-arm-cw {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes orbit-arm-ccw {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+
+/* Nucleus subtle pulse */
+@keyframes nucleus-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(255,255,255,0.20), 0 0 10px var(--nuc-color, #2563eb); }
+  50%       { box-shadow: 0 0 0 5px rgba(255,255,255,0.10), 0 0 22px var(--nuc-color, #2563eb); }
+}
+.atom-nucleus-pulse {
+  animation: nucleus-pulse 2.8s ease-in-out infinite;
+}
+
+/* Scroll-reveal utility */
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.reveal-up {
+  animation: reveal-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.reveal-up-1 { animation: reveal-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.10s both; }
+.reveal-up-2 { animation: reveal-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.20s both; }
+.reveal-up-3 { animation: reveal-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.30s both; }
+.reveal-up-4 { animation: reveal-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.40s both; }
+
+/* ─── Premium hero badge ──────────────────────────────── */
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 16px 5px 8px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  border: 1px solid rgba(37, 99, 235, 0.20);
+  background: rgba(37, 99, 235, 0.07);
+  color: #1d4ed8;
+  white-space: nowrap;
+}
+
+/* ─── Reaction animation cues ────────────────────────── */
+@keyframes color-flash {
+  0%   { opacity: 0; }
+  20%  { opacity: 1; }
+  80%  { opacity: 0.9; }
+  100% { opacity: 0; }
+}
+.reaction-color-flash {
+  animation: color-flash 2s ease-out forwards;
+}
+
+@keyframes precipitate-settle {
+  0%   { transform: translateY(-8px); opacity: 0; }
+  40%  { opacity: 1; }
+  100% { transform: translateY(0);    opacity: 0.9; }
+}
+.precipitate-settle {
+  animation: precipitate-settle 1.8s ease-out forwards;
+}
+
+/* ─── Enhanced experiment card v3 ────────────────────── */
+.exp-card-v3 {
+  display: flex;
+  flex-direction: column;
+  border-radius: 22px;
+  border: 1px solid var(--lab-glass-border);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 2px 12px rgba(15, 23, 42, 0.06),
+    0 1px 3px rgba(15, 23, 42, 0.03),
+    0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+  overflow: hidden;
+  text-decoration: none;
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.22s ease,
+              border-color 0.22s ease;
+}
+.exp-card-v3:hover {
+  transform: translateY(-5px) scale(1.012);
+  box-shadow:
+    0 20px 48px rgba(15, 23, 42, 0.11),
+    0 6px 16px rgba(15, 23, 42, 0.06),
+    0 0 0 1px rgba(255, 255, 255, 0.9) inset;
+}
+
+/* ─── Nav glass blur fix for hero overlap ─────────────── */
+.navbar-glass {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+/* ─── Wide-screen right panel cap ─────────────────────── */
+/* On ≥ 1440px, cap panel at 440px so workspace gets more horizontal space */
+@media (min-width: 1440px) {
+  .lab-right-panel {
+    width: clamp(280px, 26%, 440px) !important;
+  }
+}
+
+/* ─── Right panel tab content — stretch to fill cleanly ─ */
+/*
+  The flex-1 on the tab content already fills the space.
+  Add a subtle gradient so "empty" scroll area feels designed.
+*/
+.lab-right-panel > .flex-1 {
+  background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(248,250,252,0.55) 100%);
+}
+
+/* ═══════════════════════════════════════════════════════
+   PERFORMANCE — GPU COMPOSITING & PAINT CONTAINMENT
+   Promote animated elements to their own compositor layers
+   so browser doesn't repaint the page on every tick.
+   ═══════════════════════════════════════════════════════ */
+
+/* Animated workspace SVG — isolated paint layer */
+.lab-ws-area svg,
+.lab-ws-area > div {
+  will-change: transform;
+  contain: layout style;
+}
+
+/* Floating / drifting hero elements — compositor isolation */
+.bubble-rise,
+.lab-glow-pulse,
+.live-dot,
+.atom-icon-glow,
+.atom-nucleus-pulse {
+  will-change: transform, opacity;
+}
+
+/* Periodic table tiles — isolate hover 3-D transforms */
+.elem-tile {
+  will-change: transform, box-shadow;
+}
+
+/* Experiment cards — GPU-accelerate translateY hover */
+.exp-card-v3,
+.exp-card-premium,
+.feature-card-v2 {
+  will-change: transform, box-shadow;
+}
+
+/* Shimmer gradient animation — compositor layer */
+.shimmer-text,
+.gradient-animate {
+  will-change: background-position;
+}
+
+/* Contain experiment card grid sections to avoid global layout thrash */
+.exp-grid-3,
+.exp-grid-4 {
+  contain: layout;
+}
+
+/* Lab right panel — contain repaints to the panel subtree */
+.lab-right-panel {
+  contain: layout paint style;
+}
+
+/* Backdrop blur elements — promote to separate layer */
+.glass,
+.glass-heavy,
+.navbar-glass,
+.atom-modal-backdrop {
+  will-change: backdrop-filter;
+}
+
+/* Remove will-change after animation completes to free GPU memory */
+.elem-tile:not(:hover) {
+  will-change: auto;
+}
+.exp-card-v3:not(:hover),
+.exp-card-premium:not(:hover),
+.feature-card-v2:not(:hover) {
+  will-change: auto;
+}
+
+/* ─── Workspace area: reduce padding further on medium-tall screens */
+@media (min-height: 800px) and (min-width: 1024px) {
+  .lab-ws-area {
+    padding: 12px 16px 10px;
+  }
+}
+
+/* ─── Experiment page: reduce obs panel on very wide screens */
+@media (min-width: 1536px) {
+  .lab-obs-panel {
+    max-height: 180px;
+  }
+  .lab-ws-area {
+    padding: 8px 12px 6px;
+  }
+}
+
+/* ─── Right panel observations: subtle glass gradient ────── */
+.lab-obs-panel {
+  background: linear-gradient(180deg, rgba(255,255,255,0.55) 0%, rgba(248,250,252,0.80) 100%);
+}
+
+/* ─── Observation panel: empty state message ─────────────── */
+.lab-obs-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 12px 16px;
+  font-size: 11px;
+  color: var(--lab-text-subtle);
+  font-style: italic;
+}
+
+/* ─── Workspace area: slightly more generous on large screens */
+@media (min-width: 1600px) {
+  .lab-ws-area {
+    padding: 14px 20px 12px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   PREMIUM APPLE-STYLE DESIGN SYSTEM ADDITIONS
+   ═══════════════════════════════════════════════════════ */
+
+/* ─── 3D card hover transform ────────────────────────── */
+.card-3d {
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease;
+  transform-style: preserve-3d;
+}
+.card-3d:hover {
+  transform: perspective(1000px) rotateX(-2deg) rotateY(2deg) translateY(-6px);
+  box-shadow: 0 24px 56px rgba(15,23,42,0.14), 0 8px 20px rgba(15,23,42,0.06);
+}
+
+/* ─── Apple-style glass surface ──────────────────────── */
+.apple-glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border: 0.5px solid rgba(0, 0, 0, 0.10);
+}
+
+/* ─── Large hero number display ──────────────────────── */
+.stat-number {
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  background: linear-gradient(135deg, #0f172a 0%, #1e40af 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Premium section accent line ────────────────────── */
+.section-accent-line {
+  width: 40px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #2563eb, #0ea5e9);
+  margin-bottom: 20px;
+}
+
+/* ─── Floating glow orb (background decoration) ──────── */
+.glow-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.35;
+  pointer-events: none;
+  animation: float-y 6s ease-in-out infinite;
+}
+.glow-orb-blue  { background: radial-gradient(circle, rgba(37,99,235,0.6) 0%, transparent 70%); }
+.glow-orb-cyan  { background: radial-gradient(circle, rgba(6,182,212,0.5) 0%, transparent 70%); }
+.glow-orb-purple{ background: radial-gradient(circle, rgba(124,58,237,0.4) 0%, transparent 70%); }
+
+/* ─── Experiment card: image overlay gradient ────────── */
+.exp-img-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.08) 100%);
+}
+
+/* ─── Premium number badge ────────────────────────────── */
+.num-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #1d4ed8, #0ea5e9);
+  color: white;
+  flex-shrink: 0;
+}
+
+/* ─── Section cards grid ─────────────────────────────── */
+.nav-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+@media (min-width: 768px) {
+  .nav-cards-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (min-width: 1024px) {
+  .nav-cards-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* ─── Apple-style frosted nav card ───────────────────── */
+.nav-card-apple {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px 22px;
+  border-radius: 20px;
+  background: rgba(255,255,255,0.90);
+  border: 1px solid rgba(148,163,184,0.18);
+  box-shadow: 0 4px 20px rgba(15,23,42,0.07), 0 1px 3px rgba(15,23,42,0.03), 0 0 0 1px rgba(255,255,255,0.8) inset;
+  text-decoration: none;
+  transition: transform 0.22s cubic-bezier(0.22,1,0.36,1), box-shadow 0.22s ease, border-color 0.22s ease;
+  overflow: hidden;
+}
+.nav-card-apple:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px rgba(15,23,42,0.10), 0 4px 12px rgba(15,23,42,0.05), 0 0 0 1px rgba(255,255,255,0.9) inset;
+}
+.nav-card-apple::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  background: var(--nav-card-glow, transparent);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.nav-card-apple:hover::before {
+  opacity: 1;
+}
+
+/* ─── Apple gradient button ──────────────────────────── */
+.btn-apple {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 22px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+}
+.btn-apple-primary {
+  background: linear-gradient(135deg, #1d4ed8 0%, #0ea5e9 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 3px 16px rgba(37,99,235,0.32);
+}
+.btn-apple-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(37,99,235,0.40);
+}
+.btn-apple-secondary {
+  background: rgba(255,255,255,0.9);
+  color: var(--lab-text-secondary);
+  border: 1px solid rgba(148,163,184,0.22);
+  box-shadow: 0 2px 8px rgba(15,23,42,0.06);
+}
+.btn-apple-secondary:hover {
+  transform: translateY(-1px);
+  background: white;
+}
+
+/* ─── Frosted tag pill ───────────────────────────────── */
+.tag-frosted {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 100px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.75);
+  border: 1px solid rgba(148,163,184,0.22);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--lab-text-muted);
+}
+
+/* ─── 3D element tile hover (more pronounced) ────────── */
+@keyframes tile-shimmer {
+  0%, 100% { background-position: -200% center; }
+  100%     { background-position: 200% center; }
+}
+
+/* ─── Experiment showcase grid ───────────────────────── */
+.exp-showcase-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+@media (min-width: 560px) {
+  .exp-showcase-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 900px) {
+  .exp-showcase-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 1200px) {
+  .exp-showcase-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* ─── Realistic apparatus card image area ────────────── */
+.apparatus-image-area {
+  position: relative;
+  height: 160px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-bottom: 1px solid rgba(148,163,184,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── Fullscreen hero overlay ────────────────────────── */
+@keyframes hero-fade-in {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hero-animate { animation: hero-fade-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.hero-animate-1 { animation: hero-fade-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both; }
+.hero-animate-2 { animation: hero-fade-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both; }
+.hero-animate-3 { animation: hero-fade-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both; }
+
+/* ─── Orbit-arm keyframes for Periodic Table 3D orbital ── */
+@keyframes orbit-arm-cw {
+  0%   { transform: rotateZ(0deg);   }
+  100% { transform: rotateZ(360deg); }
+}
+@keyframes orbit-arm-ccw {
+  0%   { transform: rotateZ(0deg);   }
+  100% { transform: rotateZ(-360deg); }
+}
+
+/* ─── Stagger animation for cards ────────────────────── */
+@keyframes slide-up-fade {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.slide-up-1 { animation: slide-up-fade 0.5s ease 0.05s both; }
+.slide-up-2 { animation: slide-up-fade 0.5s ease 0.12s both; }
+.slide-up-3 { animation: slide-up-fade 0.5s ease 0.19s both; }
+.slide-up-4 { animation: slide-up-fade 0.5s ease 0.26s both; }
+
+/* ─── Remove Active Lab section references ────────────── */
+/* LabInfoCard only shows inside lab layout, never on homepage */
+
+/* ═══════════════════════════════════════════════════════
+   IMMERSIVE 3D LAB EXPERIENCE — DEPTH & REACTION SYSTEM
+   ═══════════════════════════════════════════════════════ */
+
+/* ─── Heat shimmer / distortion effect ──────────────────── */
+@keyframes heat-shimmer {
+  0%, 100% { filter: blur(0px) brightness(1.00); }
+  25%       { filter: blur(0.4px) brightness(1.02); }
+  50%       { filter: blur(0.8px) brightness(1.04); }
+  75%       { filter: blur(0.3px) brightness(1.01); }
+}
+.heat-shimmer {
+  animation: heat-shimmer 1.8s ease-in-out infinite;
+}
+
+/* ─── Liquid pour arc stream ─────────────────────────────── */
+@keyframes pour-stream {
+  0%   { stroke-dashoffset: 40; opacity: 0.9; }
+  50%  { stroke-dashoffset: 0;  opacity: 1;   }
+  100% { stroke-dashoffset: -40; opacity: 0.8; }
+}
+.pour-stream {
+  stroke-dasharray: 8 3;
+  animation: pour-stream 0.55s linear infinite;
+}
+
+/* ─── Precipitate settle with swirl ─────────────────────── */
+@keyframes precipitate-swirl {
+  0%   { transform: translateY(-12px) rotate(-8deg); opacity: 0; }
+  30%  { opacity: 0.9; }
+  70%  { transform: translateY(var(--settle-y, 0px)) rotate(4deg); opacity: 0.85; }
+  100% { transform: translateY(0px) rotate(0deg); opacity: 0.90; }
+}
+.precipitate-swirl {
+  animation: precipitate-swirl 2s cubic-bezier(0.22, 0, 0.7, 1) both;
+}
+
+/* ─── Reaction foam / surface bubble animation ───────────── */
+@keyframes surface-foam {
+  0%   { transform: scaleY(1) translateX(0); }
+  33%  { transform: scaleY(1.3) translateX(3px); }
+  66%  { transform: scaleY(0.8) translateX(-2px); }
+  100% { transform: scaleY(1) translateX(0); }
+}
+.surface-foam {
+  animation: surface-foam 1.4s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+/* ─── Glass specular shine sweep ─────────────────────────── */
+@keyframes glass-shine {
+  0%   { opacity: 0; transform: translateX(-60px) skewX(-15deg); }
+  40%  { opacity: 0.4; }
+  60%  { opacity: 0.4; }
+  100% { opacity: 0; transform: translateX(120px) skewX(-15deg); }
+}
+.glass-shine-sweep {
+  animation: glass-shine 3.5s ease-in-out infinite;
+}
+
+/* ─── Flame flicker — staggered turbulence ───────────────── */
+@keyframes flame-flicker-a {
+  0%, 100% { transform: scaleX(1) scaleY(1) translateX(0); }
+  20%       { transform: scaleX(1.06) scaleY(0.96) translateX(1px); }
+  40%       { transform: scaleX(0.96) scaleY(1.08) translateX(-1px); }
+  60%       { transform: scaleX(1.04) scaleY(0.97) translateX(0.5px); }
+  80%       { transform: scaleX(0.98) scaleY(1.04) translateX(-0.5px); }
+}
+@keyframes flame-flicker-b {
+  0%, 100% { transform: scaleX(1) scaleY(1.02) rotate(0deg); }
+  30%       { transform: scaleX(1.08) scaleY(0.95) rotate(1.5deg); }
+  60%       { transform: scaleX(0.94) scaleY(1.06) rotate(-1deg); }
+}
+@keyframes flame-flicker-c {
+  0%, 100% { opacity: 0.85; transform: scaleY(1); }
+  25%       { opacity: 1;    transform: scaleY(1.1); }
+  75%       { opacity: 0.75; transform: scaleY(0.92); }
+}
+.flame-core    { animation: flame-flicker-a 0.65s ease-in-out infinite; transform-origin: bottom center; }
+.flame-mid     { animation: flame-flicker-b 0.90s ease-in-out infinite; transform-origin: bottom center; }
+.flame-tip     { animation: flame-flicker-c 0.55s ease-in-out infinite; transform-origin: bottom center; }
+
+/* ─── Ion emission glow ring ─────────────────────────────── */
+@keyframes ion-emit {
+  0%   { r: 14; opacity: 0.7; }
+  50%  { r: 22; opacity: 0.3; }
+  100% { r: 30; opacity: 0;   }
+}
+.ion-emit-ring {
+  animation: ion-emit 1.4s ease-out infinite;
+}
+
+/* ─── Particle kinetic energy motion ─────────────────────── */
+@keyframes particle-kinetic {
+  0%   { transform: translate(0, 0); }
+  25%  { transform: translate(var(--pkx, 6px), var(--pky, -4px)); }
+  50%  { transform: translate(var(--pkx2, -4px), var(--pky2, 5px)); }
+  75%  { transform: translate(var(--pkx3, 3px), var(--pky3, -2px)); }
+  100% { transform: translate(0, 0); }
+}
+
+/* ─── Gas container pressure pulse ──────────────────────── */
+@keyframes pressure-pulse {
+  0%, 100% { box-shadow: inset 0 0 0 1.5px rgba(59,130,246,0.25); }
+  50%       { box-shadow: inset 0 0 0 2px rgba(59,130,246,0.55), 0 0 14px rgba(59,130,246,0.15); }
+}
+.pressure-pulse {
+  animation: pressure-pulse 1.6s ease-in-out infinite;
+}
+
+/* ─── Temperature reactive liquid hue ───────────────────── */
+@keyframes temp-liquid-warm {
+  0%, 100% { filter: hue-rotate(0deg) brightness(1); }
+  50%       { filter: hue-rotate(-20deg) brightness(1.06); }
+}
+@keyframes temp-liquid-hot {
+  0%, 100% { filter: hue-rotate(0deg) brightness(1); }
+  50%       { filter: hue-rotate(-40deg) brightness(1.10) saturate(1.3); }
+}
+.temp-warm { animation: temp-liquid-warm 2.2s ease-in-out infinite; }
+.temp-hot  { animation: temp-liquid-hot  1.4s ease-in-out infinite; }
+
+/* ─── 3D glass apparatus depth utilities ─────────────────── */
+.glass-apparatus {
+  filter: drop-shadow(0 6px 18px rgba(15,23,42,0.14))
+          drop-shadow(0 2px 6px rgba(15,23,42,0.08));
+}
+.glass-apparatus-inset {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.8),
+    inset 1px 0 0 rgba(255,255,255,0.5),
+    inset 0 -1px 0 rgba(0,0,0,0.06);
+}
+/* Realistic lab bench surface — replaces dark benches */
+.lab-bench-surface {
+  background: linear-gradient(180deg,
+    #e8edf3 0%,
+    #d4dae3 40%,
+    #c8d0db 100%);
+  border-top: 2px solid #b0bac7;
+  box-shadow: 0 -3px 0 rgba(255,255,255,0.6) inset;
+}
+
+/* ─── Liquid meniscus shimmer ────────────────────────────── */
+@keyframes meniscus-wave {
+  0%, 100% { d: path("M 0 4 Q 25 1 50 4 Q 75 7 100 4"); }
+  50%       { d: path("M 0 4 Q 25 7 50 4 Q 75 1 100 4"); }
+}
+.meniscus-wave {
+  animation: meniscus-wave 2.8s ease-in-out infinite;
+}
+
+/* ─── Endpoint color flash (titration) ───────────────────── */
+@keyframes endpoint-bloom {
+  0%   { opacity: 0;   transform: scale(0.85); }
+  15%  { opacity: 0.9; transform: scale(1.06); }
+  60%  { opacity: 0.75; transform: scale(1.02); }
+  100% { opacity: 0.65; transform: scale(1); }
+}
+.endpoint-bloom {
+  animation: endpoint-bloom 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ─── Beaker pour arc ────────────────────────────────────── */
+@keyframes drip-arc {
+  0%   { transform: translateY(0) scale(1); opacity: 0.9; }
+  70%  { opacity: 0.6; }
+  100% { transform: translateY(var(--drip-dist, 48px)) scale(0.4); opacity: 0; }
+}
+.drip-arc {
+  animation: drip-arc 0.55s ease-in forwards;
+}
+
+/* ─── Reaction completion burst ──────────────────────────── */
+@keyframes reaction-burst {
+  0%   { transform: scale(0.8); opacity: 0; }
+  30%  { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1);    opacity: 0.85; }
+}
+.reaction-burst {
+  animation: reaction-burst 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* ─── Premium workspace parallax hint ───────────────────── */
+.workspace-card {
+  position: relative;
+  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.workspace-card:hover {
+  transform: perspective(1200px) rotateX(-1deg) translateY(-2px);
+}
+
+/* ─── Apparatus glass sheen (pseudo-element version) ─────── */
+.glass-sheen {
+  position: relative;
+  overflow: hidden;
+}
+.glass-sheen::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 8%;
+  width: 18%;
+  height: 100%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0.04) 60%, transparent 100%);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* ─── Lab bench realistic surface (light) ────────────────── */
+.lab-bench-light {
+  background: linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 60%, #b8c4d0 100%);
+  border-top: 1.5px solid #94a3b8;
+  box-shadow: 0 -2px 0 rgba(255,255,255,0.55) inset, 0 3px 8px rgba(15,23,42,0.08);
+}
+
+/* ─── Flame observation chamber (light-theme compatible) ─── */
+.flame-chamber {
+  background: radial-gradient(ellipse at 50% 70%, rgba(60,40,20,0.88) 0%, rgba(15,15,25,0.94) 100%);
+  border: 1.5px solid rgba(100,116,139,0.55);
+  border-radius: 8px;
+  box-shadow:
+    inset 0 0 20px rgba(0,0,0,0.4),
+    0 4px 16px rgba(15,23,42,0.18),
+    0 0 0 3px rgba(100,116,139,0.18),
+    0 0 0 4px rgba(248,250,252,0.6);
+}
+
+/* ─── Active experiment workspace glow ───────────────────── */
+@keyframes ws-active-glow {
+  0%, 100% {
+    box-shadow:
+      0 20px 60px rgba(15,23,42,0.08),
+      0 4px 12px rgba(15,23,42,0.04),
+      0 0 0 1px rgba(255,255,255,0.9) inset;
+  }
+  50% {
+    box-shadow:
+      0 20px 60px rgba(15,23,42,0.10),
+      0 4px 12px rgba(15,23,42,0.06),
+      0 0 0 1px rgba(255,255,255,0.9) inset,
+      0 0 30px var(--ws-glow-color, rgba(37,99,235,0.12));
+  }
+}
+.ws-active-glow {
+  animation: ws-active-glow 2.8s ease-in-out infinite;
+}
+
+/* ─── Concentration gradient bar ─────────────────────────── */
+.conc-bar-track {
+  background: rgba(148,163,184,0.18);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.conc-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ─── Electrode spark animation ──────────────────────────── */
+@keyframes electrode-spark {
+  0%, 90%, 100% { opacity: 0; transform: scale(0.2); }
+  10%, 50%      { opacity: 1; transform: scale(1); }
+  70%           { opacity: 0.4; transform: scale(0.8); }
+}
+.electrode-spark {
+  animation: electrode-spark 2s ease-in-out infinite;
+}
+
+/* ─── Smooth chemical color interpolation ────────────────── */
+.chem-color-transition {
+  transition: fill 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+              background-color 0.8s cubic-bezier(0.4, 0, 0.2, 1),
+              color 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ─── Workspace depth shadow upgrade ─────────────────────── */
+.ws-depth {
+  box-shadow:
+    0 24px 64px rgba(15,23,42,0.10),
+    0 8px 24px rgba(15,23,42,0.06),
+    0 2px 6px rgba(15,23,42,0.03),
+    0 0 0 1px rgba(255,255,255,0.92) inset;
+}
+
+/* ─── Observation panel premium entry ────────────────────── */
+@keyframes obs-entry {
+  from { opacity: 0; transform: translateX(8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.obs-entry {
+  animation: obs-entry 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ─── Feature strip icon glow ────────────────────────────── */
+@keyframes icon-glow-pulse {
+  0%, 100% { filter: drop-shadow(0 0 3px rgba(37,99,235,0.3)); }
+  50%       { filter: drop-shadow(0 0 10px rgba(37,99,235,0.7)); }
+}
+.icon-glow {
+  animation: icon-glow-pulse 2.6s ease-in-out infinite;
+}
+
+/* ─── Scroll-triggered reveal helpers ───────────────────── */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.scroll-reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ═══════════════════════════════════════════════════════
+   DESKTOP / TABLET LAYOUT POLISH — 2026-06
+   Targeted fixes for status bar overflow, formula pills,
+   right-panel spacing, and workspace balance.
+   ═══════════════════════════════════════════════════════ */
+
+/* ─── Status bar: prevent metric chips from overflowing
+      on screens where many metrics + long values appear ── */
+.status-bar,
+[class*="status-bar"] {
+  overflow: hidden;
+}
+
+/* Metric chip: cap width and allow internal ellipsis for long values */
+.metric-chip {
+  max-width: 200px;
+}
+.metric-chip .metric-value {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── Reaction note: cap to two lines on desktop ─── */
+/* reactionNote <p> inside LabPageShell */
+.lab-center-main > div[class*="mx-4"] p {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ─── Right-panel controls: consistent padding/spacing ── */
+/* The motion.div wrapping controls has class="p-3 space-y-3".
+   On ≥1280 px, give a little more breathing room.            */
+@media (min-width: 1280px) {
+  .lab-right-panel .flex-1 > div[class*="p-3"] {
+    padding: 14px;
+  }
+  .lab-right-panel .flex-1 > div[class*="space-y-3"] > * + * {
+    margin-top: 14px;
+  }
+}
+
+/* ─── Right panel: ensure controls area doesn't feel
+      empty when there are only a few controls         ── */
+.lab-right-panel .flex-1 {
+  min-height: 0;
+}
+
+/* ─── Experiment header: jumper select — cap label width ── */
+/* ExperimentsIndex: experiment name in header truncates safely */
+.lab-header-exp-name {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── Experiment index cards: ensure image area loads
+      with a matching bg so missing photos don't show
+      a hard white box                                   ── */
+.exp-grid-3 a > div:first-child,
+.exp-grid-4 a > div:first-child {
+  background-color: #f1f5f9; /* slate-100 fallback */
+}
+
+/* ─── Density workspace: ensure tank fits without clipping
+      on typical 768 px-tall laptop screens              ── */
+@media (max-height: 800px) and (min-width: 1024px) {
+  .lab-ws-area svg {
+    max-height: calc(100vh - 200px);
+  }
+}
+
+/* ─── Separation techniques: card text contrast fix ────── */
+/* Ensure feature text inside technique cards stays readable */
+.sep-technique-card {
+  background: rgba(255,255,255,0.90);
+  color: var(--lab-text-primary);
+}
+.sep-technique-card p,
+.sep-technique-card span {
+  color: var(--lab-text-secondary);
+}
+
+/* ─── Filtration workspace: center the apparatus ────────── */
+.filtration-workspace-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+/* ─── Chemical equilibrium: give concentration labels
+      enough breathing room to prevent overlap           ── */
+.eq-conc-label {
+  font-size: 10px;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+/* ─── Solubility panel: tighten list item density ──────── */
+.solubility-list-item {
+  padding-top: 5px;
+  padding-bottom: 5px;
+  min-height: 0;
+}
+
+/* ─── Calorimetry graph: proportionate height ───────────── */
+.calorimetry-graph-area {
+  flex: 1 1 0%;
+  min-height: 120px;
+  max-height: 280px;
+}
+
+/* ─── Dissolving rate: reduce deep control panel ───────── */
+.dissolving-controls-panel {
+  gap: 8px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   TEMPERATURE / RANGE SLIDER — premium lab style
+   Used in dissolving-rate and any future slider controls.
+   CSS custom properties set inline via JS:
+     --slider-color: the accent colour (hex)
+     --slider-pct:   fill percentage (e.g. "48%")
+   ═══════════════════════════════════════════════════════ */
+.lab-temp-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 100px;
+  outline: none;
+  cursor: pointer;
+  background: linear-gradient(
+    to right,
+    var(--slider-color, #3b82f6) 0%,
+    var(--slider-color, #3b82f6) var(--slider-pct, 50%),
+    rgba(148,163,184,0.22)       var(--slider-pct, 50%),
+    rgba(148,163,184,0.22)       100%
+  );
+  transition: background 0.15s ease;
+}
+.lab-temp-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width:  18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--slider-color, #3b82f6);
+  border: 2.5px solid white;
+  box-shadow:
+    0 0 0 1px var(--slider-color, #3b82f6),
+    0 2px 8px rgba(0,0,0,0.20);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.lab-temp-slider::-moz-range-thumb {
+  width:  18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--slider-color, #3b82f6);
+  border: 2.5px solid white;
+  box-shadow:
+    0 0 0 1px var(--slider-color, #3b82f6),
+    0 2px 8px rgba(0,0,0,0.20);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.lab-temp-slider:hover::-webkit-slider-thumb,
+.lab-temp-slider:focus::-webkit-slider-thumb {
+  transform: scale(1.18);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--slider-color, #3b82f6) 20%, transparent),
+    0 2px 8px rgba(0,0,0,0.22);
+}
+.lab-temp-slider:hover::-moz-range-thumb,
+.lab-temp-slider:focus::-moz-range-thumb {
+  transform: scale(1.18);
+}
+.lab-temp-slider:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ─── Lab control slider (generic reusable variant) ──── */
+.lab-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 5px;
+  border-radius: 100px;
+  background: rgba(148,163,184,0.25);
+  outline: none;
+  cursor: pointer;
+  accent-color: var(--lab-blue-600);
+}
+.lab-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width:  16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--lab-blue-600);
+  border: 2px solid white;
+  box-shadow: 0 1px 6px rgba(37,99,235,0.35);
+  cursor: pointer;
+}
+
+/* ─── General workspace spacing guard ─────────────────── */
+/* Ensure workspace SVGs always have a little breathing room */
+.lab-ws-area > * {
+  max-width: 100%;
+}
+
+/* ─── Hero section: stats row alignment ────────────────── */
+.hero-stats-row {
+  display: flex;
+  gap: clamp(16px, 3vw, 32px);
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+/* ─── Homepage feature strip: consistent icon sizing ───── */
+.feature-strip-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── Experiment workspace: min-height guard on very wide screens ── */
+@media (min-width: 1600px) {
+  .lab-ws-area {
+    padding: 14px 20px 12px;
+  }
+}
+
+/* ─── Animate workspace container entrance ─────────────── */
+@keyframes ws-slide-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.lab-ws-area > * {
+  animation: ws-slide-in 0.35s ease both;
+}
+
+/* ─── Density workspace: bottom label readability fix ───── */
+/* Ensure the bottom label in the density SVG gets a subtle bg strip */
+.density-label-strip {
+  background: rgba(255,255,255,0.70);
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+
+/* ─── Redox beaker: scale properly ─────────────────────── */
+.redox-workspace svg {
+  overflow: visible;
+}
+
+/* ─── Premium section divider with icon ─────────────────── */
+.section-divider-icon {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 auto;
+  max-width: 100%;
+}
+.section-divider-icon::before,
+.section-divider-icon::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--lab-glass-border) 40%, var(--lab-glass-border) 60%, transparent);
+}
+
+/* ─── Experiment index: hero section consistent padding ── */
+.exp-index-hero-inner {
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: center;
+  padding: clamp(40px, 6vw, 80px) clamp(16px, 4vw, 48px);
+}
+
+/* ─── Prevent long concentration formulas from overflowing
+      the status bar chips                                 ── */
+.status-bar .status-chip {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─── Lab bench "active glow" pulse (workspace active)  ── */
+@keyframes bench-active-glow {
+  0%, 100% { opacity: 0.55; }
+  50%       { opacity: 0.85; }
+}
+.lab-ws-area--active::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  pointer-events: none;
+  animation: bench-active-glow 2.4s ease-in-out infinite;
+}
+
+/* ─── Titration: ensure pH curve card has correct height ── */
+.titration-ph-curve-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.titration-ph-curve-card > svg {
+  flex: 1 1 0%;
+  min-height: 0;
+}
+
+/* ═══════════════════════════════════════════════════════
+   WORKSPACE SVG SAFE-ZONE SYSTEM
+   Prevents labels, instruments, and bench rects from
+   bleeding into container edges or each other.
+   ═══════════════════════════════════════════════════════ */
+
+/*
+  Rule: workspace SVGs are clipped by their container's
+  overflow:hidden. Text whose baseline sits within 10 px
+  of the viewBox bottom edge risks being half-clipped.
+  Each workspace component must keep its bottom-most
+  SVG <text> baseline ≥ 14 px from the viewBox height.
+  This CSS adds a visual reminder strip — actual safe
+  margins are enforced per-component in the SVG geometry.
+*/
+
+/* ─── Workspace container: ensure clip doesn't cut labels ── */
+.lab-ws-area {
+  /* already has overflow:hidden — keep, but pad enough so
+     the workspace component's rounded corners don't eat
+     the first/last pixel of the SVG                        */
+  padding-bottom: max(8px, env(safe-area-inset-bottom, 8px));
+}
+
+/* ─── SVG inside workspace: block-level, no extra whitespace */
+.lab-ws-area svg {
+  display: block;
+  /* Prevent browser from adding extra bottom space for
+     inline SVGs (some engines treat svg as inline by default) */
+  vertical-align: bottom;
+}
+
+/* ─── Bench strip: subtle separator line so it never merges
+      with a bottom label at the same shade of grey          ── */
+.lab-ws-bench-strip {
+  border-top: 1.5px solid rgba(100, 116, 139, 0.30);
+  background: linear-gradient(180deg, #dde3eb 0%, #c8d0db 100%);
+  box-shadow: 0 -2px 0 rgba(255,255,255,0.55) inset;
+}
+
+/* ─── Status / instruction strip pinned to workspace bottom ─ */
+/*
+  When a text label is rendered directly in the SVG as the
+  lowest element (not a status bar below the workspace), it
+  should sit at least 14 px above the viewBox bottom.
+  Components that use a translucent pill background for their
+  bottom labels benefit from the rule below to ensure the
+  pill's bottom border is never invisible against the bench.
+*/
+.ws-bottom-label-pill {
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 100px;
+  padding: 2px 10px;
+  font-size: 8.5px;
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+}
+
+/* ─── Prevent any absolute-positioned overlay from overlapping
+      the SVG bottom strip on short screens (≤ 700 px tall)  ── */
+@media (max-height: 700px) {
+  .lab-popup-overlay {
+    max-height: calc(100% - 48px);
+    overflow-y: auto;
+  }
+}

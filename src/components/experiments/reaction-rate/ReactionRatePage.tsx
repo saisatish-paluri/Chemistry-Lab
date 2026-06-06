@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState, startTransition } from "react";
 import { useReactionRateStore }                          from "@/lib/store/reaction-rate-store";
@@ -10,10 +10,11 @@ import StatusBar                                         from "@/components/lab/
 import ResultModal                                       from "@/components/lab/ResultModal";
 import ContextPopup, { obsToPopup }                      from "@/components/lab/ContextPopup";
 import LabPageShell                                      from "@/components/lab/LabPageShell";
+import LabContextPanel                                   from "@/components/lab/LabContextPanel";
 import { SURFACE_AREA_LABELS }                           from "@/lib/engine/reaction-rate-engine";
+import { EXPERIMENT_EDUCATION }                          from "@/lib/experiment-education";
 
 export default function ReactionRatePage() {
-  const [mounted, setMounted]     = useState(false);
   const [showPopup, setShowPopup] = useState(false);
   const store      = useReactionRateStore();
   const tickRef    = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -21,12 +22,10 @@ export default function ReactionRatePage() {
 
   useEffect(() => {
     store.hydrate();
-    startTransition(() => setMounted(true));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (!mounted) return;
     if (store.status === "running") {
       tickRef.current = setInterval(() => store.tickAction(1), 1000);
     } else {
@@ -34,7 +33,7 @@ export default function ReactionRatePage() {
     }
     return () => { if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; } };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [store.status, mounted]);
+  }, [store.status]);
 
   useEffect(() => () => { if (popupTimer.current) clearTimeout(popupTimer.current); }, []);
 
@@ -46,13 +45,6 @@ export default function ReactionRatePage() {
     popupTimer.current = setTimeout(() => setShowPopup(false), 3200);
   }, [lastObsId]);
 
-  if (!mounted) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 rounded-full border-2 border-blue-400 border-t-transparent animate-spin" />
-      </div>
-    );
-  }
 
   const lastObs = store.observations[0];
   const popup   = lastObs ? obsToPopup(lastObs.type, lastObs.message) : null;
@@ -122,8 +114,31 @@ export default function ReactionRatePage() {
     </div>
   );
 
+  const rateLeftPanel = (
+    <LabContextPanel
+      title="Reaction Rate"
+      accent="#f59e0b"
+      summary="Three factors control how fast reactant molecules collide and overcome the activation energy barrier."
+      formula="k = A · e^(−Ea/RT)"
+      formulaLabel="Arrhenius equation"
+      facts={[
+        { icon: "🌡️", label: "Temperature",   value: "Rate doubles per 10 °C rise" },
+        { icon: "🧪", label: "Concentration", value: "Rate ∝ [reactant]" },
+        { icon: "📐", label: "Surface area",  value: "Powder fastest, solid slowest" },
+        { icon: "⚗️", label: "Reaction",      value: "CaCO₃ + 2HCl → CO₂↑ + …" },
+      ]}
+      steps={[
+        { number: 1, title: "Set temperature",   body: "Use the slider to set temperature (25–80 °C). Higher T = more energetic collisions." },
+        { number: 2, title: "Set concentration", body: "Adjust [HCl] (0.1–2.0 M). Higher concentration = more frequent collisions." },
+        { number: 3, title: "Set surface area",  body: "Choose from solid lump, chips, granules, or powder." },
+        { number: 4, title: "Run reaction",      body: "Click Start to observe CO₂ gas evolution rate. Monitor the rate factor display." },
+      ]}
+    />
+  );
+
   return (
     <LabPageShell
+      leftPanel={rateLeftPanel}
       statusBar={
         <StatusBar
           status={store.status}
@@ -149,7 +164,12 @@ export default function ReactionRatePage() {
           isRunning={store.status === "running"}
         />
       }
-      workspaceMaxW="max-w-lg"
+      education={EXPERIMENT_EDUCATION["reaction-rate"]}
+      reactionNote={
+        store.status === "running"
+          ? `Rate × ${store.rateMultiplier.toFixed(1)} vs baseline · T = ${store.temperature} °C · ${store.concentration.toFixed(1)}× conc · ${SURFACE_AREA_LABELS[store.surfaceArea]}`
+          : "Set temperature, concentration, and surface area, then run to observe collision theory in action."
+      }
 
       centerBottom={rateFactorCard}
 

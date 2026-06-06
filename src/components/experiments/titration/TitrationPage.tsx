@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState, startTransition } from "react";
 import { useTitrationStore }                             from "@/lib/store/titration-store";
@@ -11,29 +11,13 @@ import StatusBar                                         from "@/components/lab/
 import ResultModal                                       from "@/components/lab/ResultModal";
 import ContextPopup, { obsToPopup }                      from "@/components/lab/ContextPopup";
 import ChemicalAddPopup, { type ChemicalAddEvent }       from "@/components/lab/ChemicalAddPopup";
-import PreLabIntro                                       from "@/components/lab/PreLabIntro";
 import SetupPhase                                        from "@/components/lab/SetupPhase";
 import LabPageShell                                      from "@/components/lab/LabPageShell";
+import LabContextPanel                                   from "@/components/lab/LabContextPanel";
 import { INDICATORS }                                    from "@/lib/engine/chemistry";
 import type { IndicatorName }                            from "@/lib/engine/types";
+import { EXPERIMENT_EDUCATION }                          from "@/lib/experiment-education";
 
-// ── Pre-lab data ──────────────────────────────────────────────────────────────
-const TITRATION_INTRO = {
-  title:     "Acid-Base Titration",
-  objective: "Determine the exact volume of 0.1 M NaOH required to neutralise 25 mL of 0.1 M HCl. Add an indicator, then deliver NaOH from the burette drop-by-drop until the permanent colour change marks the endpoint.",
-  apparatus: ["Burette (50 mL)", "Conical Flask (250 mL)", "Retort Stand & Clamp", "Burette Clamp", "White Tile", "Dropping Pipette", "Wash Bottle"],
-  reagents: [
-    { name: "HCl (Hydrochloric Acid)",  concentration: "0.1 M · 25 mL in flask" },
-    { name: "NaOH (Sodium Hydroxide)",  concentration: "0.1 M · 50 mL in burette" },
-    { name: "Phenolphthalein",          concentration: "indicator, 2–3 drops" },
-  ],
-  safetyNotes: [
-    "HCl is corrosive — avoid skin and eye contact.",
-    "NaOH is corrosive — handle with gloves at all times.",
-    "Clean up spills immediately with water.",
-    "Wear safety goggles throughout the experiment.",
-  ],
-};
 
 // ── Indicator popup events ────────────────────────────────────────────────────
 const INDICATOR_ADD_EVENTS: Record<IndicatorName, ChemicalAddEvent> = {
@@ -84,7 +68,6 @@ function makeTitrantEvent(volumeMl: number, pH: number): ChemicalAddEvent {
 
 // ── Page component ────────────────────────────────────────────────────────────
 export default function TitrationPage() {
-  const [mounted, setMounted]             = useState(false);
   const [isTitrating, setIsTitrating]     = useState(false);
   const [showObsPopup, setShowObsPopup]   = useState(false);
   const [chemEvent, setChemEvent]         = useState<ChemicalAddEvent | null>(null);
@@ -99,7 +82,6 @@ export default function TitrationPage() {
 
   useEffect(() => {
     store.hydrate();
-    startTransition(() => setMounted(true));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -118,13 +100,6 @@ export default function TitrationPage() {
     obsPopupTimer.current = setTimeout(() => setShowObsPopup(false), 3800);
   }, [lastObsId]);
 
-  if (!mounted) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 rounded-full border-2 border-blue-400 border-t-transparent animate-spin" />
-      </div>
-    );
-  }
 
   // ── Chemical popup helper ──────────────────────────────────────────────────
   function fireChemPopup(ev: ChemicalAddEvent) {
@@ -202,10 +177,31 @@ export default function TitrationPage() {
     </>
   );
 
+  const titrationLeftPanel = (
+    <LabContextPanel
+      title="Acid-Base Titration"
+      accent="#2563eb"
+      summary="Add NaOH drop-by-drop from the burette into the HCl flask. The indicator changes colour at the equivalence point (pH 7)."
+      formula="HCl(aq) + NaOH(aq) → NaCl(aq) + H₂O(l)"
+      formulaLabel="Net ionic equation"
+      facts={[
+        { icon: "⚗️", label: "Flask acid",   value: "25 mL HCl"   },
+        { icon: "🧪", label: "Burette base",  value: "0.1 M NaOH"  },
+        { icon: "📍", label: "Equiv. vol.",   value: "25.0 mL"      },
+        { icon: "⚡", label: "Equiv. pH",     value: "7.00"         },
+      ]}
+      steps={[
+        { number: 1, title: "Add indicator",   body: "Select phenolphthalein (best for this titration) from Controls." },
+        { number: 2, title: "Open stopcock",   body: "Set flow rate then click Add NaOH to deliver titrant." },
+        { number: 3, title: "Watch the curve", body: "The pH curve in the centre panel shows the sigmoid. Slow down near pH 6." },
+        { number: 4, title: "Detect endpoint", body: "One drop past pH 8.2 turns the flask pink — stop immediately." },
+      ]}
+    />
+  );
+
   return (
     <LabPageShell
-      preLabIntro={<PreLabIntro {...TITRATION_INTRO} />}
-
+      leftPanel={titrationLeftPanel}
       statusBar={
         <StatusBar
           status={store.status}
@@ -228,7 +224,14 @@ export default function TitrationPage() {
           endpointReached={store.endpointReached}
         />
       }
-      workspaceMaxW="max-w-sm"
+      education={EXPERIMENT_EDUCATION.titration}
+      reactionNote={
+        store.flask.indicatorAdded
+          ? store.endpointReached
+            ? "Endpoint reached — neutralisation complete. Stop adding base."
+            : `HCl + NaOH → NaCl + H₂O · pH ${store.flask.pH.toFixed(2)} · indicator changes near pH ${store.flask.indicator === "methylOrange" ? "3.1–4.4" : store.flask.indicator === "litmus" ? "6–8" : "8.2–10"}`
+          : "Add an indicator to track the neutralisation endpoint."
+      }
 
       centerBottom={
         <div
@@ -239,7 +242,11 @@ export default function TitrationPage() {
             boxShadow:  "var(--lab-shadow-sm)",
           }}
         >
-          <PHCurve curve={store.titrationCurve} equivalenceVol={store.equivalenceVolume} />
+          <PHCurve
+            curve={store.titrationCurve}
+            equivalenceVol={store.equivalenceVolume}
+            indicator={store.flask.indicator}
+          />
         </div>
       }
 
@@ -281,6 +288,8 @@ export default function TitrationPage() {
           flowRate={store.burette.flowRate}
           status={store.status}
           isRunning={store.status === "running"}
+          volumeAdded={store.volumeAdded}
+          pH={store.flask.pH}
           onAddIndicator={handleAddIndicator}
           onAddTitrant={handleAddTitrant}
           onSetFlowRate={store.setFlowRateAction}
@@ -347,8 +356,11 @@ interface FlaskContentsProps {
 }
 
 function FlaskContentsCard({ flask, volumeAdded, ind }: FlaskContentsProps) {
-  const acidMolesLeft = Math.max(0, 0.1 * 0.025 - 0.1 * (volumeAdded / 1000));
-  const neutralPct    = Math.min(100, (volumeAdded / 25) * 100);
+  const acidMolesLeft  = Math.max(0, 0.1 * 0.025 - 0.1 * (volumeAdded / 1000));
+  const baseMolesIn    = 0.1 * (volumeAdded / 1000);
+  const baseExcess     = Math.max(0, baseMolesIn - 0.1 * 0.025);
+  const neutralPct     = Math.min(100, (volumeAdded / 25) * 100);
+  const pastEquiv      = volumeAdded > 25;
 
   return (
     <InfoCard>
@@ -384,11 +396,18 @@ function FlaskContentsCard({ flask, volumeAdded, ind }: FlaskContentsProps) {
           <ContentRow
             dot="#86efac" label="NaOH added"
             value={`${volumeAdded.toFixed(2)} mL`}
-            sub={`${(0.1 * volumeAdded / 1000).toFixed(4)} mol`}
+            sub={`${baseMolesIn.toFixed(5)} mol`}
           />
         )}
         {volumeAdded > 0 && (
           <ContentRow dot="#94a3b8" label="NaCl (product)" value="in solution" sub="neutralisation salt" />
+        )}
+        {pastEquiv && baseExcess > 0 && (
+          <ContentRow
+            dot="#a78bfa" label="NaOH excess"
+            value={`${baseExcess.toFixed(5)} mol`}
+            sub="past equivalence point"
+          />
         )}
         {flask.indicatorAdded && ind && (
           <ContentRow

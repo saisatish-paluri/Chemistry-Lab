@@ -80,6 +80,14 @@ export const useSolubilityStore = create<SolubilityStore>((set, get) => ({
 
   hydrate: () => {
     const saved = loadSession<SolubilityState>(STORAGE_KEY);
-    if (saved) set({ ...saved, lastError: null });
+    if (saved) {
+      if (saved.status === "completed" || saved.status === "failed") {
+        const fresh = initialSolubilityState(saved.mode);
+        set({ ...fresh, lastError: null });
+        saveSession(STORAGE_KEY, fresh);
+      } else {
+        set({ ...saved, lastError: null });
+      }
+    }
   },
 }));

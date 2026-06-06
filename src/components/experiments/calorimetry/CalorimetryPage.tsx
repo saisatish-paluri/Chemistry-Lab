@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, startTransition } from "react";
 import { motion }                                from "framer-motion";
@@ -8,34 +8,18 @@ import ObservationPanel                          from "@/components/lab/Observat
 import StatusBar                                 from "@/components/lab/StatusBar";
 import ResultModal                               from "@/components/lab/ResultModal";
 import ContextPopup, { obsToPopup }              from "@/components/lab/ContextPopup";
-import PreLabIntro                               from "@/components/lab/PreLabIntro";
 import LabPageShell                              from "@/components/lab/LabPageShell";
+import LabContextPanel                           from "@/components/lab/LabContextPanel";
 import { calcCalorimetryTemp }                   from "@/lib/engine/calorimetry-engine";
+import { EXPERIMENT_EDUCATION }                 from "@/lib/experiment-education";
 
-const INTRO = {
-  title:     "Calorimetry — Heat of Neutralisation",
-  objective: "Add sodium hydroxide (NaOH) to hydrochloric acid (HCl) in a polystyrene calorimeter and record the temperature at each addition. Plot temperature vs. volume of NaOH to find the equivalence point, then calculate the molar enthalpy of neutralisation.",
-  apparatus: ["Polystyrene cup calorimeter", "Thermometer (0.1 °C precision)", "Burette (50 mL)", "Measuring cylinder", "Stirring rod"],
-  reagents: [
-    { name: "HCl (hydrochloric acid)", concentration: "1.0 M — 100 mL" },
-    { name: "NaOH (sodium hydroxide)", concentration: "1.0 M" },
-  ],
-  safetyNotes: [
-    "Both HCl and NaOH are corrosive — wear gloves and eye protection.",
-    "Handle the calorimeter carefully — polystyrene is fragile.",
-    "Ensure thorough mixing after each addition before reading temperature.",
-    "Do not exceed 80 °C — this indicates a calculation error.",
-  ],
-};
 
 export default function CalorimetryPage() {
-  const [mounted, setMounted]     = useState(false);
   const [showPopup, setShowPopup] = useState(false);
   const store = useCalorimetryStore();
 
   useEffect(() => {
     store.hydrate();
-    startTransition(() => setMounted(true));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -47,13 +31,6 @@ export default function CalorimetryPage() {
     return () => clearTimeout(t);
   }, [lastObsId]);
 
-  if (!mounted) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 rounded-full border-2 border-blue-400 border-t-transparent animate-spin" />
-      </div>
-    );
-  }
 
   const lastObs        = store.observations[0];
   const popup          = lastObs ? obsToPopup(lastObs.type, lastObs.message) : null;
@@ -157,10 +134,31 @@ export default function CalorimetryPage() {
     </div>
   );
 
+  const calorimetryLeftPanel = (
+    <LabContextPanel
+      title="Calorimetry"
+      accent="#f59e0b"
+      summary="Measure the enthalpy of neutralisation by recording the temperature rise when acid and base react in an insulated polystyrene cup calorimeter."
+      formula="ΔH = −q / n = −(mcΔT) / n"
+      formulaLabel="Enthalpy of neutralisation"
+      facts={[
+        { icon: "🧪", label: "HCl (flask)",   value: "25 mL, 2.0 M" },
+        { icon: "🧪", label: "NaOH (burette)", value: "1.0 M" },
+        { icon: "📐", label: "Specific heat",  value: "4.18 J g⁻¹ °C⁻¹" },
+        { icon: "📚", label: "Literature ΔH",  value: "−57.1 kJ mol⁻¹" },
+      ]}
+      steps={[
+        { number: 1, title: "Record T₀",      body: "Note the initial temperature before adding any NaOH." },
+        { number: 2, title: "Add NaOH",        body: "Add NaOH in 5 mL or 10 mL portions. Watch the temperature rise." },
+        { number: 3, title: "Find T_max",      body: "Temperature peaks at the equivalence point (equimolar HCl and NaOH)." },
+        { number: 4, title: "Calculate ΔH",    body: "Use q = mcΔT, then ΔH = −q/n. Compare with −57.1 kJ mol⁻¹." },
+      ]}
+    />
+  );
+
   return (
     <LabPageShell
-      preLabIntro={<PreLabIntro {...INTRO} />}
-
+      leftPanel={calorimetryLeftPanel}
       statusBar={
         <StatusBar
           status={store.status}
@@ -185,7 +183,12 @@ export default function CalorimetryPage() {
           hclVolumeMl={store.hclVolumeMl}
         />
       }
-      workspaceMaxW="max-w-sm"
+      education={EXPERIMENT_EDUCATION.calorimetry}
+      reactionNote={
+        store.naohAddedMl > 0
+          ? `HCl + NaOH → NaCl + H₂O · ΔT = ${(store.currentTempC - store.initialTempC).toFixed(1)} °C · q = ${((store.hclVolumeMl + store.naohAddedMl) * 4.18 * (store.currentTempC - store.initialTempC) / 1000).toFixed(2)} kJ${store.calculatedDeltaH !== null ? ` · ΔH = ${store.calculatedDeltaH.toFixed(1)} kJ/mol` : ""}`
+          : "Add NaOH in measured portions — record temperature rise after each addition."
+      }
 
       centerBottom={tempGraph}
 
@@ -238,74 +241,154 @@ function CalorimetryWorkspace({
 
   return (
     <div
-      className="rounded-2xl overflow-hidden"
+      className="relative rounded-3xl overflow-hidden select-none"
       style={{
-        background: "var(--lab-glass-heavy)",
-        border:     "1px solid var(--lab-glass-border)",
-        boxShadow:  "var(--lab-shadow-md)",
+        aspectRatio: "300/240",
+        width:       "100%",
+        height:      "auto",
+        maxHeight:   "100%",
+        background: `radial-gradient(ellipse at 50% 25%, rgba(239,68,68,${0.06 + warmFrac * 0.10}) 0%, transparent 50%), linear-gradient(180deg, #fef2f2 0%, #fde8e8 40%, #fef2f4 100%)`,
+        border: "1px solid rgba(148,163,184,0.28)",
+        boxShadow:
+          "0 24px 64px rgba(15,23,42,0.08), " +
+          "0 4px 12px rgba(15,23,42,0.04), " +
+          "0 0 0 1px rgba(255,255,255,0.92) inset",
+        transition: "background 1s ease",
       }}
     >
-      <div className="p-4">
-        <p
-          className="text-[10px] font-semibold uppercase tracking-widest mb-3 text-center"
-          style={{ color: "var(--lab-text-muted)" }}
-        >
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: "radial-gradient(circle, rgba(239,68,68,0.14) 1px, transparent 1px)",
+          backgroundSize:  "22px 22px",
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="absolute pointer-events-none"
+        style={{
+          top: "-48px", left: "50%", transform: "translateX(-50%)",
+          width: "288px", height: "192px",
+          background: `radial-gradient(ellipse at center, rgba(239,68,68,${0.08 + warmFrac * 0.28}) 0%, transparent 70%)`,
+          transition: "background 1.2s ease",
+        }}
+      />
+      {/* Heat glow around cup when warm */}
+      {warmFrac > 0.15 && (
+        <div
+          aria-hidden="true"
+          className="absolute pointer-events-none"
+          style={{
+            bottom: "20%", left: "50%", transform: "translateX(-50%)",
+            width: "200px", height: "100px",
+            background: `radial-gradient(ellipse at center, rgba(${r},${g},${b},${warmFrac * 0.22}) 0%, transparent 70%)`,
+            filter: "blur(16px)",
+            transition: "background 1s ease",
+            animation: warmFrac > 0.5 ? "lab-glow-pulse 2s ease-in-out infinite" : "none",
+          }}
+        />
+      )}
+
+      <svg
+        viewBox="0 0 300 240"
+        width="100%"
+        style={{ display: "block", position: "relative", zIndex: 10 }}
+        aria-label="Calorimeter"
+        role="img"
+      >
+        <defs>
+          <filter id="cal-shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="rgba(0,0,0,0.50)" />
+          </filter>
+          <clipPath id="cal-cup-clip">
+            <path d="M84 42 L74 194 Q74 208 94 208 L206 208 Q226 208 226 194 L216 42 Z" />
+          </clipPath>
+        </defs>
+
+        {/* ── Lab bench — light theme ── */}
+        <rect x="0" y="224" width="300" height="16" fill="#b8c4d0" />
+        <rect x="0" y="220" width="300" height="6"  fill="#cbd5e1" />
+        <rect x="0" y="220" width="300" height="2"  fill="rgba(255,255,255,0.55)" />
+
+        <text x="150" y="18" textAnchor="middle" fontSize="9" fill="#3b6690" fontWeight="600">
           Calorimeter — HCl + NaOH
-        </p>
+        </text>
 
-        <svg viewBox="0 0 300 200" width="100%" aria-label="Calorimeter">
-          <path d="M80 40 L70 180 Q70 190 90 190 L210 190 Q230 190 230 180 L220 40 Z"
-                fill="rgba(248,250,252,0.9)" stroke="#cbd5e1" strokeWidth="1.5" />
-          <path d="M75 40 L65 185 Q65 198 90 198 L210 198 Q235 198 235 185 L225 40 Z"
-                fill="none" stroke="#e2e8f0" strokeWidth="3" />
+        {/* ── Outer polystyrene cup — light gray ── */}
+        <path d="M80 40 L70 195 Q70 210 90 210 L210 210 Q230 210 230 195 L220 40 Z"
+              fill="rgba(255,255,255,0.52)" stroke="rgba(71,85,105,0.50)" strokeWidth="2"
+              filter="url(#cal-shadow)" />
+        {/* Inner cup wall — insulation layers */}
+        <path d="M84 42 L74 194 Q74 208 94 208 L206 208 Q226 208 226 194 L216 42 Z"
+              fill="rgba(241,245,249,0.72)" stroke="rgba(148,163,184,0.35)" strokeWidth="1.2" />
+        <path d="M84 46 L84 194" stroke="rgba(255,255,255,0.45)" strokeWidth="4" strokeLinecap="round" />
 
-          <motion.path
-            d={`M81 80 L${81 + (totalMl - 100) * 0.3} 80 L${221 - (totalMl - 100) * 0.3} 80 L221 80 L${225 - (totalMl - 100) * 0.3} 185 Q225 190 210 190 L90 190 Q75 190 ${75 + (totalMl - 100) * 0.3} 185 Z`}
-            animate={{ fill: solColor }}
-            transition={{ duration: 1, ease: "easeOut" }}
-          />
-
-          <rect x="105" y="100" width="90" height="36" rx="8"
-                fill="rgba(255,255,255,0.85)" stroke="#cbd5e1" strokeWidth="1" />
-          <text x="150" y="119" textAnchor="middle" fontSize="16" fill="#0f172a" fontWeight="bold">
-            {currentTempC.toFixed(1)}
-          </text>
-          <text x="150" y="131" textAnchor="middle" fontSize="8.5" fill="#64748b">°C</text>
-
-          <rect x="145" y="40" width="10" height="55" rx="5" fill="white" stroke="#94a3b8" strokeWidth="1" />
-          <motion.rect
-            x="147" y={94 - warmFrac * 40}
-            width="6"
-            animate={{ height: 40 + warmFrac * 40 }}
-            transition={{ duration: 0.6 }}
-            rx="3"
-            fill="#ef4444"
-          />
-          <circle cx="150" cy="98" r="7" fill="#ef4444" />
-
-          <line x1="190" y1="40" x2="185" y2="170" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" />
-          <ellipse cx="183" cy="170" rx="12" ry="3" fill="none" stroke="#94a3b8" strokeWidth="1.5" />
-
-          <text x="150" y="178" textAnchor="middle" fontSize="8.5" fill="white" opacity="0.9">
-            ΔT = +{deltaT.toFixed(2)} °C
-          </text>
-        </svg>
-
-        <div className="mt-2">
-          <div className="flex justify-between text-[9px] mb-1" style={{ color: "var(--lab-text-subtle)" }}>
-            <span>25 °C (initial)</span>
-            <span>{calcCalorimetryTemp(100).toFixed(1)} °C (max)</span>
-          </div>
-          <div className="h-2 rounded-full overflow-hidden" style={{ background: "linear-gradient(90deg, #bfdbfe, #fca5a5)" }}>
-            <motion.div
-              animate={{ width: `${(warmFrac * 100).toFixed(1)}%` }}
-              transition={{ duration: 0.8 }}
-              className="h-full rounded-full"
-              style={{ background: `rgb(${r},${g},${b})` }}
+        {/* Solution — rises from bottom, clipped to inner cup shape */}
+        {totalMl > 0 && (() => {
+          const maxVol = 125;
+          const cupBottom = 208;
+          const cupTop = 46;
+          const liqH = Math.min(1, totalMl / maxVol) * (cupBottom - cupTop);
+          const liqY = cupBottom - liqH;
+          return (
+            <motion.rect
+              x="75" width="150"
+              clipPath="url(#cal-cup-clip)"
+              animate={{ y: liqY, height: Math.max(4, liqH), fill: solColor }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
             />
-          </div>
-        </div>
-      </div>
+          );
+        })()}
+
+        {/* ── Temperature badge ── */}
+        <rect x="105" y="108" width="90" height="42" rx="10"
+              fill="rgba(255,255,255,0.96)" stroke="rgba(148,163,184,0.28)" strokeWidth="1.2"
+              filter="url(#cal-shadow)" />
+        <text x="150" y="130" textAnchor="middle" fontSize="19" fill={`rgb(${r},${g},${b})`} fontWeight="900" fontFamily="monospace">
+          {currentTempC.toFixed(1)}
+        </text>
+        <text x="150" y="143" textAnchor="middle" fontSize="8.5" fill="#64748b" fontWeight="600">°C</text>
+
+        {/* ── Thermometer ── */}
+        <rect x="145" y="40" width="10" height="62" rx="5"
+              fill="rgba(255,255,255,0.60)" stroke="rgba(148,163,184,0.50)" strokeWidth="1.2" />
+        <motion.rect
+          x="147"
+          width="6"
+          rx="3"
+          animate={{
+            y:      100 - warmFrac * 48,
+            height: Math.max(4, 10 + warmFrac * 52),
+            fill:   `rgb(${r},${g},${b})`,
+          }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        />
+        <circle cx="150" cy="106" r="8" fill={`rgb(${r},${g},${b})`} style={{ transition: "fill 0.6s ease" }} />
+        <circle cx="150" cy="106" r="4" fill="rgba(255,255,255,0.28)" />
+
+        {/* ── Stirrer ── */}
+        <line x1="192" y1="40" x2="186" y2="178" stroke="rgba(71,85,105,0.45)" strokeWidth="2.2" strokeLinecap="round" />
+        <line x1="192.5" y1="40" x2="186.5" y2="178" stroke="rgba(255,255,255,0.30)" strokeWidth="0.8" strokeLinecap="round" />
+        <ellipse cx="184" cy="178" rx="13" ry="3.5" fill="none" stroke="rgba(71,85,105,0.40)" strokeWidth="1.5" />
+
+        <text x="150" y="200" textAnchor="middle" fontSize="8.5" fill="#334155" fontWeight="700">
+          ΔT = +{deltaT.toFixed(2)} °C
+        </text>
+
+        {/* ── Warm scale bar ── */}
+        <text x="55"  y="216" fontSize="7" fill="#64748b">25°C</text>
+        <text x="245" y="216" textAnchor="end" fontSize="7" fill="#64748b">
+          {calcCalorimetryTemp(100).toFixed(0)}°C
+        </text>
+        <rect x="55" y="217" width="190" height="5" rx="2.5" fill="rgba(148,163,184,0.22)" />
+        <motion.rect
+          x="55" y="217" height="5" rx="2.5"
+          animate={{ width: Math.round(190 * warmFrac) }}
+          transition={{ duration: 0.8 }}
+          fill={`rgb(${r},${g},${b})`}
+        />
+      </svg>
     </div>
   );
 }
@@ -319,8 +402,8 @@ function TempGraph({
   maxTemp:     number;
   initialTemp: number;
 }) {
-  const W = 240, H = 100;
-  const pad = { l: 30, r: 10, t: 8, b: 20 };
+  const W = 280, H = 140;
+  const pad = { l: 34, r: 12, t: 10, b: 24 };
   const iW  = W - pad.l - pad.r;
   const iH  = H - pad.t - pad.b;
 
@@ -335,35 +418,57 @@ function TempGraph({
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" aria-label="Temperature graph">
-      <line x1={pad.l} y1={pad.t} x2={pad.l} y2={pad.t + iH} stroke="#e2e8f0" strokeWidth="1" />
-      <line x1={pad.l} y1={pad.t + iH} x2={W - pad.r} y2={pad.t + iH} stroke="#e2e8f0" strokeWidth="1" />
-
+      {/* Grid lines */}
       {[25, 27, 29, 31, 33].filter((t) => t >= yMin && t <= yMax).map((t) => (
         <g key={t}>
-          <line x1={pad.l} y1={scaleY(t)} x2={W - pad.r} y2={scaleY(t)} stroke="#f1f5f9" strokeWidth="0.8" />
-          <text x={pad.l - 3} y={scaleY(t) + 3} textAnchor="end" fontSize="7" fill="#94a3b8">{t}</text>
+          <line x1={pad.l} y1={scaleY(t)} x2={W - pad.r} y2={scaleY(t)} stroke="#e2e8f0" strokeWidth="0.8" />
+          <text x={pad.l - 4} y={scaleY(t) + 3.5} textAnchor="end" fontSize="8" fill="#94a3b8">{t}</text>
         </g>
       ))}
 
-      {[0, 50, 100].map((v) => (
-        <text key={v} x={scaleX(v)} y={H - 5} textAnchor="middle" fontSize="7" fill="#94a3b8">{v}</text>
-      ))}
-      <text x={W / 2} y={H} textAnchor="middle" fontSize="7" fill="#94a3b8">mL NaOH</text>
+      {/* Axes */}
+      <line x1={pad.l} y1={pad.t} x2={pad.l} y2={pad.t + iH} stroke="#94a3b8" strokeWidth="1.2" />
+      <line x1={pad.l} y1={pad.t + iH} x2={W - pad.r} y2={pad.t + iH} stroke="#94a3b8" strokeWidth="1.2" />
 
+      {/* X-axis labels */}
+      {[0, 50, 100].map((v) => (
+        <text key={v} x={scaleX(v)} y={pad.t + iH + 14} textAnchor="middle" fontSize="8" fill="#94a3b8">{v}</text>
+      ))}
+      <text x={W / 2} y={H} textAnchor="middle" fontSize="8" fill="#64748b">mL NaOH added</text>
+
+      {/* Equivalence point dashed line */}
       <line x1={scaleX(100)} y1={pad.t} x2={scaleX(100)} y2={pad.t + iH}
             stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3 2" />
+      <text x={scaleX(100)} y={pad.t - 2} textAnchor="middle" fontSize="7" fill="#94a3b8">equiv.</text>
 
+      {/* Y-axis label */}
+      <text x={8} y={pad.t + iH / 2} textAnchor="middle" fontSize="8" fill="#64748b"
+        transform={`rotate(-90, 8, ${pad.t + iH / 2})`}>°C</text>
+
+      {/* Data line */}
       {dataPoints.length > 1 && (
-        <polyline points={pts} fill="none" stroke="#ef4444" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        <polyline points={pts} fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       )}
 
+      {/* Current point dot */}
       {dataPoints.length > 0 && (() => {
         const last = dataPoints[dataPoints.length - 1];
         return (
-          <circle cx={scaleX(last.naohVolumeMl)} cy={scaleY(last.tempC)} r={3}
-                  fill="#ef4444" stroke="white" strokeWidth="1" />
+          <motion.circle cx={scaleX(last.naohVolumeMl)} cy={scaleY(last.tempC)} r={4}
+            fill="#ef4444" stroke="white" strokeWidth="1.5"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 200, damping: 12 }}
+          />
         );
       })()}
+
+      {/* Empty state hint */}
+      {dataPoints.length === 0 && (
+        <text x={W / 2} y={pad.t + iH / 2} textAnchor="middle" fontSize="9" fill="#cbd5e1" fontStyle="italic">
+          Add NaOH to record points
+        </text>
+      )}
     </svg>
   );
 }

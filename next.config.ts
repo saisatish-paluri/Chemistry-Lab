@@ -1,10 +1,16 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Allow HMR and dev-tool requests from the local-network IP so the browser
-  // doesn't show a perpetual loading/buffering spinner when the site is opened
-  // from another device on the same LAN. Add additional IPs here as needed.
-  allowedDevOrigins: ["10.10.30.202", "10.10.30.*"],
+  allowedDevOrigins: ["10.10.30.202", "10.10.30.*", "192.168.31.234", "192.168.31.*"],
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname:  "images.unsplash.com",
+        pathname:  "/**",
+      },
+    ],
+  },
 };
 
 export default nextConfig;

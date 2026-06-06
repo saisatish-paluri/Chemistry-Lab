@@ -90,26 +90,39 @@ export default function ObservationPanel({ observations }: Props) {
   return (
     <div className="flex flex-col h-full">
       <div
-        className="flex items-center justify-between px-4 py-2.5 border-b"
+        className="flex items-center justify-between px-4 py-2 border-b"
         style={{ borderColor: "var(--lab-glass-border)" }}
       >
-        <span className="text-xs font-semibold uppercase tracking-wider"
-          style={{ color: "var(--lab-text-muted)" }}>
-          Observations
-        </span>
-        <span
-          className="text-xs px-2 py-0.5 rounded-full font-semibold"
-          style={{ background: "rgba(37,99,235,0.1)", color: "var(--lab-blue-600)" }}
-        >
-          {observations.length}
-        </span>
+        <div className="flex items-center gap-2">
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
+            <circle cx="5.5" cy="5.5" r="4.5" stroke="var(--lab-text-subtle)" strokeWidth="1.1"/>
+            <line x1="5.5" y1="4" x2="5.5" y2="7" stroke="var(--lab-text-subtle)" strokeWidth="1.1" strokeLinecap="round"/>
+            <circle cx="5.5" cy="2.8" r="0.6" fill="var(--lab-text-subtle)"/>
+          </svg>
+          <span className="text-[10px] font-bold uppercase tracking-wider"
+            style={{ color: "var(--lab-text-muted)" }}>
+            Observations
+          </span>
+        </div>
+        {observations.length > 0 && (
+          <span
+            className="text-[9px] px-2 py-0.5 rounded-full font-bold"
+            style={{ background: "rgba(37,99,235,0.08)", color: "var(--lab-blue-600)", border: "1px solid rgba(37,99,235,0.16)" }}
+          >
+            {observations.length}
+          </span>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5" style={{ maxHeight: "360px" }}>
         {observations.length === 0 ? (
-          <p className="text-xs text-center py-8" style={{ color: "var(--lab-text-subtle)" }}>
-            No observations yet — start the experiment.
-          </p>
+          <div className="lab-obs-empty">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <circle cx="7" cy="7" r="6" stroke="var(--lab-text-subtle)" strokeWidth="1" strokeDasharray="3 2"/>
+              <path d="M7 5v3M7 9.5v0.1" stroke="var(--lab-text-subtle)" strokeWidth="1.2" strokeLinecap="round"/>
+            </svg>
+            Start the experiment to record observations
+          </div>
         ) : (
           <AnimatePresence initial={false}>
             {observations.map((obs) => {

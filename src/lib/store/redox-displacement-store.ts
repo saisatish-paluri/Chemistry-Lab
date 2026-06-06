@@ -60,6 +60,14 @@ export const useRedoxDisplacementStore = create<RedoxDisplacementStore>((set, ge
 
   hydrate: () => {
     const saved = loadSession<RedoxDisplacementState>(STORAGE_KEY);
-    if (saved) set({ ...saved, lastError: null });
+    if (saved) {
+      if (saved.status === "completed" || saved.status === "failed") {
+        const fresh = initialRedoxState(saved.mode);
+        set({ ...fresh, lastError: null });
+        saveSession(STORAGE_KEY, fresh);
+      } else {
+        set({ ...saved, lastError: null });
+      }
+    }
   },
 }));

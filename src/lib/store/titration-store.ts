@@ -59,6 +59,16 @@ export const useTitrationStore = create<TitrationStore>((set, get) => ({
 
   hydrate: () => {
     const saved = loadSession<TitrationState>(STORAGE_KEY);
-    if (saved) set({ ...saved, lastError: null });
+    if (saved) {
+      // If experiment was completed or failed, always start fresh so the graph
+      // doesn't show a stale completed curve from a previous session.
+      if (saved.status === "completed" || saved.status === "failed") {
+        const fresh = initialTitrationState(saved.mode);
+        set({ ...fresh, lastError: null });
+        saveSession(STORAGE_KEY, fresh);
+      } else {
+        set({ ...saved, lastError: null });
+      }
+    }
   },
 }));

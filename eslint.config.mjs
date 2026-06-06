@@ -15,6 +15,16 @@ const eslintConfig = defineConfig([
     // Agent skill reference files (not project source):
     ".agents/**",
   ]),
+  // Project-level rule overrides
+  {
+    rules: {
+      // Ignore _-prefixed arguments (intentionally unused function params)
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

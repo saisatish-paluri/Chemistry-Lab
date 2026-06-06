@@ -41,6 +41,14 @@ export const useCalorimetryStore = create<CalorimetryStore>((set, get) => ({
 
   hydrate: () => {
     const saved = loadSession<CalorimetryState>(STORAGE_KEY);
-    if (saved) set({ ...saved, lastError: null });
+    if (saved) {
+      if (saved.status === "completed" || saved.status === "failed") {
+        const fresh = initialCalorimetryState(saved.mode);
+        set({ ...fresh, lastError: null });
+        saveSession(STORAGE_KEY, fresh);
+      } else {
+        set({ ...saved, lastError: null });
+      }
+    }
   },
 }));

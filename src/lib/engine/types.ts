@@ -375,3 +375,281 @@ export interface CalorimetryState {
   result:            ExperimentResult | null;
   startedAt:         number | null;
 }
+
+// ─── Density / Floating-Sinking (Class 6) ─────────────────────────────────────
+
+export type DensityMaterialId =
+  | "wood"
+  | "ice"
+  | "plastic"
+  | "wax"
+  | "rubber"
+  | "aluminum"
+  | "steel"
+  | "stone";
+
+export interface DensityState {
+  mode:             ExperimentMode;
+  status:           ExperimentStatus;
+  selectedMaterial: DensityMaterialId | null;
+  isDropping:       boolean;
+  isSettled:        boolean;
+  testedMaterials:  DensityMaterialId[];
+  steps:            StepDef[];
+  objectives:       ExperimentObjective[];
+  observations:     ObservationEvent[];
+  result:           ExperimentResult | null;
+  startedAt:        number | null;
+}
+
+// ─── Dissolving Rate (Class 6–7) ───────────────────────────────────────────────
+
+export type DissolveTemp        = "cold" | "warm" | "hot";
+export type DissolveGranularity = "coarse" | "fine" | "powder";
+
+export interface DissolvingDataPoint {
+  label: string;
+  time:  number; // simulated seconds
+}
+
+export interface DissolvingRateState {
+  mode:             ExperimentMode;
+  status:           ExperimentStatus;
+  temperature:      DissolveTemp;
+  granularity:      DissolveGranularity;
+  stirring:         boolean;
+  isDissolving:     boolean;
+  dissolveProgress: number;        // 0–100
+  dissolveTime:     number | null; // simulated seconds when complete
+  dataPoints:       DissolvingDataPoint[];
+  steps:            StepDef[];
+  objectives:       ExperimentObjective[];
+  observations:     ObservationEvent[];
+  result:           ExperimentResult | null;
+  startedAt:        number | null;
+}
+
+// ─── Indicator Test (Class 7) ──────────────────────────────────────────────────
+
+export type IndicatorTestId =
+  | "turmeric"
+  | "red-litmus"
+  | "blue-litmus"
+  | "cabbage-juice";
+
+export type TestSubstanceId =
+  | "vinegar"
+  | "lemon-juice"
+  | "baking-soda"
+  | "soap-solution"
+  | "milk"
+  | "distilled-water"
+  | "ammonia"
+  | "salt-solution";
+
+export type AcidityClass = "acidic" | "neutral" | "basic";
+
+export interface IndicatorTestRecord {
+  id:             string;
+  indicator:      IndicatorTestId;
+  substance:      TestSubstanceId;
+  resultColor:    string;
+  classification: AcidityClass;
+  pH:             number;
+  timestamp:      number;
+}
+
+export interface IndicatorTestState {
+  mode:              ExperimentMode;
+  status:            ExperimentStatus;
+  selectedIndicator: IndicatorTestId | null;
+  selectedSubstance: TestSubstanceId | null;
+  isTesting:         boolean;
+  currentResult:     { color: string; classification: AcidityClass; pH: number } | null;
+  testHistory:       IndicatorTestRecord[];
+  steps:             StepDef[];
+  objectives:        ExperimentObjective[];
+  observations:      ObservationEvent[];
+  result:            ExperimentResult | null;
+  startedAt:         number | null;
+}
+
+// ─── Filtration Basics (Class 6) ──────────────────────────────────────────────
+
+export type FiltrationStage =
+  | "setup"
+  | "mixing"
+  | "mixed"
+  | "pouring"
+  | "filtering"
+  | "complete";
+
+export interface FiltrationState {
+  mode:           ExperimentMode;
+  status:         ExperimentStatus;
+  stage:          FiltrationStage;
+  sandGrams:      number;
+  saltGrams:      number;
+  waterMl:        number;
+  mixProgress:    number; // 0–1
+  filterProgress: number; // 0–1
+  filtrateVolume: number; // mL clear filtrate collected
+  residueMass:    number; // g sand remaining on filter
+  steps:          StepDef[];
+  objectives:     ExperimentObjective[];
+  observations:   ObservationEvent[];
+  result:         ExperimentResult | null;
+  startedAt:      number | null;
+}
+
+// ─── Neutralization Reaction ──────────────────────────────────────────────────
+export type NeutStepId = "measure-hcl" | "measure-naoh" | "mix" | "observe" | "record";
+
+export interface NeutralizationState {
+  mode:           ExperimentMode;
+  status:         ExperimentStatus;
+  currentStep:    NeutStepId;
+  hclVolumeMl:    number;
+  naohVolumeMl:   number;
+  isMixing:       boolean;
+  mixProgress:    number;
+  initialTempC:   number;
+  currentTempC:   number;
+  reactionDone:   boolean;
+  saltFormed:     boolean;
+  steps:          StepDef[];
+  objectives:     ExperimentObjective[];
+  observations:   ObservationEvent[];
+  result:         ExperimentResult | null;
+  startedAt:      number | null;
+}
+
+// ─── Qualitative Salt Analysis ────────────────────────────────────────────────
+export type SaltCationId   = "copper" | "iron" | "zinc" | "calcium" | "ammonium";
+export type SaltAnionId    = "chloride" | "sulfate" | "carbonate" | "nitrate";
+export type UnknownSaltId  =
+  | "copper-sulfate"
+  | "iron-chloride"
+  | "zinc-carbonate"
+  | "calcium-nitrate"
+  | "ammonium-chloride";
+
+export type SaltTestPhase = "select" | "preliminary" | "cation" | "anion" | "identify";
+
+export interface SaltTestResult {
+  testName:      string;
+  observation:   string;
+  color:         string;
+  precipitate:   boolean;
+  effervescence: boolean;
+  timestamp:     number;
+}
+
+export interface SaltAnalysisState {
+  mode:             ExperimentMode;
+  status:           ExperimentStatus;
+  selectedSalt:     UnknownSaltId | null;
+  phase:            SaltTestPhase;
+  cationResults:    SaltTestResult[];
+  anionResults:     SaltTestResult[];
+  identifiedCation: SaltCationId | null;
+  identifiedAnion:  SaltAnionId | null;
+  currentTest:      string | null;
+  isTesting:        boolean;
+  testProgress:     number;
+  steps:            StepDef[];
+  objectives:       ExperimentObjective[];
+  observations:     ObservationEvent[];
+  result:           ExperimentResult | null;
+  startedAt:        number | null;
+}
+
+// ─── Water Hardness (EDTA Titration) ──────────────────────────────────────────
+export type HardnessCategory = "soft" | "moderately-hard" | "hard" | "very-hard";
+
+export interface WaterHardnessState {
+  mode:             ExperimentMode;
+  status:           ExperimentStatus;
+  buretteFilled:    boolean;
+  samplePrepared:   boolean;
+  indicatorAdded:   boolean;
+  edtaAddedMl:      number;
+  endpointReached:  boolean;
+  solutionColor:    string;
+  hardnessMgL:      number | null;
+  hardnessCategory: HardnessCategory | null;
+  isTitrating:      boolean;
+  steps:            StepDef[];
+  objectives:       ExperimentObjective[];
+  observations:     ObservationEvent[];
+  result:           ExperimentResult | null;
+  startedAt:        number | null;
+}
+
+// ─── Functional Group Identification ─────────────────────────────────────────
+export type FunctionalGroupId    = "alcohol" | "aldehyde" | "ketone" | "carboxylic-acid" | "amine";
+export type FGTestId =
+  | "lucas-test"
+  | "tollens-test"
+  | "dnp-test"
+  | "nahco3-test"
+  | "hinsberg-test";
+export type UnknownCompoundId =
+  | "compound-a"
+  | "compound-b"
+  | "compound-c"
+  | "compound-d"
+  | "compound-e";
+
+export interface FGTestResult {
+  testId:        FGTestId;
+  testName:      string;
+  observation:   string;
+  color:         string;
+  positive:      boolean;
+  timestamp:     number;
+}
+
+export interface FunctionalGroupsState {
+  mode:             ExperimentMode;
+  status:           ExperimentStatus;
+  selectedCompound: UnknownCompoundId | null;
+  selectedTest:     FGTestId | null;
+  testResults:      FGTestResult[];
+  isTesting:        boolean;
+  identified:       FunctionalGroupId | null;
+  steps:            StepDef[];
+  objectives:       ExperimentObjective[];
+  observations:     ObservationEvent[];
+  result:           ExperimentResult | null;
+  startedAt:        number | null;
+}
+
+// ─── Paper Chromatography ─────────────────────────────────────────────────────
+export type InkId = "black-ink" | "blue-ink" | "green-ink" | "red-ink";
+
+export interface ChromaDye {
+  name:       string;
+  color:      string;
+  rfValue:    number;
+  distanceCm: number;
+}
+
+export interface ChromatographyState {
+  mode:           ExperimentMode;
+  status:         ExperimentStatus;
+  selectedInk:    InkId | null;
+  inkApplied:     boolean;
+  paperInChamber: boolean;
+  solventAdded:   boolean;
+  isRunning:      boolean;
+  solventFrontCm: number;
+  dyes:           ChromaDye[];
+  rfValues:       { name: string; rf: number; color: string }[];
+  runComplete:    boolean;
+  steps:          StepDef[];
+  objectives:     ExperimentObjective[];
+  observations:   ObservationEvent[];
+  result:         ExperimentResult | null;
+  startedAt:      number | null;
+}

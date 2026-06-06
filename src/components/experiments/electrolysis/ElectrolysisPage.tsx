@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState, startTransition } from "react";
 import { useElectrolysisStore }                           from "@/lib/store/electrolysis-store";
@@ -10,31 +10,12 @@ import StatusBar                                          from "@/components/lab
 import ResultModal                                        from "@/components/lab/ResultModal";
 import ContextPopup, { obsToPopup }                       from "@/components/lab/ContextPopup";
 import ChemicalAddPopup, { type ChemicalAddEvent }        from "@/components/lab/ChemicalAddPopup";
-import PreLabIntro                                        from "@/components/lab/PreLabIntro";
 import SetupPhase                                         from "@/components/lab/SetupPhase";
 import LabPageShell                                       from "@/components/lab/LabPageShell";
+import LabContextPanel                                    from "@/components/lab/LabContextPanel";
 import { ELECTROLYTES }                                   from "@/lib/engine/electrolysis-engine";
 import type { ElectrolyteId }                             from "@/lib/engine/types";
-
-// ── Pre-lab data ──────────────────────────────────────────────────────────────
-const ELECTROLYSIS_INTRO = {
-  title:     "Electrolysis of Ionic Solutions",
-  objective: "Investigate electrolysis using a Hofmann voltameter. Select an ionic electrolyte, insert carbon electrodes, connect the DC power source, and observe gas evolution and electrode reactions.",
-  apparatus: ["Hofmann Voltameter", "DC Power Supply (0–12 V)", "Carbon Electrodes (×2)", "Connecting Wires", "Gas Collection Tubes (×2)"],
-  reagents: [
-    { name: "NaCl — sodium chloride",  concentration: "aqueous, select before start" },
-    { name: "H₂SO₄ — sulphuric acid",  concentration: "dilute, aqueous" },
-    { name: "CuSO₄ — copper sulphate", concentration: "aqueous (blue)" },
-    { name: "NaOH — sodium hydroxide", concentration: "aqueous" },
-    { name: "Distilled water",          concentration: "non-electrolyte control" },
-  ],
-  safetyNotes: [
-    "Electric shock hazard — never handle connections while power is on.",
-    "Chlorine gas may evolve from NaCl — work in a well-ventilated area.",
-    "Do not exceed 12 V — follow the voltage safety limit.",
-    "H₂SO₄ is highly corrosive — wear gloves and safety goggles at all times.",
-  ],
-};
+import { EXPERIMENT_EDUCATION }                           from "@/lib/experiment-education";
 
 // ── Popup events ─────────────────────────────────────────────────────────────
 const ELECTROLYTE_EVENTS: Record<ElectrolyteId, ChemicalAddEvent> = {
@@ -79,7 +60,6 @@ const ELECTRODE_EVENT: ChemicalAddEvent = {
 
 // ── Page component ────────────────────────────────────────────────────────────
 export default function ElectrolysisPage() {
-  const [mounted, setMounted]             = useState(false);
   const [showObsPopup, setShowObsPopup]   = useState(false);
   const [chemEvent, setChemEvent]         = useState<ChemicalAddEvent | null>(null);
   const [showChemPopup, setShowChemPopup] = useState(false);
@@ -92,13 +72,11 @@ export default function ElectrolysisPage() {
 
   useEffect(() => {
     store.hydrate();
-    startTransition(() => setMounted(true));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Simulation tick — 1 Hz when running
   useEffect(() => {
-    if (!mounted) return;
     if (store.status === "running") {
       tickRef.current = setInterval(() => store.tickAction(1), 1000);
     } else {
@@ -106,7 +84,7 @@ export default function ElectrolysisPage() {
     }
     return () => { if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; } };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [store.status, mounted]);
+  }, [store.status]);
 
   useEffect(() => () => {
     if (obsTimer.current)  clearTimeout(obsTimer.current);
@@ -121,13 +99,6 @@ export default function ElectrolysisPage() {
     obsTimer.current = setTimeout(() => setShowObsPopup(false), 3800);
   }, [lastObsId]);
 
-  if (!mounted) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 rounded-full border-2 border-blue-400 border-t-transparent animate-spin" />
-      </div>
-    );
-  }
 
   function fireChemPopup(ev: ChemicalAddEvent) {
     setChemEvent(ev);
@@ -221,10 +192,32 @@ export default function ElectrolysisPage() {
     </>
   );
 
+  const electrolysisLeftPanel = (
+    <LabContextPanel
+      title="Electrolysis"
+      accent="#059669"
+      summary="DC current forces non-spontaneous redox reactions. Cations migrate to cathode (reduction); anions migrate to anode (oxidation)."
+      formula="m = (I × t) / (n × F)"
+      formulaLabel="Faraday's First Law"
+      facts={[
+        { icon: "⚡", label: "Cathode (−)", value: "Reduction (gain e⁻)" },
+        { icon: "⚡", label: "Anode (+)",   value: "Oxidation (lose e⁻)" },
+        { icon: "📐", label: "Faraday",    value: "96 485 C mol⁻¹" },
+        { icon: "🧪", label: "NaCl anode", value: "Cl₂↑ or O₂↑" },
+      ]}
+      steps={[
+        { number: 1, title: "Select electrolyte", body: "Choose an ionic solution from the controls. Distilled water is the non-conductive control." },
+        { number: 2, title: "Insert electrodes",  body: "Insert carbon (graphite) electrodes — inert, so they don't react." },
+        { number: 3, title: "Set voltage",        body: "Adjust voltage (6–12 V). Higher voltage drives a faster rate." },
+        { number: 4, title: "Start DC supply",    body: "Click 'Start' to complete the circuit and begin electrolysis." },
+        { number: 5, title: "Compare gases",      body: "Observe volumes of gas at each electrode — note the 2:1 ratio for H₂:O₂." },
+      ]}
+    />
+  );
+
   return (
     <LabPageShell
-      preLabIntro={<PreLabIntro {...ELECTROLYSIS_INTRO} />}
-
+      leftPanel={electrolysisLeftPanel}
       statusBar={
         <StatusBar
           status={store.status}
@@ -253,7 +246,14 @@ export default function ElectrolysisPage() {
           cathodeGasMl={store.cathodeGasMl}
         />
       }
-      workspaceMaxW="max-w-xl"
+      education={EXPERIMENT_EDUCATION.electrolysis}
+      reactionNote={
+        store.electrolyte
+          ? store.status === "running"
+            ? `${store.cathode.gasFormula ?? "Gas"}↑ cathode (−) · ${store.anode.gasFormula ?? "Gas"}↑ anode (+) · ${store.current.toFixed(2)} A · ${store.runTimeSeconds.toFixed(0)} s`
+            : `${ELECTROLYTES[store.electrolyte].name.split("—")[0].trim()} — insert electrodes then start DC supply.`
+          : "Select an electrolyte to begin electrolysis."
+      }
 
       setupPhase={
         !setupDone ? (

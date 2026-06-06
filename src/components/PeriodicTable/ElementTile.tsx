@@ -9,11 +9,8 @@ interface Props {
   gridCol?:      number;
   onHover:       (el: ChemElement | null, rect?: DOMRect) => void;
   onClick:       (el: ChemElement) => void;
-  /** Full opacity when true; dimmed when false and something else is hovered. */
   isHighlighted: boolean;
-  /** True when this tile's category is the actively hovered category. */
   isActive:      boolean;
-  /** True when this element is the selected/clicked element. */
   isSelected:    boolean;
 }
 
@@ -24,6 +21,9 @@ export default function ElementTile({
   const row = gridRow ?? element.row;
   const col = gridCol ?? element.col;
 
+  // Wave-stagger delay: tiles reveal left→right, top→bottom
+  const delayMs = Math.min(1400, ((row - 1) * 18 + (col - 1)) * 5);
+
   return (
     <div
       ref={ref}
@@ -31,14 +31,16 @@ export default function ElementTile({
       style={{
         gridRow:       row,
         gridColumn:    col,
-        opacity:       isHighlighted ? 1 : 0.4,
+        opacity:       isHighlighted ? 1 : 0.22,
         outline:       isSelected
-          ? "2px solid var(--lab-blue-600)"
+          ? "2px solid var(--tile-border, var(--lab-blue-600))"
           : isActive
-          ? "2px solid var(--lab-blue-500)"
+          ? "1px solid var(--tile-border, var(--lab-blue-500))"
           : undefined,
-        outlineOffset: isSelected || isActive ? "1px" : undefined,
-        transition:    "opacity 0.18s ease, outline 0.1s ease",
+        outlineOffset: isSelected ? "2px" : isActive ? "1px" : undefined,
+        boxShadow:     isSelected ? "0 0 16px var(--tile-border, rgba(96,165,250,0.5))" : undefined,
+        transition:    "opacity 0.18s ease, outline 0.10s ease, box-shadow 0.15s ease",
+        animationDelay: `${delayMs}ms`,
       }}
       onMouseEnter={() => onHover(element, ref.current?.getBoundingClientRect())}
       onMouseLeave={() => onHover(null)}

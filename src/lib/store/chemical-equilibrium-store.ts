@@ -49,6 +49,14 @@ export const useChemicalEquilibriumStore = create<ChemicalEquilibriumStore>((set
 
   hydrate: () => {
     const saved = loadSession<ChemicalEquilibriumState>(STORAGE_KEY);
-    if (saved) set({ ...saved, lastError: null });
+    if (saved) {
+      if (saved.status === "completed" || saved.status === "failed") {
+        const fresh = initialEquilibriumState(saved.mode);
+        set({ ...fresh, lastError: null });
+        saveSession(STORAGE_KEY, fresh);
+      } else {
+        set({ ...saved, lastError: null });
+      }
+    }
   },
 }));

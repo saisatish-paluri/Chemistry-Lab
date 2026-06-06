@@ -3,6 +3,72 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
+// ── Wikimedia Commons photo backgrounds per apparatus item ─────────────────────
+// Each photo shows the exact apparatus at medium opacity behind the SVG illustration.
+// Sources are CC-licensed Wikimedia Commons images — verified and apparatus-specific.
+// onError fallback silently drops the photo and keeps the SVG visible.
+const APPARATUS_PHOTOS: Record<string, string> = {
+  // Glass burette with stopcock — CC-licensed photograph
+  "burette":              "https://upload.wikimedia.org/wikipedia/commons/7/71/Burette.png",
+  // Erlenmeyer (conical) flask — standard laboratory photograph
+  "conical-flask":        "https://upload.wikimedia.org/wikipedia/commons/0/00/Erlenmeyer_flask_hg.jpg",
+  // Bunsen burner with blue flame
+  "bunsen-burner":        "https://upload.wikimedia.org/wikipedia/commons/1/1c/Mechero_Bunsen.jpg",
+  // Glass beaker — 250 mL borosilicate beaker photograph
+  "beaker":               "https://upload.wikimedia.org/wikipedia/commons/4/4a/Beaker_%28laboratory_equipment%29.jpg",
+  // Nichrome wire loop used in flame tests
+  "nichrome-loop":        "https://upload.wikimedia.org/wikipedia/commons/d/d5/Copper_flame_test.JPG",
+  // DC bench power supply
+  "dc-power-supply":      "https://upload.wikimedia.org/wikipedia/commons/1/1a/Bench_PSU.JPG",
+  // Carbon electrode pair for electrolysis
+  "electrode":            "https://upload.wikimedia.org/wikipedia/commons/d/d1/Electrolysis_Apparatus.png",
+  // Hofmann voltameter — classic electrolysis U-tube
+  "hofmann-voltameter":   "https://upload.wikimedia.org/wikipedia/commons/e/ec/Hofmann_voltameter_1866.jpg",
+  // Litmus indicator paper strips
+  "indicator":            "https://upload.wikimedia.org/wikipedia/commons/e/e6/Blue_and_red_litmus_paper.JPG",
+  // 250 mL glass graduated cylinder
+  "measuring-cylinder":   "https://upload.wikimedia.org/wikipedia/commons/7/7c/Glass_graduated_cylinder-250ml_1.jpg",
+  // Glass test tubes in rack
+  "test-tube":            "https://upload.wikimedia.org/wikipedia/commons/e/e2/TestTubes.jpg",
+  // Pasteur dropping pipettes
+  "dropper":              "https://upload.wikimedia.org/wikipedia/commons/9/9b/Pasteur_Pipets.jpg",
+  // Porcelain evaporating dish
+  "evaporating-dish":     "https://upload.wikimedia.org/wikipedia/commons/c/cf/Abdampfschalen_verschiedene_Groessen.jpg",
+  // Laboratory glass thermometer
+  "thermometer":          "https://upload.wikimedia.org/wikipedia/commons/2/22/CelsiusKelvinThermometer.jpg",
+  // Chromatography paper strip
+  "chromatography-paper": "https://upload.wikimedia.org/wikipedia/commons/3/32/Chromatography_paper.jpg",
+  // Liebig water-cooled condenser
+  "condenser":            "https://upload.wikimedia.org/wikipedia/commons/f/ff/LiebigCondenser.jpg",
+};
+
+// Photo with silent error fallback — renders nothing if URL is unavailable.
+// Default opacity raised so the apparatus photo is clearly visible behind the SVG.
+function ApparatusPhoto({ id, opacity = 0.45 }: { id: string; opacity?: number }) {
+  const [err, setErr] = useState(false);
+  const url = APPARATUS_PHOTOS[id];
+  if (!url || err) return null;
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={url}
+      alt=""
+      aria-hidden="true"
+      onError={() => setErr(true)}
+      style={{
+        position:   "absolute",
+        inset:      0,
+        width:      "100%",
+        height:     "100%",
+        objectFit:  "cover",
+        objectPosition: "center",
+        opacity,
+        borderRadius: "inherit",
+      }}
+    />
+  );
+}
+
 interface Apparatus {
   id:       string;
   name:     string;
@@ -282,12 +348,13 @@ export default function ApparatusSection() {
                     }}
                     aria-pressed={isSelected}
                   >
-                    {/* Image area */}
+                    {/* Image area — real photo background + SVG illustration overlay */}
                     <div
-                      className="flex items-center justify-center h-28 w-full"
-                      style={{ background: `${item.accent}08` }}
+                      className="flex items-center justify-center h-28 w-full overflow-hidden"
+                      style={{ background: `${item.accent}08`, position: "relative" }}
                     >
-                      <div style={{ color: item.accent, width: 64, height: 64 }}>
+                      <ApparatusPhoto id={item.id} opacity={0.45} />
+                      <div style={{ color: item.accent, width: 64, height: 64, position: "relative", zIndex: 2 }}>
                         {item.render}
                       </div>
                     </div>
@@ -327,12 +394,13 @@ export default function ApparatusSection() {
                   boxShadow:   `0 8px 32px ${detail.accent}1a`,
                 }}
               >
-                {/* Header render */}
+                {/* Header render — real photo background + SVG overlay */}
                 <div
-                  className="flex items-center justify-center h-36"
-                  style={{ background: `${detail.accent}0a` }}
+                  className="flex items-center justify-center h-36 overflow-hidden"
+                  style={{ background: `${detail.accent}0a`, position: "relative" }}
                 >
-                  <div style={{ color: detail.accent, width: 80, height: 80 }}>
+                  <ApparatusPhoto id={detail.id} opacity={0.50} />
+                  <div style={{ color: detail.accent, width: 80, height: 80, position: "relative", zIndex: 2 }}>
                     {detail.render}
                   </div>
                 </div>

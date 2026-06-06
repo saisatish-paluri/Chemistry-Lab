@@ -17,7 +17,18 @@ export type ExperimentKey =
   | "gas-collection"
   | "redox-displacement"
   | "calorimetry"
-  | "separation-techniques";
+  | "separation-techniques"
+  // Class 6-7 experiments
+  | "density-floats-sinks"
+  | "dissolving-rate"
+  | "indicator-test"
+  | "filtration-basics"
+  // New experiments
+  | "neutralization"
+  | "salt-analysis"
+  | "water-hardness"
+  | "functional-groups"
+  | "chromatography";
 
 export const MCQ_DATA: Record<ExperimentKey, MCQQuestion[]> = {
 
@@ -674,4 +685,185 @@ export const MCQ_DATA: Record<ExperimentKey, MCQQuestion[]> = {
         "Ethanol and water are miscible liquids with sufficiently different boiling points (~22 °C apart) that simple distillation can separate them. Ethanol distils first at ~78 °C; the temperature then rises as the ethanol fraction is depleted, indicating when to stop collecting the first fraction.",
     },
   ],
+
+  // ── Class 6-7 experiments ──────────────────────────────────────────────────
+  "density-floats-sinks": [
+    {
+      id: "df1",
+      question: "An object has a density of 0.85 g/cm³. What happens when it is placed in water?",
+      options: ["It sinks to the bottom", "It floats on the surface", "It dissolves in water", "It explodes"],
+      correctIndex: 1,
+      explanation: "Since the object's density (0.85 g/cm³) is less than water's density (1.0 g/cm³), the buoyant force is greater than the object's weight, causing it to float.",
+    },
+    {
+      id: "df2",
+      question: "Which of the following correctly states the condition for an object to sink in water?",
+      options: [
+        "Its density is less than 1.0 g/cm³",
+        "Its density equals 1.0 g/cm³",
+        "Its density is greater than 1.0 g/cm³",
+        "Its mass is less than 100g",
+      ],
+      correctIndex: 2,
+      explanation: "An object sinks when its density is greater than the density of water (1.0 g/cm³). In this case the gravitational force on the object exceeds the buoyant force.",
+    },
+    {
+      id: "df3",
+      question: "A steel ship floats despite steel being denser than water. Why?",
+      options: [
+        "Steel becomes less dense when shaped into a ship",
+        "The hollow hull shape increases the ship's effective volume, reducing its average density below 1.0 g/cm³",
+        "Water becomes denser under the ship",
+        "The ship has special anti-gravity engines",
+      ],
+      correctIndex: 1,
+      explanation: "The ship's hull encloses a large volume of air, making the ship's total mass spread over a much larger volume. This lowers the average density of the ship-plus-air system to below 1.0 g/cm³, allowing it to float — this is Archimedes' Principle.",
+    },
+    {
+      id: "df4",
+      question: "Ice floats on water. What does this tell us about the density of ice compared to liquid water?",
+      options: [
+        "Ice is denser than water (ρ_ice > 1.0)",
+        "Ice has the same density as water (ρ_ice = 1.0)",
+        "Ice is less dense than water (ρ_ice < 1.0)",
+        "The density of ice changes with temperature and cannot be stated",
+      ],
+      correctIndex: 2,
+      explanation: "Ice floats because its density (~0.92 g/cm³) is slightly less than liquid water (1.0 g/cm³). This is unusual — most substances are denser in the solid phase than the liquid phase. Ice's crystal structure leaves more empty space between molecules than liquid water.",
+    },
+  ],
+
+  "dissolving-rate": [
+    {
+      id: "dr1",
+      question: "Which change would most increase the rate at which sugar dissolves in water?",
+      options: [
+        "Using a larger beaker",
+        "Using powdered sugar in hot water with stirring",
+        "Using coarse sugar in cold water without stirring",
+        "Doubling the amount of sugar",
+      ],
+      correctIndex: 1,
+      explanation: "Powdered sugar maximises surface area; hot water provides more kinetic energy to break sugar-sugar bonds; stirring continuously brings fresh solvent into contact with the solute. Combining all three factors gives the fastest dissolving rate.",
+    },
+    {
+      id: "dr2",
+      question: "Why does stirring increase the rate of dissolving?",
+      options: [
+        "Stirring heats the water",
+        "Stirring breaks the solute into smaller pieces",
+        "Stirring moves dissolved particles away from the solute surface, bringing fresh solvent into contact",
+        "Stirring reduces the amount of solute needed",
+      ],
+      correctIndex: 2,
+      explanation: "When a solute dissolves, the region immediately around it becomes concentrated with dissolved particles, slowing further dissolving. Stirring disperses this concentrated layer and brings fresh, unsaturated solvent into contact with the solute surface.",
+    },
+    {
+      id: "dr3",
+      question: "If you crush a sugar cube before dissolving it, what happens and why?",
+      options: [
+        "It dissolves more slowly because the crystals are damaged",
+        "It dissolves faster because it has a greater surface area exposed to the solvent",
+        "It dissolves at the same rate because the total mass is unchanged",
+        "It dissolves faster because crushing makes the sugar react with water",
+      ],
+      correctIndex: 1,
+      explanation: "Crushing increases the number of faces of the sugar exposed to water. Dissolving occurs only at the surface between solute and solvent, so more surface area means more sites where water molecules can interact with sugar molecules simultaneously.",
+    },
+    {
+      id: "dr4",
+      question: "A student dissolves salt in cold water (5°C). She then repeats the experiment in hot water (80°C). What difference would she observe?",
+      options: [
+        "The salt dissolves more slowly in hot water",
+        "The salt dissolves at the same speed regardless of temperature",
+        "The salt dissolves more quickly in hot water",
+        "The salt does not dissolve in cold water at all",
+      ],
+      correctIndex: 2,
+      explanation: "In hot water, both the water molecules and the salt ions have higher kinetic energy. Water molecules collide with the salt surface more frequently and with more energy, breaking the ionic bonds between Na⁺ and Cl⁻ faster. Solubility and dissolving rate both generally increase with temperature.",
+    },
+  ],
+
+  "indicator-test": [
+    {
+      id: "it1",
+      question: "What colour does red litmus paper turn when dipped into an alkaline solution?",
+      options: ["Red (stays the same)", "Blue", "Yellow", "Green"],
+      correctIndex: 1,
+      explanation: "Red litmus paper turns blue in alkaline (basic) conditions. The alkaline solution provides OH⁻ ions which interact with the litmus pigment, changing its structure and colour. In acidic conditions, blue litmus turns red — this is the reverse change.",
+    },
+    {
+      id: "it2",
+      question: "Lemon juice turns turmeric paper from yellow to which colour?",
+      options: ["Blue", "Green", "Red / orange-red", "Stays yellow"],
+      correctIndex: 3,
+      explanation: "Lemon juice is acidic (pH ~2). Turmeric paper stays yellow in acidic and neutral conditions — it only changes to red in strongly basic (alkaline) conditions. So lemon juice would NOT change turmeric paper's colour.",
+    },
+    {
+      id: "it3",
+      question: "What does pH 7 indicate?",
+      options: [
+        "Strongly acidic",
+        "Weakly acidic",
+        "Neutral — equal concentrations of H⁺ and OH⁻",
+        "Strongly basic",
+      ],
+      correctIndex: 2,
+      explanation: "At pH 7, the concentration of hydrogen ions (H⁺) equals the concentration of hydroxide ions (OH⁻) — this is the neutral point. Pure water has a pH of 7. Acids have pH < 7 (more H⁺) and bases have pH > 7 (more OH⁻).",
+    },
+    {
+      id: "it4",
+      question: "Baking soda solution turns red cabbage juice from purple to which colour?",
+      options: ["Red / pink", "Yellow / green", "Blue", "Stays purple"],
+      correctIndex: 1,
+      explanation: "Baking soda (sodium bicarbonate) is basic, with pH around 8.3. Red cabbage juice acts as a universal indicator: it's purple at neutral pH, red/pink in acid, and green/yellow in alkali. Since baking soda is basic, it turns the cabbage juice green/yellow.",
+    },
+  ],
+
+  "filtration-basics": [
+    {
+      id: "fb1",
+      question: "What is the name of the solid left on the filter paper after filtration?",
+      options: ["Filtrate", "Residue", "Precipitate", "Solvent"],
+      correctIndex: 1,
+      explanation: "The solid that cannot pass through the filter paper and remains on it is called the residue (or residuum). The liquid that passes through is the filtrate. In this experiment, sand is the residue and the salt solution is the filtrate.",
+    },
+    {
+      id: "fb2",
+      question: "Why can filtration separate sand from saltwater but NOT salt from saltwater?",
+      options: [
+        "Salt is too heavy to pass through the filter paper",
+        "Sand particles are small enough to pass through filter paper",
+        "Salt is dissolved and exists as individual ions, which are much smaller than the filter paper pores",
+        "Saltwater is too dense to pass through the filter paper",
+      ],
+      correctIndex: 2,
+      explanation: "Filtration separates insoluble solids from liquids based on particle size. Sand particles are visible solid particles, larger than the filter paper pores — they are retained. Salt is dissolved as Na⁺ and Cl⁻ ions (~0.1 nm), far smaller than filter paper pores — they pass through with the water.",
+    },
+    {
+      id: "fb3",
+      question: "After filtering a sand-salt mixture, what technique would you use to recover the salt from the filtrate?",
+      options: ["Filtration again", "Evaporation (crystallisation)", "Centrifugation", "Magnetic separation"],
+      correctIndex: 1,
+      explanation: "To recover dissolved salt from the filtrate, you heat the solution so the water evaporates, leaving salt crystals behind. This process is called evaporation or crystallisation. It works for any soluble solid dissolved in water.",
+    },
+    {
+      id: "fb4",
+      question: "Which of the following mixtures can be separated by filtration?",
+      options: [
+        "Sugar dissolved in water",
+        "Alcohol and water",
+        "Iron filings mixed with water",
+        "Salt dissolved in vinegar",
+      ],
+      correctIndex: 2,
+      explanation: "Filtration separates insoluble solids from liquids. Iron filings are insoluble in water — they do not dissolve and form suspended particles that can be trapped by filter paper. Sugar, salt, and alcohol are all soluble/miscible and would pass through the filter with the liquid.",
+    },
+  ],
+
+  neutralization:    [],
+  "salt-analysis":   [],
+  "water-hardness":  [],
+  "functional-groups": [],
+  chromatography:    [],
 };

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useRef, startTransition } from "react";
 import { motion, AnimatePresence }                       from "framer-motion";
@@ -8,8 +8,9 @@ import ObservationPanel                                  from "@/components/lab/
 import StatusBar                                         from "@/components/lab/StatusBar";
 import ResultModal                                       from "@/components/lab/ResultModal";
 import ContextPopup, { obsToPopup }                      from "@/components/lab/ContextPopup";
-import PreLabIntro                                       from "@/components/lab/PreLabIntro";
 import LabPageShell                                      from "@/components/lab/LabPageShell";
+import LabContextPanel                                   from "@/components/lab/LabContextPanel";
+import { EXPERIMENT_EDUCATION }                          from "@/lib/experiment-education";
 import type {
   SeparationTechnique,
   FiltrationState,
@@ -17,36 +18,6 @@ import type {
   DistillationState,
   ChromatographyState,
 } from "@/lib/engine/separation-techniques-engine";
-
-const INTRO = {
-  title:     "Separation Techniques Laboratory",
-  objective: "Perform four classical separation techniques — filtration, evaporation to crystallisation, simple distillation, and paper chromatography — to separate and purify the components of mixtures. Understand the physical principle behind each method and match each technique to an appropriate real-world application.",
-  apparatus: [
-    "Filter funnel & filter paper",
-    "Evaporating dish",
-    "Bunsen burner & tripod",
-    "Distillation flask (250 mL)",
-    "Liebig condenser",
-    "Chromatography paper & tank",
-    "Capillary tubes",
-    "Collecting flasks",
-    "Thermometer",
-    "Pencil, ruler",
-  ],
-  reagents: [
-    { name: "Sand–water mixture",       concentration: "25 g sand in 200 mL water — filtration" },
-    { name: "NaCl(aq)",                  concentration: "0.5 M, 50 mL — evaporation" },
-    { name: "Ethanol–water mixture",    concentration: "~40 % v/v, 50 mL — distillation" },
-    { name: "Mixed food colouring ink", concentration: "3-component blend — chromatography" },
-    { name: "Ethanol (solvent)",         concentration: "96 % — chromatography mobile phase" },
-  ],
-  safetyNotes: [
-    "Keep ethanol away from open flames — it is highly flammable.",
-    "Wear eye protection throughout. Conduct distillation in a fume cupboard.",
-    "Allow all glassware to cool before handling — burns risk.",
-    "Do not seal the distillation system — pressure build-up may cause breakage.",
-  ],
-};
 
 const TECHNIQUES: Array<{
   id:        SeparationTechnique;
@@ -96,14 +67,15 @@ const TECHNIQUES: Array<{
 ];
 
 export default function SeparationTechniquesPage() {
-  const [mounted, setMounted]     = useState(false);
   const [showPopup, setShowPopup] = useState(false);
-  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const store   = useSeparationTechniquesStore();
+  const tickRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const store    = useSeparationTechniquesStore();
+  // Keep a stable ref to the latest store so interval callbacks never go stale
+  const storeRef = useRef(store);
+  useEffect(() => { storeRef.current = store; });
 
   useEffect(() => {
     store.hydrate();
-    startTransition(() => setMounted(true));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -115,34 +87,32 @@ export default function SeparationTechniquesPage() {
     return () => clearTimeout(t);
   }, [lastObsId]);
 
+  // Tick interval — only restarts when technique or status meaningfully changes,
+  // NOT on every store update (fixing the exponential interval accumulation bug).
+  const { technique, status } = store;
   useEffect(() => {
-    if (!store.technique || store.status === "completed") {
-      if (tickRef.current) clearInterval(tickRef.current);
+    if (!technique || status === "completed") {
+      if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
       return;
     }
 
-    tickRef.current = setInterval(() => {
-      if (store.technique === "filtration" && store.filtration.pourStarted && !store.filtration.filtrateCollected) {
-        store.filtrationTickAction();
-      } else if (store.technique === "evaporation" && store.evaporation.heatApplied && !store.evaporation.complete) {
-        store.evaporationTickAction();
-      } else if (store.technique === "distillation" && store.distillation.heaterOn && !store.distillation.complete) {
-        store.distillationTickAction();
-      } else if (store.technique === "chromatography" && store.chromatography.solventAdded && !store.chromatography.developed) {
-        store.chromatographyTickAction();
+    const id = setInterval(() => {
+      const s = storeRef.current;
+      if (s.technique === "filtration" && s.filtration.pourStarted && !s.filtration.filtrateCollected) {
+        s.filtrationTickAction();
+      } else if (s.technique === "evaporation" && s.evaporation.heatApplied && !s.evaporation.complete) {
+        s.evaporationTickAction();
+      } else if (s.technique === "distillation" && s.distillation.heaterOn && !s.distillation.complete) {
+        s.distillationTickAction();
+      } else if (s.technique === "chromatography" && s.chromatography.solventAdded && !s.chromatography.developed) {
+        s.chromatographyTickAction();
       }
     }, 600);
 
-    return () => { if (tickRef.current) clearInterval(tickRef.current); };
-  }, [store]);
+    tickRef.current = id;
+    return () => { clearInterval(id); tickRef.current = null; };
+  }, [technique, status]);
 
-  if (!mounted) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 rounded-full border-2 border-blue-400 border-t-transparent animate-spin" />
-      </div>
-    );
-  }
 
   const lastObs = store.observations[0];
   const popup   = lastObs ? obsToPopup(lastObs.type, lastObs.message) : null;
@@ -179,7 +149,7 @@ export default function SeparationTechniquesPage() {
     <div className="w-full">
       <p
         className="text-xs font-semibold uppercase tracking-widest mb-5 text-center"
-        style={{ color: "var(--lab-blue-600)" }}
+        style={{ color: "#3b6690" }}
       >
         Select a Separation Technique to Begin
       </p>
@@ -192,24 +162,24 @@ export default function SeparationTechniquesPage() {
             onClick={() => store.selectTechniqueAction(t.id)}
             className="rounded-2xl p-5 border text-left transition-all duration-150"
             style={{
-              background:  "var(--lab-glass-heavy)",
-              borderColor: "var(--lab-glass-border)",
-              boxShadow:   "var(--lab-shadow-md)",
+              background:  "rgba(9,24,52,0.80)",
+              borderColor: `${t.accent}55`,
+              boxShadow:   "0 4px 20px rgba(0,0,0,0.40)",
             }}
           >
             <div
               className="w-12 h-12 rounded-xl flex items-center justify-center mb-3"
-              style={{ background: t.bg, color: t.accent }}
+              style={{ background: `${t.accent}18`, color: t.accent }}
             >
               {t.icon}
             </div>
-            <p className="text-sm font-bold mb-1" style={{ color: "var(--lab-text-primary)" }}>
+            <p className="text-sm font-bold mb-1" style={{ color: "#f1f5f9" }}>
               {t.label}
             </p>
-            <p className="text-[10.5px] leading-snug mb-2" style={{ color: "var(--lab-text-muted)" }}>
+            <p className="text-[10.5px] leading-snug mb-2" style={{ color: "#94a3b8" }}>
               {t.principle}
             </p>
-            <p className="text-[9.5px]" style={{ color: t.accent }}>
+            <p className="text-[9.5px]" style={{ color: `${t.accent}ee` }}>
               Used for: {t.use}
             </p>
           </motion.button>
@@ -239,10 +209,29 @@ export default function SeparationTechniquesPage() {
     </div>
   );
 
+  const sepLeftPanel = (
+    <LabContextPanel
+      title="Separation Techniques"
+      accent="#0891b2"
+      summary="Each technique exploits a different physical property: particle size (filtration), boiling point (distillation), or solubility/affinity (chromatography)."
+      facts={[
+        { icon: "🔽", label: "Filtration",     value: "Solid/liquid — particle size" },
+        { icon: "💨", label: "Distillation",   value: "Liquids — boiling point diff." },
+        { icon: "📊", label: "Chromatography", value: "Rf = dist. spot / dist. solvent" },
+        { icon: "🧂", label: "Evaporation",    value: "Dissolve solute from solution" },
+      ]}
+      steps={[
+        { number: 1, title: "Choose technique", body: "Click a technique card in the workspace: Filtration, Distillation, or Chromatography." },
+        { number: 2, title: "Set up apparatus", body: "Follow the setup steps in the Controls panel. Each technique has its own procedure." },
+        { number: 3, title: "Start separation", body: "Click Run/Start to begin the separation process and collect data." },
+        { number: 4, title: "Analyse results",  body: "For chromatography, calculate Rf values. For distillation, record boiling points." },
+      ]}
+    />
+  );
+
   return (
     <LabPageShell
-      preLabIntro={<PreLabIntro {...INTRO} />}
-
+      leftPanel={sepLeftPanel}
       statusBar={
         <StatusBar
           status={store.status}
@@ -252,7 +241,18 @@ export default function SeparationTechniquesPage() {
       }
 
       workspace={workspace}
-      workspaceMaxW={store.technique ? "max-w-md" : "max-w-2xl"}
+      education={EXPERIMENT_EDUCATION["separation-techniques"]}
+      reactionNote={
+        store.technique === "filtration"
+          ? "Filtration: filter paper retains the insoluble residue; liquid filtrate passes through by gravity."
+          : store.technique === "evaporation"
+            ? "Evaporation: heating drives off the solvent as vapour, leaving the dissolved solute as dry crystals."
+            : store.technique === "distillation"
+              ? "Distillation: the most volatile component boils first, condenses, and is collected as the distillate."
+              : store.technique === "chromatography"
+                ? "Chromatography: Rf = spot distance ÷ solvent front — unique per compound under fixed conditions."
+                : "Select Filtration, Evaporation, Distillation, or Chromatography to begin."
+      }
 
       centerBottom={store.technique ? <NarratorPanel store={store} /> : undefined}
 
@@ -294,26 +294,45 @@ function TechniqueWorkspace({
 }) {
   return (
     <div
-      className="rounded-2xl overflow-hidden"
+      className="relative rounded-3xl overflow-hidden"
       style={{
-        background: "var(--lab-glass-heavy)",
-        border:     "1px solid var(--lab-glass-border)",
-        boxShadow:  "var(--lab-shadow-md)",
+        width:     "100%",
+        maxHeight: "100%",
+        background: "radial-gradient(ellipse at 50% 25%, rgba(2,132,199,0.08) 0%, transparent 50%), linear-gradient(180deg, #f0f7ff 0%, #e8f3ff 40%, #f0f7ff 100%)",
+        border: "1px solid rgba(148,163,184,0.28)",
+        boxShadow: `0 10px 30px rgba(15,23,42,0.06), 0 2px 6px rgba(15,23,42,0.03), 0 0 0 1px rgba(255,255,255,0.80) inset`,
       }}
     >
-      <div className="flex items-center gap-2 px-4 py-3 border-b" style={{ borderColor: "var(--lab-glass-border)" }}>
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: "radial-gradient(circle, rgba(99,179,237,0.10) 1px, transparent 1px)",
+          backgroundSize:  "22px 22px",
+        }}
+      />
+      <div className="relative flex items-center gap-2 px-4 py-3 border-b z-10"
+        style={{ borderColor: "rgba(99,179,237,0.18)" }}>
         <div
           className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-          style={{ background: tech.bg, color: tech.accent }}
+          style={{ background: `${tech.accent}20`, color: tech.accent }}
         >
           {tech.icon}
         </div>
-        <p className="text-xs font-bold" style={{ color: "var(--lab-text-primary)" }}>{tech.label}</p>
-        <span className="text-[9px] ml-auto font-mono" style={{ color: "var(--lab-text-subtle)" }}>
+        <p className="text-xs font-bold flex-shrink-0" style={{ color: tech.accent }}>{tech.label}</p>
+        <span
+          className="text-[9px] ml-2 font-mono min-w-0 overflow-hidden"
+          style={{
+            color: "#4b7096",
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+          }}
+        >
           {tech.principle}
         </span>
       </div>
-      <div className="p-4">
+      <div className="relative p-4 z-10">
         {store.technique === "filtration"     && <FiltrationDiagram    state={store.filtration} />}
         {store.technique === "evaporation"    && <EvaporationDiagram   state={store.evaporation} />}
         {store.technique === "distillation"   && <DistillationDiagram  state={store.distillation} />}
@@ -326,22 +345,30 @@ function TechniqueWorkspace({
 // ── SVG Diagrams ──────────────────────────────────────────────────────────────
 
 function FiltrationDiagram({ state }: { state: FiltrationState }) {
-  const fillH      = (state.pourProgress / 100) * 80;
-  const filtrateH  = state.filtrateCollected ? 40 : (state.filtrateClear ? (state.pourProgress / 100) * 40 : 0);
+  const fillH     = (state.pourProgress / 100) * 80;
+  const filtrateH = state.filtrateCollected ? 40 : (state.filtrateClear ? (state.pourProgress / 100) * 40 : 0);
 
   return (
     <svg viewBox="0 0 300 220" width="100%" aria-label="Filtration apparatus">
-      <line x1="150" y1="20" x2="150" y2="180" stroke="#94a3b8" strokeWidth="3" />
-      <line x1="110" y1="180" x2="190" y2="180" stroke="#94a3b8" strokeWidth="3" />
+      <defs>
+        <clipPath id="sep-funnel-clip">
+          <path d="M100 30 L200 30 L170 80 L130 80 Z" />
+        </clipPath>
+      </defs>
+      {/* Retort stand */}
+      <line x1="150" y1="20" x2="150" y2="180" stroke="rgba(99,179,237,0.35)" strokeWidth="3" />
+      <line x1="110" y1="180" x2="190" y2="180" stroke="rgba(99,179,237,0.35)" strokeWidth="3" />
 
-      <path d="M100 30 L200 30 L170 80 L130 80 Z" fill="rgba(219,234,254,0.4)" stroke="#3b82f6" strokeWidth="1.5" />
-      <path d="M130 80 L135 100 M170 80 L165 100" stroke="#3b82f6" strokeWidth="1.5" />
-      <rect x="133" y="100" width="34" height="30" rx="2" fill="none" stroke="#3b82f6" strokeWidth="1.5" />
+      {/* Funnel — dark glass */}
+      <path d="M100 30 L200 30 L170 80 L130 80 Z"
+            fill="rgba(255,255,255,0.48)" stroke="#60a5fa" strokeWidth="1.5" />
+      <path d="M130 80 L135 100 M170 80 L165 100" stroke="#60a5fa" strokeWidth="1.5" />
+      <rect x="133" y="100" width="34" height="30" rx="2" fill="rgba(255,255,255,0.48)" stroke="#60a5fa" strokeWidth="1.5" />
 
       {state.filterSetUp && (
         <>
-          <path d="M100 30 L155 82" stroke="white" strokeWidth="0.8" opacity="0.6" strokeDasharray="3 2" />
-          <text x="150" y="52" textAnchor="middle" fontSize="8" fill="#1d4ed8" fontWeight="600">Filter Paper</text>
+          <path d="M100 30 L155 82" stroke="rgba(255,255,255,0.15)" strokeWidth="0.8" strokeDasharray="3 2" />
+          <text x="150" y="52" textAnchor="middle" fontSize="8" fill="#60a5fa" fontWeight="600">Filter Paper</text>
         </>
       )}
 
@@ -350,9 +377,9 @@ function FiltrationDiagram({ state }: { state: FiltrationState }) {
           x="101" y={80 - fillH}
           width="98" height={fillH}
           animate={{ height: fillH, y: 80 - fillH }}
-          fill="rgba(148,163,184,0.5)"
+          fill="rgba(99,179,237,0.25)"
           transition={{ duration: 0.5 }}
-          clipPath="url(#funnel-clip)"
+          clipPath="url(#sep-funnel-clip)"
         />
       )}
 
@@ -360,35 +387,36 @@ function FiltrationDiagram({ state }: { state: FiltrationState }) {
         <>
           <motion.line
             x1="150" y1="130" x2="150" y2="160"
-            stroke="#93c5fd" strokeWidth="1.5"
+            stroke="#60a5fa" strokeWidth="1.5"
             animate={{ y2: [150, 160, 150] }}
             transition={{ repeat: Infinity, duration: 0.6 }}
           />
-          <text x="150" y="138" textAnchor="middle" fontSize="7.5" fill="#2563eb">filtrate</text>
+          <text x="150" y="138" textAnchor="middle" fontSize="7.5" fill="#60a5fa">filtrate</text>
         </>
       )}
 
+      {/* Collection beaker — dark glass */}
       <path d="M115 155 L110 205 Q110 210 150 210 Q190 210 190 205 L185 155 Z"
-            fill="rgba(219,234,254,0.3)" stroke="#94a3b8" strokeWidth="1.5" />
+            fill="rgba(255,255,255,0.48)" stroke="rgba(71,85,105,0.50)" strokeWidth="1.5" />
       {filtrateH > 0 && (
         <motion.rect
           x="111" y={210 - filtrateH}
           width="78" height={filtrateH}
           animate={{ height: filtrateH }}
-          fill="rgba(147,197,253,0.7)"
+          fill="rgba(59,130,246,0.30)"
           transition={{ duration: 0.8 }}
         />
       )}
-      <text x="150" y="200" textAnchor="middle" fontSize="8" fill="#1d4ed8">
+      <text x="150" y="200" textAnchor="middle" fontSize="8" fill="#7db8ef">
         {state.filtrateCollected ? "Filtrate (clear)" : "Beaker"}
       </text>
 
-      <text x="80" y="57" fontSize="8" fill="#64748b" textAnchor="end">Mixture:</text>
-      <text x="80" y="67" fontSize="7.5" fill="#64748b" textAnchor="end">Sand + Water</text>
-      <text x="80" y="77" fontSize="7" fill="#94a3b8" textAnchor="end">(liquid state)</text>
+      <text x="80" y="57"  fontSize="8"   fill="#3b6690" textAnchor="end">Mixture:</text>
+      <text x="80" y="67"  fontSize="7.5" fill="#3b6690" textAnchor="end">Sand + Water</text>
+      <text x="80" y="77"  fontSize="7"   fill="#2d4a6a" textAnchor="end">(liquid state)</text>
 
       {state.residueDried && (
-        <text x="150" y="95" textAnchor="middle" fontSize="8" fill="#ea580c" fontWeight="600">
+        <text x="150" y="95" textAnchor="middle" fontSize="8" fill="#fb923c" fontWeight="600">
           Residue: {state.solidRecoveredG} g sand
         </text>
       )}
@@ -401,14 +429,16 @@ function EvaporationDiagram({ state }: { state: EvaporationState }) {
 
   return (
     <svg viewBox="0 0 300 220" width="100%" aria-label="Evaporation apparatus">
-      <line x1="90" y1="180" x2="150" y2="130" stroke="#94a3b8" strokeWidth="2" />
-      <line x1="210" y1="180" x2="150" y2="130" stroke="#94a3b8" strokeWidth="2" />
-      <line x1="150" y1="185" x2="150" y2="130" stroke="#94a3b8" strokeWidth="2" />
-      <ellipse cx="150" cy="128" rx="40" ry="6" fill="none" stroke="#94a3b8" strokeWidth="1.5" strokeDasharray="4 2" />
+      {/* Tripod stand */}
+      <line x1="90"  y1="180" x2="150" y2="130" stroke="rgba(99,179,237,0.35)" strokeWidth="2" />
+      <line x1="210" y1="180" x2="150" y2="130" stroke="rgba(99,179,237,0.35)" strokeWidth="2" />
+      <line x1="150" y1="185" x2="150" y2="130" stroke="rgba(99,179,237,0.35)" strokeWidth="2" />
+      <ellipse cx="150" cy="128" rx="40" ry="6" fill="none" stroke="rgba(99,179,237,0.35)" strokeWidth="1.5" strokeDasharray="4 2" />
 
+      {/* Evaporating dish — dark glass */}
       <path d="M110 110 Q110 130 150 132 Q190 130 190 110 Z"
-            fill="rgba(248,250,252,0.95)" stroke="#94a3b8" strokeWidth="1.5" />
-      <ellipse cx="150" cy="110" rx="40" ry="8" fill="rgba(248,250,252,0.95)" stroke="#94a3b8" strokeWidth="1.5" />
+            fill="rgba(255,255,255,0.48)" stroke="rgba(71,85,105,0.50)" strokeWidth="1.5" />
+      <ellipse cx="150" cy="110" rx="40" ry="8" fill="rgba(255,255,255,0.48)" stroke="rgba(71,85,105,0.50)" strokeWidth="1.5" />
 
       {state.solutionAdded && (
         <motion.ellipse
@@ -416,7 +446,7 @@ function EvaporationDiagram({ state }: { state: EvaporationState }) {
           rx={38 * solutionLevel}
           ry={6 * solutionLevel}
           animate={{ rx: 38 * solutionLevel, ry: 6 * solutionLevel }}
-          fill={state.crystalsForming ? "rgba(219,234,254,0.8)" : "rgba(147,197,253,0.5)"}
+          fill={state.crystalsForming ? "rgba(59,130,246,0.40)" : "rgba(59,130,246,0.25)"}
           transition={{ duration: 0.8 }}
         />
       )}
@@ -424,10 +454,10 @@ function EvaporationDiagram({ state }: { state: EvaporationState }) {
       {state.crystalsForming && (
         <>
           {[135, 145, 155, 165].map((x, i) => (
-            <rect key={i} x={x} y="112" width="4" height="4" fill="white" stroke="#cbd5e1" strokeWidth="0.5"
+            <rect key={i} x={x} y="112" width="4" height="4" fill="rgba(226,232,240,0.80)" stroke="rgba(99,179,237,0.35)" strokeWidth="0.5"
                   transform={`rotate(${i * 20}, ${x + 2}, 114)`} />
           ))}
-          <text x="150" y="126" textAnchor="middle" fontSize="7.5" fill="#ea580c" fontWeight="600">
+          <text x="150" y="126" textAnchor="middle" fontSize="7.5" fill="#fb923c" fontWeight="600">
             NaCl crystals forming
           </text>
         </>
@@ -439,13 +469,13 @@ function EvaporationDiagram({ state }: { state: EvaporationState }) {
             <motion.path
               key={i}
               d={`M${x} 108 Q${x + 5} 95 ${x} 82`}
-              fill="none" stroke="rgba(148,163,184,0.4)" strokeWidth="1.5"
+              fill="none" stroke="rgba(148,163,184,0.22)" strokeWidth="1.5"
               animate={{ opacity: [0.3, 0.7, 0.3] }}
               transition={{ repeat: Infinity, duration: 1.2 + i * 0.3 }}
             />
           ))}
-          <text x="150" y="76" textAnchor="middle" fontSize="8" fill="#94a3b8">H₂O vapour</text>
-          <text x="210" y="80" fontSize="7.5" fill="#64748b">(gas state)</text>
+          <text x="150" y="76" textAnchor="middle" fontSize="8" fill="#3b6690">H₂O vapour</text>
+          <text x="210" y="80" fontSize="7.5" fill="#3b6690">(gas state)</text>
         </>
       )}
 
@@ -468,21 +498,21 @@ function EvaporationDiagram({ state }: { state: EvaporationState }) {
         </>
       )}
 
-      <text x="68" y="115" fontSize="8" fill="#64748b" textAnchor="end">NaCl(aq):</text>
-      <text x="68" y="125" fontSize="7.5" fill="#94a3b8" textAnchor="end">liquid state</text>
+      <text x="68" y="115" fontSize="8"   fill="#3b6690" textAnchor="end">NaCl(aq):</text>
+      <text x="68" y="125" fontSize="7.5" fill="#2d4a6a" textAnchor="end">liquid state</text>
       {state.solutionAdded && (
-        <text x="68" y="135" fontSize="7" fill="#94a3b8" textAnchor="end">0.5 M, 50 mL</text>
+        <text x="68" y="135" fontSize="7" fill="#2d4a6a" textAnchor="end">0.5 M, 50 mL</text>
       )}
 
-      <rect x="80" y="192" width="140" height="8" rx="4" fill="var(--lab-slate-100)" />
+      <rect x="80" y="192" width="140" height="8" rx="4" fill="rgba(148,163,184,0.22)" />
       <motion.rect
         x="80" y="192"
         animate={{ width: state.evapProgress * 1.4 }}
         height="8" rx="4"
-        fill="#ea580c"
+        fill="#fb923c"
         transition={{ duration: 0.6 }}
       />
-      <text x="150" y="210" textAnchor="middle" fontSize="7.5" fill="#64748b">
+      <text x="150" y="210" textAnchor="middle" fontSize="7.5" fill="#3b6690">
         {state.evapProgress.toFixed(0)}% evaporated
       </text>
     </svg>
@@ -494,22 +524,24 @@ function DistillationDiagram({ state }: { state: DistillationState }) {
 
   return (
     <svg viewBox="0 0 320 220" width="100%" aria-label="Distillation apparatus">
-      <ellipse cx="80" cy="140" rx="40" ry="14" fill="rgba(219,234,254,0.4)" stroke="#3b82f6" strokeWidth="1.5" />
-      <rect x="40" y="126" width="80" height="14" fill="rgba(219,234,254,0.4)" stroke="#3b82f6" strokeWidth="0" />
+      {/* Distillation flask — dark glass */}
+      <ellipse cx="80" cy="140" rx="40" ry="14" fill="rgba(255,255,255,0.48)" stroke="#60a5fa" strokeWidth="1.5" />
+      <rect x="40" y="126" width="80" height="14" fill="rgba(255,255,255,0.48)" />
       <path d="M40 126 L40 155 Q40 165 80 165 Q120 165 120 155 L120 126"
-            fill="rgba(219,234,254,0.4)" stroke="#3b82f6" strokeWidth="1.5" />
-      <line x1="80" y1="112" x2="80" y2="126" stroke="#3b82f6" strokeWidth="4" strokeLinecap="round" />
-      <line x1="100" y1="118" x2="175" y2="90" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" />
+            fill="rgba(255,255,255,0.48)" stroke="#60a5fa" strokeWidth="1.5" />
+      <line x1="80" y1="112" x2="80" y2="126" stroke="#60a5fa" strokeWidth="4" strokeLinecap="round" />
+      <line x1="100" y1="118" x2="175" y2="90" stroke="#60a5fa" strokeWidth="3" strokeLinecap="round" />
 
       <motion.ellipse
         cx="80" cy="155" rx="38" ry="8"
-        animate={{ fill: `rgba(${Math.round(100 + warmFrac * 80)}, ${Math.round(180 - warmFrac * 80)}, ${Math.round(230 - warmFrac * 100)}, 0.6)` }}
+        animate={{ fill: `rgba(${Math.round(30 + warmFrac * 80)}, ${Math.round(100 - warmFrac * 40)}, ${Math.round(180 - warmFrac * 80)}, 0.55)` }}
         transition={{ duration: 0.8 }}
       />
 
       {state.flaskSetUp && (
         <>
-          <rect x="76" y="92" width="8" height="24" rx="4" fill="white" stroke="#94a3b8" strokeWidth="1" />
+          <rect x="76" y="92" width="8" height="24" rx="4"
+                fill="rgba(255,255,255,0.55)" stroke="rgba(99,179,237,0.35)" strokeWidth="1" />
           <motion.rect
             x="78" y={112 - warmFrac * 18}
             width="4"
@@ -518,13 +550,15 @@ function DistillationDiagram({ state }: { state: DistillationState }) {
             transition={{ duration: 0.5 }}
           />
           <circle cx="80" cy="116" r="5" fill="#ef4444" />
-          <text x="68" y="105" fontSize="8" fill="#64748b" textAnchor="end">
+          <text x="68" y="105" fontSize="8" fill="#3b6690" textAnchor="end">
             {state.tempC.toFixed(0)}°C
           </text>
         </>
       )}
 
-      <rect x="170" y="72" width="80" height="16" rx="3" fill="rgba(186,230,253,0.4)" stroke="#0ea5e9" strokeWidth="1.5"
+      {/* Condenser */}
+      <rect x="170" y="72" width="80" height="16" rx="3"
+            fill="rgba(255,255,255,0.48)" stroke="#0ea5e9" strokeWidth="1.5"
             transform="rotate(-20, 210, 80)" />
       {state.condenserOn && (
         <text x="210" y="68" textAnchor="middle" fontSize="7.5" fill="#0ea5e9" transform="rotate(-20, 210, 68)">
@@ -532,25 +566,26 @@ function DistillationDiagram({ state }: { state: DistillationState }) {
         </text>
       )}
 
+      {/* Collection flask — dark glass */}
       <path d="M250 130 L240 170 Q240 180 260 180 Q280 180 280 170 L270 130 Z"
-            fill="rgba(240,253,244,0.6)" stroke="#059669" strokeWidth="1.5" />
+            fill="rgba(255,255,255,0.48)" stroke="#34d399" strokeWidth="1.5" />
       {state.fraction1Ml > 0 && (
         <motion.rect
           x="241" y={180 - state.fraction1Ml * 2}
           width="38"
           animate={{ height: state.fraction1Ml * 2 }}
-          fill={state.firstFractionDone ? "rgba(167,243,208,0.7)" : "rgba(253,230,138,0.7)"}
+          fill={state.firstFractionDone ? "rgba(52,211,153,0.35)" : "rgba(251,191,36,0.35)"}
           transition={{ duration: 0.5 }}
         />
       )}
-      <text x="260" y="192" textAnchor="middle" fontSize="7.5" fill="#059669">
+      <text x="260" y="192" textAnchor="middle" fontSize="7.5" fill="#34d399">
         {state.firstFractionDone ? `EtOH: ${state.fraction1Ml.toFixed(1)} mL` : "Fraction 1"}
       </text>
 
       {state.heaterOn && state.tempC >= 76 && (
         <motion.path
           d="M100 118 Q138 95 175 88"
-          fill="none" stroke="rgba(148,163,184,0.5)" strokeWidth="2" strokeDasharray="4 3"
+          fill="none" stroke="rgba(148,163,184,0.30)" strokeWidth="2" strokeDasharray="4 3"
           animate={{ strokeDashoffset: [-24, 0] }}
           transition={{ repeat: Infinity, duration: 0.6 }}
         />
@@ -566,8 +601,8 @@ function DistillationDiagram({ state }: { state: DistillationState }) {
         />
       )}
 
-      <text x="80" y="208" textAnchor="middle" fontSize="7.5" fill="#64748b">EtOH/H₂O mixture</text>
-      <text x="80" y="218" textAnchor="middle" fontSize="7" fill="#94a3b8">(liquid, ~40% EtOH)</text>
+      <text x="80" y="208" textAnchor="middle" fontSize="7.5" fill="#3b6690">EtOH/H₂O mixture</text>
+      <text x="80" y="218" textAnchor="middle" fontSize="7"   fill="#2d4a6a">(liquid, ~40% EtOH)</text>
     </svg>
   );
 }
@@ -578,35 +613,39 @@ function ChromatographyDiagram({ state }: { state: ChromatographyState }) {
 
   return (
     <svg viewBox="0 0 300 230" width="100%" aria-label="Chromatography">
-      <rect x="60" y="40" width="180" height="175" rx="4" fill="rgba(240,249,255,0.3)" stroke="#0ea5e9" strokeWidth="1.5" />
-      <rect x="90" y="50" width="120" height={paperH} fill="rgba(254,252,232,0.8)" stroke="#d97706" strokeWidth="1" />
+      {/* Tank — dark glass */}
+      <rect x="60" y="40" width="180" height="175" rx="4"
+            fill="rgba(255,255,255,0.48)" stroke="rgba(71,85,105,0.50)" strokeWidth="1.5" />
+      {/* Chromatography paper */}
+      <rect x="90" y="50" width="120" height={paperH}
+            fill="rgba(248,244,232,0.96)" stroke="rgba(180,140,60,0.55)" strokeWidth="1" />
 
       {state.paperPrepared && (
         <>
-          <line x1="90" y1="195" x2="210" y2="195" stroke="#94a3b8" strokeWidth="1" strokeDasharray="3 2" />
-          <text x="215" y="198" fontSize="7.5" fill="#94a3b8">baseline</text>
+          <line x1="90" y1="195" x2="210" y2="195" stroke="rgba(99,179,237,0.35)" strokeWidth="1" strokeDasharray="3 2" />
+          <text x="215" y="198" fontSize="7.5" fill="#3b6690">baseline</text>
         </>
       )}
 
       {state.sampleSpotted && (
         <>
           {[120, 150, 180].map((x, i) => {
-            const spot   = state.spotsData[i];
-            const color  = spot ? spot.color : ["#2563eb", "#dc2626", "#16a34a"][i];
-            const distY  = spot ? 195 - (spot.distanceMm / 80) * paperH : 195;
+            const spot  = state.spotsData[i];
+            const color = spot ? spot.color : ["#60a5fa", "#f87171", "#4ade80"][i];
+            const distY = spot ? 195 - (spot.distanceMm / 80) * paperH : 195;
             return (
               <g key={i}>
                 {state.solventAdded && (
                   <motion.line
                     x1={x} y1="195" x2={x} y2={distY}
-                    stroke={color} strokeWidth="1" opacity="0.3"
+                    stroke={color} strokeWidth="1" opacity="0.35"
                     animate={{ y2: distY }}
                     transition={{ duration: 0.5 }}
                   />
                 )}
                 <motion.circle
                   cx={x} cy={distY} r="5"
-                  fill={color} opacity="0.8"
+                  fill={color} opacity="0.85"
                   animate={{ cy: distY }}
                   transition={{ duration: 0.5 }}
                 />
@@ -631,21 +670,21 @@ function ChromatographyDiagram({ state }: { state: ChromatographyState }) {
       )}
 
       {state.solventAdded && (
-        <rect x="61" y="196" width="178" height="18" rx="2" fill="rgba(224,242,254,0.7)" />
+        <rect x="61" y="196" width="178" height="18" rx="2" fill="rgba(8,145,178,0.20)" />
       )}
 
-      <text x="150" y="222" textAnchor="middle" fontSize="7.5" fill="#0891b2">
+      <text x="150" y="222" textAnchor="middle" fontSize="7.5" fill="#0ea5e9">
         {state.solventAdded ? "Ethanol solvent (mobile phase)" : "Solvent tank"}
       </text>
 
       {state.sampleSpotted && (
         <g>
           {["Blue dye", "Red dye", "Yellow dye"].map((name, i) => {
-            const colors = ["#2563eb", "#dc2626", "#16a34a"];
+            const colors = ["#60a5fa", "#f87171", "#4ade80"];
             return (
               <g key={i}>
                 <circle cx="68" cy={170 - i * 14} r="4" fill={colors[i]} />
-                <text x="75" y={173 - i * 14} fontSize="7" fill="#64748b">{name}</text>
+                <text x="75" y={173 - i * 14} fontSize="7" fill="#3b6690">{name}</text>
               </g>
             );
           })}

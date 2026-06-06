@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useRef, useState, startTransition } from "react";
 import { useFlameTestStore }                             from "@/lib/store/flame-test-store";
@@ -9,35 +9,14 @@ import ObservationPanel                                  from "@/components/lab/
 import StatusBar                                         from "@/components/lab/StatusBar";
 import ResultModal                                       from "@/components/lab/ResultModal";
 import ContextPopup, { obsToPopup }                      from "@/components/lab/ContextPopup";
-import PreLabIntro                                       from "@/components/lab/PreLabIntro";
 import LabPageShell                                      from "@/components/lab/LabPageShell";
+import LabContextPanel                                   from "@/components/lab/LabContextPanel";
 import { FLAME_SAMPLES }                                 from "@/lib/engine/flame-test-engine";
-
-const FLAME_TEST_INTRO = {
-  title:     "Flame Test",
-  objective: "Identify metal ions by the characteristic colours they emit when heated in a Bunsen burner flame. Dip the nichrome loop in a salt solution, then hold the loop in the flame and observe the emission colour.",
-  apparatus: ["Bunsen Burner", "Nichrome Wire Loop", "Sample Vials (×7)", "Dilute HCl (cleaning)", "Eye Protection"],
-  reagents: [
-    { name: "LiCl — Lithium chloride",    concentration: "crimson red flame" },
-    { name: "NaCl — Sodium chloride",     concentration: "persistent yellow flame" },
-    { name: "KCl — Potassium chloride",   concentration: "lilac / violet flame" },
-    { name: "CaCl₂ — Calcium chloride",   concentration: "brick red / orange-red flame" },
-    { name: "SrCl₂ — Strontium chloride", concentration: "crimson / scarlet flame" },
-    { name: "BaCl₂ — Barium chloride",    concentration: "pale green / apple green flame" },
-    { name: "CuSO₄ — Copper sulphate",    concentration: "blue-green flame" },
-  ],
-  safetyNotes: [
-    "Keep flammable materials away from the Bunsen burner flame.",
-    "Clean the nichrome loop with dilute HCl between each sample to avoid contamination.",
-    "Wear eye protection when observing flame colours.",
-    "Never leave the Bunsen burner unattended.",
-  ],
-};
+import { EXPERIMENT_EDUCATION }                          from "@/lib/experiment-education";
 
 const TEST_DURATION_MS = 3500;
 
 export default function FlameTestPage() {
-  const [mounted, setMounted]     = useState(false);
   const [showPopup, setShowPopup] = useState(false);
   const store      = useFlameTestStore();
   const testTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -45,12 +24,10 @@ export default function FlameTestPage() {
 
   useEffect(() => {
     store.hydrate();
-    startTransition(() => setMounted(true));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (!mounted) return;
     if (store.status === "running") {
       testTimer.current = setTimeout(() => store.completeTestAction(), TEST_DURATION_MS);
     } else {
@@ -58,7 +35,7 @@ export default function FlameTestPage() {
     }
     return () => { if (testTimer.current) { clearTimeout(testTimer.current); testTimer.current = null; } };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [store.status, mounted]);
+  }, [store.status]);
 
   useEffect(() => () => { if (popupTimer.current) clearTimeout(popupTimer.current); }, []);
 
@@ -70,13 +47,6 @@ export default function FlameTestPage() {
     popupTimer.current = setTimeout(() => setShowPopup(false), 3200);
   }, [lastObsId]);
 
-  if (!mounted) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 rounded-full border-2 border-blue-400 border-t-transparent animate-spin" />
-      </div>
-    );
-  }
 
   const profile = store.selectedSample ? FLAME_SAMPLES[store.selectedSample] : null;
   const lastObs = store.observations[0];
@@ -136,10 +106,32 @@ export default function FlameTestPage() {
     </>
   ) : undefined;
 
+  const flameLeftPanel = (
+    <LabContextPanel
+      title="Flame Test"
+      accent="#ef4444"
+      summary="Metal ions emit characteristic flame colours when electrons jump to excited states and return to ground state, releasing photons of specific wavelengths."
+      formula="M⁺ → M⁺* → M⁺ + hν"
+      formulaLabel="Electron transition"
+      facts={[
+        { icon: "🔥", label: "Bunsen flame", value: "~1700 °C" },
+        { icon: "🎨", label: "Na⁺",          value: "Golden Yellow (~589 nm)" },
+        { icon: "🎨", label: "Li⁺",          value: "Crimson Red (~670 nm)" },
+        { icon: "🎨", label: "K⁺",           value: "Lilac/Violet (~767 nm)" },
+      ]}
+      steps={[
+        { number: 1, title: "Light burner",   body: "Click 'Light Bunsen Burner' to reach ~1700 °C." },
+        { number: 2, title: "Select sample",  body: "Pick a metal salt from the controls panel." },
+        { number: 3, title: "Dip the loop",   body: "Click 'Dip Loop' to coat the nichrome wire." },
+        { number: 4, title: "Test in flame",  body: "Hold loop in flame — observe the colour produced." },
+        { number: 5, title: "Clean & repeat", body: "Clean loop in distilled water between tests to avoid contamination." },
+      ]}
+    />
+  );
+
   return (
     <LabPageShell
-      preLabIntro={<PreLabIntro {...FLAME_TEST_INTRO} />}
-
+      leftPanel={flameLeftPanel}
       statusBar={
         <StatusBar
           status={store.status}
@@ -165,7 +157,16 @@ export default function FlameTestPage() {
           testHistory={store.testHistory}
         />
       }
-      workspaceMaxW="max-w-md"
+      education={EXPERIMENT_EDUCATION["flame-test"]}
+      reactionNote={
+        store.selectedSample && store.status === "running"
+          ? `${FLAME_SAMPLES[store.selectedSample].name} → ${FLAME_SAMPLES[store.selectedSample].colorName} (${FLAME_SAMPLES[store.selectedSample].wavelength}) — excited ${FLAME_SAMPLES[store.selectedSample].ion} electrons emit characteristic photons.`
+          : store.flameLit && store.loopDipped
+            ? "Loop dipped — hold it in the hottest part of the flame and note the colour."
+            : store.flameLit
+              ? "Flame lit — select a sample and dip the nichrome loop."
+              : "Light the Bunsen burner, then select a metal salt to test."
+      }
 
       controls={
         <FlameTestControls

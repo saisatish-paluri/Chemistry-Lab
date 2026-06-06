@@ -7,13 +7,13 @@ import { SOLUTIONS } from "@/lib/engine/solubility-engine";
 interface Props {
   solutionA:      SolutionId | null;
   solutionB:      SolutionId | null;
-  mixProgress:    number;           // 0–1
+  mixProgress:    number;
   hasPrecipitate: boolean;
   precipitate:    PrecipitateInfo | null;
   isRunning:      boolean;
 }
 
-// Deterministic particle positions from seed
+/** Deterministic particle seed for precipitate settling */
 function seedParticles(count: number, containerW: number, containerH: number, seed: number) {
   const particles = [];
   let s = seed;
@@ -21,14 +21,26 @@ function seedParticles(count: number, containerW: number, containerH: number, se
     s = (s * 1664525 + 1013904223) & 0xffffffff;
     const x = 8 + ((Math.abs(s) % 1000) / 1000) * (containerW - 16);
     s = (s * 1664525 + 1013904223) & 0xffffffff;
-    const r = 1.5 + ((Math.abs(s) % 1000) / 1000) * 2.5;
+    const r = 1.5 + ((Math.abs(s) % 1000) / 1000) * 3;
     s = (s * 1664525 + 1013904223) & 0xffffffff;
-    const delay = ((Math.abs(s) % 1000) / 1000) * 1.2;
+    const delay = ((Math.abs(s) % 1000) / 1000) * 1.4;
     s = (s * 1664525 + 1013904223) & 0xffffffff;
-    const dur = 1.5 + ((Math.abs(s) % 1000) / 1000) * 1.5;
-    particles.push({ x, r, delay, dur, finalY: containerH * 0.55 + ((Math.abs(s) % 1000) / 1000) * containerH * 0.35 });
+    const dur = 1.6 + ((Math.abs(s) % 1000) / 1000) * 1.8;
+    s = (s * 1664525 + 1013904223) & 0xffffffff;
+    const swirl = (((Math.abs(s) % 1000) / 1000) - 0.5) * 18;
+    particles.push({
+      x, r, delay, dur, swirl,
+      finalY: containerH * 0.62 + ((Math.abs(s) % 1000) / 1000) * containerH * 0.30,
+    });
   }
   return particles;
+}
+
+/** Liquid stream arc path from beaker lip to center beaker */
+function pourArc(fromX: number, fromY: number, toX: number, toY: number, sag: number): string {
+  const mx = (fromX + toX) / 2;
+  const my = Math.min(fromY, toY) - sag;
+  return `M ${fromX} ${fromY} Q ${mx} ${my} ${toX} ${toY}`;
 }
 
 export default function SolubilityWorkspace({
@@ -36,222 +48,393 @@ export default function SolubilityWorkspace({
 }: Props) {
   const profA = solutionA ? SOLUTIONS[solutionA] : null;
   const profB = solutionB ? SOLUTIONS[solutionB] : null;
-
-  // Combined beaker color
   const combinedColor = mixProgress > 0
-    ? (hasPrecipitate && precipitate ? `${precipitate.color}33` : "#e0f2fe")
-    : "#f8fafc";
+    ? (hasPrecipitate && precipitate ? `${precipitate.color}33` : "rgba(14,165,233,0.22)")
+    : "rgba(224,242,254,0.35)";
+  // Seed from formula so each precipitate has a distinct particle layout
+  const precipitateSeed = precipitate
+    ? precipitate.formula.split("").reduce((acc, c, i) => acc + c.charCodeAt(0) * (i + 31), 0)
+    : 42;
+  const particles = precipitate ? seedParticles(26, 96, 98, precipitateSeed) : [];
 
-  // Precipitate particles
-  const particles = precipitate ? seedParticles(22, 90, 90, 42) : [];
+  // Pour stream paths
+  const pourAPathA = pourArc(152, 185, 195, 200, 18);  // A to center
+  const pourAPathB = pourArc(328, 185, 285, 200, 18);  // B to center
 
   return (
     <div
-      className="rounded-2xl overflow-hidden"
+      className="relative rounded-3xl overflow-hidden select-none"
       style={{
-        background: "var(--lab-glass-heavy)",
-        border: "1px solid var(--lab-glass-border)",
-        boxShadow: "var(--lab-shadow-md)",
+        aspectRatio: "480/320",
+        width:       "100%",
+        height:      "auto",
+        maxHeight:   "100%",
+        background: "radial-gradient(ellipse at 50% 25%, rgba(5,150,105,0.10) 0%, transparent 50%), linear-gradient(180deg, #f0fdf7 0%, #ecfdf5 40%, #f0fdf9 100%)",
+        boxShadow:
+          "0 24px 64px rgba(15, 23, 42, 0.08), " +
+          "0 4px 12px rgba(15, 23, 42, 0.04), " +
+          "0 0 0 1px rgba(255, 255, 255, 0.92) inset",
+        border: "1px solid rgba(148, 163, 184, 0.28)",
       }}
     >
+      {/* Dot grid */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: "radial-gradient(circle, rgba(148,163,184,0.13) 1px, transparent 1px)",
+          backgroundSize:  "22px 22px",
+        }}
+      />
+      {/* Top ambient glow */}
+      <div
+        aria-hidden="true"
+        className="absolute pointer-events-none"
+        style={{
+          top: "-48px", left: "50%", transform: "translateX(-50%)",
+          width: "288px", height: "192px",
+          background: "radial-gradient(ellipse at center, rgba(59,130,246,0.07) 0%, transparent 70%)",
+        }}
+      />
+      {/* Lab bench */}
+      <div
+        aria-hidden="true"
+        className="absolute pointer-events-none lab-bench-light"
+        style={{ bottom: 0, left: 0, right: 0, height: "44px", borderRadius: "0 0 24px 24px" }}
+      />
+
       <svg
         viewBox="0 0 480 320"
         width="100%"
-        style={{ display: "block" }}
+        style={{ display: "block", position: "relative", zIndex: 10 }}
         aria-label="Solubility reaction vessels"
         role="img"
       >
-        {/* ── Lab bench ── */}
-        <rect x="0" y="280" width="480" height="40" fill="#cbd5e1" />
-        <rect x="0" y="276" width="480" height="6" fill="#94a3b8" />
+        <defs>
+          <filter id="sol-shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="4" stdDeviation="5" floodColor="rgba(0,0,0,0.42)" />
+          </filter>
+          <filter id="sol-soft" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur stdDeviation="2.5" />
+          </filter>
+          <linearGradient id="sol-glass-sheen" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%"   stopColor="rgba(255,255,255,0.28)" />
+            <stop offset="30%"  stopColor="rgba(255,255,255,0.06)" />
+            <stop offset="100%" stopColor="rgba(0,0,0,0.05)" />
+          </linearGradient>
+        </defs>
 
-        {/* ── Beaker A (left) ── */}
+        {/* ── Lab bench — light steel ── */}
+        <rect x="0" y="278" width="480" height="42" fill="#c8d0db" />
+        <rect x="0" y="274" width="480" height="6"  fill="#cbd5e1" />
+        <rect x="0" y="274" width="480" height="2"  fill="rgba(255,255,255,0.55)" />
+
+        {/* ══ BEAKER A (left) ══ */}
         <g>
-          {/* Beaker body */}
-          <path d="M 60 120 L 48 272 L 152 272 L 140 120 Z" fill="#f1f5f9" fillOpacity="0.6" stroke="#94a3b8" strokeWidth="1.5" />
-          {/* Solution fill */}
+          {/* Glass body with depth */}
+          <path d="M 60 118 L 48 270 L 152 270 L 140 118 Z"
+            fill="rgba(255,255,255,0.04)" filter="url(#sol-soft)" />
+          <path d="M 60 118 L 48 270 L 152 270 L 140 118 Z"
+            fill="rgba(255,255,255,0.48)" stroke="rgba(71,85,105,0.48)" strokeWidth="1.6"
+            filter="url(#sol-shadow)" />
+          {/* Liquid fill */}
           {profA && (
-            <path d="M 62 145 L 50 272 L 150 272 L 138 145 Z" fill={profA.color} fillOpacity="0.85" />
+            <motion.path
+              d={`M 62 143 L 50 270 L 150 270 L 138 143 Z`}
+              fill={profA.color} fillOpacity="0.78"
+              animate={{ fillOpacity: [0.74, 0.82, 0.78] }}
+              transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
+            />
           )}
           {/* Beaker rim */}
-          <rect x="46" y="116" width="108" height="8" rx="2" fill="#94a3b8" />
-          {/* Label */}
-          <text x="100" y="136" textAnchor="middle" fontSize="9" fontWeight="700" fill="#475569">A</text>
+          <rect x="46" y="114" width="108" height="7" rx="2.5" fill="#b0bac5" stroke="#94a3b8" strokeWidth="0.8" />
+          <rect x="48" y="115" width="40" height="3" rx="1.5" fill="rgba(255,255,255,0.5)" />
+          {/* Glass sheen */}
+          <path d="M 64 122 L 55 266" stroke="rgba(255,255,255,0.32)" strokeWidth="3.5" strokeLinecap="round" />
+          <path d="M 70 122 L 62 266" stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" strokeLinecap="round" />
+          {/* Glass sheen using gradient */}
+          <path d="M 60 118 L 48 270 L 152 270 L 140 118 Z" fill="url(#sol-glass-sheen)" />
+          {/* Labels */}
+          <text x="100" y="134" textAnchor="middle" fontSize="9.5" fontWeight="800" fill="#1e3a8a">A</text>
           {profA && (
-            <text x="100" y="155" textAnchor="middle" fontSize="7.5" fill="#64748b">{profA.formula}</text>
+            <text x="100" y="152" textAnchor="middle" fontSize="7.5" fill="#334155" fontWeight="600">{profA.formula}</text>
           )}
           {!profA && (
-            <text x="100" y="200" textAnchor="middle" fontSize="9" fill="#94a3b8">Select A</text>
+            <text x="100" y="200" textAnchor="middle" fontSize="9" fill="#64748b" fontStyle="italic">Select A</text>
+          )}
+          {/* Meniscus wave */}
+          {profA && (
+            <motion.path
+              d="M 62 143 Q 100 140 138 143"
+              fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1.2"
+              animate={{ d: ["M 62 143 Q 100 140 138 143", "M 62 143 Q 100 146 138 143", "M 62 143 Q 100 140 138 143"] }}
+              transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
+            />
           )}
         </g>
 
-        {/* ── Beaker B (right) ── */}
+        {/* ══ BEAKER B (right) ══ */}
         <g>
-          <path d="M 340 120 L 328 272 L 432 272 L 420 120 Z" fill="#f1f5f9" fillOpacity="0.6" stroke="#94a3b8" strokeWidth="1.5" />
+          <path d="M 340 118 L 328 270 L 432 270 L 420 118 Z"
+            fill="rgba(255,255,255,0.04)" filter="url(#sol-soft)" />
+          <path d="M 340 118 L 328 270 L 432 270 L 420 118 Z"
+            fill="rgba(255,255,255,0.48)" stroke="rgba(71,85,105,0.48)" strokeWidth="1.6"
+            filter="url(#sol-shadow)" />
           {profB && (
-            <path d="M 342 145 L 330 272 L 430 272 L 418 145 Z" fill={profB.color} fillOpacity="0.85" />
+            <motion.path
+              d="M 342 143 L 330 270 L 430 270 L 418 143 Z"
+              fill={profB.color} fillOpacity="0.78"
+              animate={{ fillOpacity: [0.74, 0.82, 0.78] }}
+              transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
+            />
           )}
-          <rect x="326" y="116" width="108" height="8" rx="2" fill="#94a3b8" />
-          <text x="380" y="136" textAnchor="middle" fontSize="9" fontWeight="700" fill="#475569">B</text>
+          <rect x="326" y="114" width="108" height="7" rx="2.5" fill="#b0bac5" stroke="#94a3b8" strokeWidth="0.8" />
+          <rect x="328" y="115" width="40" height="3" rx="1.5" fill="rgba(255,255,255,0.5)" />
+          <path d="M 344 122 L 335 266" stroke="rgba(255,255,255,0.32)" strokeWidth="3.5" strokeLinecap="round" />
+          <path d="M 350 122 L 342 266" stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" strokeLinecap="round" />
+          <path d="M 340 118 L 328 270 L 432 270 L 420 118 Z" fill="url(#sol-glass-sheen)" />
+          <text x="380" y="134" textAnchor="middle" fontSize="9.5" fontWeight="800" fill="#1e3a8a">B</text>
           {profB && (
-            <text x="380" y="155" textAnchor="middle" fontSize="7.5" fill="#64748b">{profB.formula}</text>
+            <text x="380" y="152" textAnchor="middle" fontSize="7.5" fill="#334155" fontWeight="600">{profB.formula}</text>
           )}
           {!profB && (
-            <text x="380" y="200" textAnchor="middle" fontSize="9" fill="#94a3b8">Select B</text>
+            <text x="380" y="200" textAnchor="middle" fontSize="9" fill="#64748b" fontStyle="italic">Select B</text>
+          )}
+          {profB && (
+            <motion.path
+              d="M 342 143 Q 380 140 418 143"
+              fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="1.2"
+              animate={{ d: ["M 342 143 Q 380 140 418 143", "M 342 143 Q 380 146 418 143", "M 342 143 Q 380 140 418 143"] }}
+              transition={{ duration: 3.0, repeat: Infinity, ease: "easeInOut", delay: 0.6 }}
+            />
           )}
         </g>
 
-        {/* ── Combined beaker (centre) ── */}
+        {/* ══ COMBINED BEAKER (center) ══ */}
         <g>
-          <path d="M 195 140 L 178 272 L 302 272 L 285 140 Z" fill="#f8fafc" fillOpacity="0.6" stroke="#475569" strokeWidth="1.8" />
+          {/* Glow halo when reaction complete */}
+          {mixProgress >= 1 && hasPrecipitate && precipitate && (
+            <motion.ellipse
+              cx="240" cy="220"
+              rx="64" ry="28"
+              fill={precipitate.color}
+              fillOpacity="0.08"
+              filter="url(#sol-soft)"
+              animate={{ fillOpacity: [0.06, 0.14, 0.08] }}
+              transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+            />
+          )}
 
-          {/* Solution fill — grows as mixing progresses */}
+          <path d="M 195 138 L 178 270 L 302 270 L 285 138 Z"
+            fill="rgba(255,255,255,0.04)" filter="url(#sol-soft)" />
+          <path d="M 195 138 L 178 270 L 302 270 L 285 138 Z"
+            fill="rgba(255,255,255,0.50)" stroke="rgba(71,85,105,0.52)" strokeWidth="1.8"
+            filter="url(#sol-shadow)" />
+
+          {/* Mixed liquid */}
           {mixProgress > 0 && (
             <motion.path
-              d={`M ${195 + (1 - mixProgress) * 10} ${140 + (1 - mixProgress) * 90} L ${178 + (1 - mixProgress) * 8} 272 L ${302 - (1 - mixProgress) * 8} 272 L ${285 - (1 - mixProgress) * 10} ${140 + (1 - mixProgress) * 90} Z`}
+              d={`M ${195 + (1 - mixProgress) * 10} ${138 + (1 - mixProgress) * 90} L ${178 + (1 - mixProgress) * 8} 270 L ${302 - (1 - mixProgress) * 8} 270 L ${285 - (1 - mixProgress) * 10} ${138 + (1 - mixProgress) * 90} Z`}
               fill={combinedColor}
-              fillOpacity={mixProgress * 0.9 + 0.1}
+              fillOpacity={mixProgress * 0.88 + 0.12}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
+              transition={{ duration: 0.35 }}
             />
           )}
 
           {/* Precipitate particles */}
           <AnimatePresence>
-            {hasPrecipitate && precipitate && mixProgress >= 0.6 && (
+            {hasPrecipitate && precipitate && mixProgress >= 0.55 && (
               <>
                 {particles.map((p, i) => (
-                  <motion.circle
-                    key={i}
-                    cx={188 + p.x * 0.88}
-                    cy={145}
+                  <motion.circle key={i}
+                    cx={186 + p.x * 0.88}
                     r={p.r}
-                    fill={precipitate.color}
-                    fillOpacity={0.85}
-                    initial={{ cy: 145, opacity: 0 }}
-                    animate={{ cy: p.finalY, opacity: 1 }}
-                    transition={{ duration: p.dur, delay: p.delay * (1 - mixProgress + 0.2), ease: "easeIn" }}
+                    fill={precipitate.color} fillOpacity={0.88}
+                    initial={{ cy: 150, opacity: 0, cx: 186 + p.x * 0.88 + p.swirl }}
+                    animate={{
+                      cy: p.finalY,
+                      opacity: [0, 0.9, 0.9],
+                      cx: [186 + p.x * 0.88 + p.swirl, 186 + p.x * 0.88 - p.swirl * 0.4, 186 + p.x * 0.88],
+                    }}
+                    transition={{
+                      duration: p.dur,
+                      delay: p.delay * (1 - mixProgress + 0.15),
+                      ease: "easeOut",
+                    }}
                   />
                 ))}
+                {/* Sediment layer */}
+                {mixProgress >= 0.9 && (
+                  <motion.rect
+                    x={185} y={256} height={8} rx={3}
+                    fill={precipitate.color} fillOpacity={0.45}
+                    initial={{ width: 0 }}
+                    animate={{ width: Math.min(100, (mixProgress - 0.9) * 1000) }}
+                    transition={{ duration: 1.2, ease: "easeOut" }}
+                    style={{ x: 190 }}
+                  />
+                )}
               </>
             )}
           </AnimatePresence>
 
-          <rect x="176" y="136" width="128" height="8" rx="2" fill="#475569" />
-          <text x="240" y="155" textAnchor="middle" fontSize="9" fontWeight="700" fill="#334155">Combined</text>
+          {/* Combined beaker rim */}
+          <rect x="176" y="134" width="128" height="8" rx="2.5" fill="#b0bac5" stroke="#94a3b8" strokeWidth="0.8" />
+          <rect x="178" y="135" width="44" height="3" rx="1.5" fill="rgba(255,255,255,0.5)" />
+          {/* Glass sheen */}
+          <path d="M 200 144 L 185 266" stroke="rgba(255,255,255,0.32)" strokeWidth="3.5" strokeLinecap="round" />
+          <path d="M 206 144 L 192 266" stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" strokeLinecap="round" />
+          <path d="M 195 138 L 178 270 L 302 270 L 285 138 Z" fill="url(#sol-glass-sheen)" />
 
-          {/* Result label */}
+          <text x="240" y="152" textAnchor="middle" fontSize="9.5" fontWeight="800" fill="#1e3a8a">Combined</text>
+
+          {/* Result badge */}
           {mixProgress >= 1 && (
-            <motion.g
-              initial={{ opacity: 0, y: -5 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-            >
+            <motion.g initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
               {hasPrecipitate && precipitate ? (
                 <>
-                  <rect x="192" y="160" width="96" height="22" rx="4" fill={`${precipitate.color}22`} stroke={precipitate.color} strokeWidth="1" />
-                  <text x="240" y="175" textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#334155">
+                  <rect x="192" y="160" width="96" height="24" rx="5"
+                    fill={`${precipitate.color}18`} stroke={precipitate.color} strokeWidth="1.2" />
+                  <text x="240" y="176" textAnchor="middle" fontSize="8.5" fontWeight="700" fill={precipitate.color}>
                     {precipitate.formula}↓ precipitate
                   </text>
                 </>
               ) : (
                 <>
-                  <rect x="192" y="160" width="96" height="22" rx="4" fill="#f0fdf4" stroke="#86efac" strokeWidth="1" />
-                  <text x="240" y="175" textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#166534">
+                  <rect x="192" y="160" width="96" height="24" rx="5"
+                    fill="rgba(5,150,105,0.12)" stroke="rgba(52,211,153,0.50)" strokeWidth="1.2" />
+                  <text x="240" y="176" textAnchor="middle" fontSize="8.5" fontWeight="700" fill="#059669">
                     No reaction
                   </text>
                 </>
               )}
             </motion.g>
           )}
+
+          {/* Meniscus wave on combined */}
+          {mixProgress > 0.1 && (
+            <motion.path
+              d={`M ${195 + (1 - mixProgress) * 10} ${138 + (1 - mixProgress) * 90}`}
+              fill="none" stroke="rgba(255,255,255,0.28)" strokeWidth="1.2"
+              animate={{
+                d: [
+                  `M ${196} ${200} Q 240 196 ${284} 200`,
+                  `M ${196} ${200} Q 240 204 ${284} 200`,
+                  `M ${196} ${200} Q 240 196 ${284} 200`,
+                ],
+              }}
+              transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
+            />
+          )}
         </g>
 
-        {/* ── Pour animation (arrows) ── */}
+        {/* ══ POUR ANIMATIONS ══ */}
         <AnimatePresence>
           {isRunning && (
             <>
-              {/* Left pour */}
-              <motion.g
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              >
+              {/* Solution A pour stream */}
+              <motion.g key="pour-a" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                {/* Stream arc */}
                 <motion.path
-                  d="M 152 190 Q 185 200 195 200"
+                  d={pourAPathA}
                   fill="none"
-                  stroke={profA?.color ?? "#93c5fd"}
-                  strokeWidth="3"
+                  stroke={profA?.color ?? "#60a5fa"}
+                  strokeWidth="5"
                   strokeLinecap="round"
-                  strokeDasharray="5 3"
-                  animate={{ strokeDashoffset: [0, -16] }}
+                  strokeOpacity="0.45"
+                  animate={{ strokeOpacity: [0.38, 0.55, 0.42] }}
+                  transition={{ duration: 0.6, repeat: Infinity, ease: "easeInOut" }}
+                />
+                <motion.path
+                  d={pourAPathA}
+                  fill="none"
+                  stroke={profA?.color ?? "#60a5fa"}
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeDasharray="6 3"
+                  animate={{ strokeDashoffset: [0, -18] }}
                   transition={{ duration: 0.5, repeat: Infinity, ease: "linear" }}
                 />
-                <motion.circle cx="195" cy="200" r="4" fill={profA?.color ?? "#93c5fd"} fillOpacity="0.6"
-                  animate={{ cy: [198, 202, 200] }} transition={{ duration: 0.4, repeat: Infinity }} />
+                {/* Drop splash */}
+                {[0, 1, 2].map(i => (
+                  <motion.circle key={i}
+                    cx={195 + (i - 1) * 5}
+                    fill={profA?.color ?? "#60a5fa"} fillOpacity="0.60"
+                    r={2 + i * 0.5}
+                    animate={{ cy: [200, 196, 202, 200] }}
+                    transition={{ duration: 0.45, repeat: Infinity, delay: i * 0.14, ease: "easeInOut" }}
+                  />
+                ))}
               </motion.g>
 
-              {/* Right pour */}
-              <motion.g
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              >
+              {/* Solution B pour stream */}
+              <motion.g key="pour-b" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <motion.path
-                  d="M 328 190 Q 295 200 285 200"
+                  d={pourAPathB}
                   fill="none"
-                  stroke={profB?.color ?? "#86efac"}
-                  strokeWidth="3"
+                  stroke={profB?.color ?? "#34d399"}
+                  strokeWidth="5"
                   strokeLinecap="round"
-                  strokeDasharray="5 3"
-                  animate={{ strokeDashoffset: [0, -16] }}
+                  strokeOpacity="0.45"
+                  animate={{ strokeOpacity: [0.38, 0.55, 0.42] }}
+                  transition={{ duration: 0.7, repeat: Infinity, ease: "easeInOut" }}
+                />
+                <motion.path
+                  d={pourAPathB}
+                  fill="none"
+                  stroke={profB?.color ?? "#34d399"}
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeDasharray="6 3"
+                  animate={{ strokeDashoffset: [0, -18] }}
                   transition={{ duration: 0.5, repeat: Infinity, ease: "linear" }}
                 />
-                <motion.circle cx="285" cy="200" r="4" fill={profB?.color ?? "#86efac"} fillOpacity="0.6"
-                  animate={{ cy: [198, 202, 200] }} transition={{ duration: 0.4, repeat: Infinity }} />
+                {[0, 1, 2].map(i => (
+                  <motion.circle key={i}
+                    cx={285 + (i - 1) * 5}
+                    fill={profB?.color ?? "#34d399"} fillOpacity="0.60"
+                    r={2 + i * 0.5}
+                    animate={{ cy: [200, 196, 202, 200] }}
+                    transition={{ duration: 0.45, repeat: Infinity, delay: i * 0.14, ease: "easeInOut" }}
+                  />
+                ))}
               </motion.g>
             </>
           )}
         </AnimatePresence>
 
-        {/* ── Net ionic equation overlay ── */}
+        {/* ══ NET IONIC EQUATION ══ */}
         {mixProgress >= 1 && hasPrecipitate && precipitate && (
-          <motion.g
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.4 }}
-          >
-            <rect x="100" y="44" width="280" height="34" rx="6"
-              fill="rgba(255,255,255,0.92)" stroke="var(--lab-glass-border)" strokeWidth="1" />
-            <text x="240" y="58" textAnchor="middle" fontSize="8" fill="#64748b" fontWeight="600">Net ionic equation</text>
-            <text x="240" y="72" textAnchor="middle" fontSize="8.5" fill="#1e293b" fontFamily="monospace">
+          <motion.g initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35, duration: 0.45 }}>
+            <rect x="96" y="40" width="288" height="36" rx="8"
+              fill="rgba(255,255,255,0.96)" stroke="rgba(148,163,184,0.28)" strokeWidth="1.2" />
+            <text x="240" y="52" textAnchor="middle" fontSize="7.5" fill="#475569" fontWeight="600" letterSpacing="0.04em">
+              NET IONIC EQUATION
+            </text>
+            <text x="240" y="67" textAnchor="middle" fontSize="9" fill="#1d4ed8" fontFamily="monospace" fontWeight="700">
               {precipitate.netIonic}
             </text>
           </motion.g>
         )}
 
         {mixProgress >= 1 && !hasPrecipitate && (
-          <motion.g
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-          >
-            <rect x="130" y="50" width="220" height="28" rx="6"
-              fill="rgba(240,253,244,0.95)" stroke="#86efac" strokeWidth="1" />
-            <text x="240" y="60" textAnchor="middle" fontSize="8" fill="#166534" fontWeight="600">No precipitation</text>
-            <text x="240" y="72" textAnchor="middle" fontSize="7.5" fill="#15803d">All product ions remain soluble</text>
+          <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+            <rect x="126" y="46" width="228" height="28" rx="7"
+              fill="rgba(5,150,105,0.08)" stroke="rgba(5,150,105,0.25)" strokeWidth="1.2" />
+            <text x="240" y="56" textAnchor="middle" fontSize="8" fill="#059669" fontWeight="700">No precipitation occurs</text>
+            <text x="240" y="68" textAnchor="middle" fontSize="7.5" fill="#334155">All product ions remain soluble in water</text>
           </motion.g>
         )}
 
-        {/* Mixing progress bar */}
+        {/* Mix progress bar */}
         {isRunning && (
           <g>
-            <rect x="160" y="298" width="160" height="6" rx="3" fill="#e2e8f0" />
+            <rect x="160" y="298" width="160" height="5" rx="2.5" fill="rgba(148,163,184,0.25)" />
             <motion.rect
-              x="160" y="298"
-              width={160 * mixProgress}
-              height="6" rx="3"
-              fill="var(--lab-blue-500)"
+              x="160" y="298" height="5" rx="2.5"
+              fill="#0ea5e9"
               initial={{ width: 0 }}
               animate={{ width: 160 * mixProgress }}
             />

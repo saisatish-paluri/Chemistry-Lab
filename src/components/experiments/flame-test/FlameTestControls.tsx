@@ -68,9 +68,12 @@ export default function FlameTestControls({
 
       {/* 1 — Light burner */}
       <div className="px-4 py-3">
-        <p className="text-[10px] font-semibold uppercase tracking-wider mb-2"
+        <p className="text-[10px] font-semibold uppercase tracking-wider mb-1"
            style={{ color: "var(--lab-text-subtle)" }}>
-          Step 1 — Bunsen Burner
+          Step 1 — Light the Bunsen Burner
+        </p>
+        <p className="text-[9.5px] mb-2" style={{ color: "#64748b", lineHeight: 1.4 }}>
+          The Bunsen burner heats the sample to ~1700 °C, exciting metal ions.
         </p>
         <Btn
           onClick={onLightBurner}
@@ -82,9 +85,12 @@ export default function FlameTestControls({
 
       {/* 2 — Sample selection */}
       <div className="px-4 py-3">
-        <p className="text-[10px] font-semibold uppercase tracking-wider mb-2"
+        <p className="text-[10px] font-semibold uppercase tracking-wider mb-1"
            style={{ color: "var(--lab-text-subtle)" }}>
-          Step 2 — Select Sample
+          Step 2 — Choose a Metal Salt
+        </p>
+        <p className="text-[9.5px] mb-2" style={{ color: "#64748b", lineHeight: 1.4 }}>
+          Each metal ion emits a unique colour when heated. Select one to test.
         </p>
         <div className="grid grid-cols-1 gap-1">
           {SAMPLES.map((s) => {
@@ -118,9 +124,12 @@ export default function FlameTestControls({
 
       {/* 3 — Loop operations */}
       <div className="px-4 py-3">
-        <p className="text-[10px] font-semibold uppercase tracking-wider mb-2"
+        <p className="text-[10px] font-semibold uppercase tracking-wider mb-1"
            style={{ color: "var(--lab-text-subtle)" }}>
-          Step 3 — Loop
+          Step 3 — Coat the Wire Loop
+        </p>
+        <p className="text-[9.5px] mb-2" style={{ color: "#64748b", lineHeight: 1.4 }}>
+          Dip the nichrome wire into the sample to coat it. Must be clean for each test.
         </p>
         <div className="flex flex-col gap-1.5">
           {!loopClean && (
@@ -147,15 +156,18 @@ export default function FlameTestControls({
 
       {/* 4 — Test */}
       <div className="px-4 py-3">
-        <p className="text-[10px] font-semibold uppercase tracking-wider mb-2"
+        <p className="text-[10px] font-semibold uppercase tracking-wider mb-1"
            style={{ color: "var(--lab-text-subtle)" }}>
-          Step 4 — Flame Test
+          Step 4 — Observe the Flame Colour
+        </p>
+        <p className="text-[9.5px] mb-2" style={{ color: "#64748b", lineHeight: 1.4 }}>
+          Hold the coated loop in the flame. The metal ions excite and emit a characteristic colour.
         </p>
         <Btn
           onClick={onPerformTest}
           disabled={!loopDipped || isRunning || isDone}
           variant="success"
-          label={isRunning ? "🔬 Observing…" : "Hold Loop in Flame"}
+          label={isRunning ? "🔬 Observing flame colour…" : "Hold Loop in Flame →"}
         />
       </div>
 

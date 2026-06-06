@@ -499,7 +499,7 @@ export function chromatographyTick(state: SeparationTechniquesState): Separation
 // ── Reset ────────────────────────────────────────────────────────────────────
 
 export function resetSeparationTechniques(
-  state: SeparationTechniquesState,
+  _state: SeparationTechniquesState,
 ): SeparationTechniquesState {
   return initialSeparationTechniquesState();
 }

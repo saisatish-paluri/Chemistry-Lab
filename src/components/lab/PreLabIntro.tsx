@@ -87,7 +87,7 @@ function groupSafetyNotes(notes: (string | SafetyNote)[]): Map<SafetyLevel, stri
 export default function PreLabIntro({
   title, objective, apparatus, reagents = [], safetyNotes,
 }: PreLabIntroProps) {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const grouped = groupSafetyNotes(safetyNotes);
 
   const dangerNotes = grouped.get("danger")!.length + grouped.get("warning")!.length;

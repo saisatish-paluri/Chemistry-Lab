@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, startTransition } from "react";
 import { motion }                                from "framer-motion";
@@ -8,27 +8,12 @@ import ObservationPanel                          from "@/components/lab/Observat
 import StatusBar                                 from "@/components/lab/StatusBar";
 import ResultModal                               from "@/components/lab/ResultModal";
 import ContextPopup, { obsToPopup }              from "@/components/lab/ContextPopup";
-import PreLabIntro                               from "@/components/lab/PreLabIntro";
 import LabPageShell                              from "@/components/lab/LabPageShell";
+import LabContextPanel                          from "@/components/lab/LabContextPanel";
 import type { EquilibriumPerturbation }          from "@/lib/engine/types";
 import { equilibriumSolutionColor, keqAtTemp }  from "@/lib/engine/chemical-equilibrium-engine";
+import { EXPERIMENT_EDUCATION }                 from "@/lib/experiment-education";
 
-const INTRO = {
-  title:     "Chemical Equilibrium — Le Chatelier's Principle",
-  objective: "Investigate the Fe³⁺ + SCN⁻ ⇌ FeSCN²⁺ equilibrium. Apply stresses (adding ions, dilution, temperature change) and observe how the system shifts to restore equilibrium, demonstrating Le Chatelier's Principle.",
-  apparatus: ["Beaker (250 mL)", "Dropping pipette", "Thermometer", "Colorimeter (simulated)", "Stirring rod"],
-  reagents: [
-    { name: "FeCl₃ (iron(III) chloride)",    concentration: "0.1 M — source of Fe³⁺" },
-    { name: "KSCN (potassium thiocyanate)",  concentration: "0.1 M — source of SCN⁻" },
-    { name: "Distilled water",               concentration: "for dilution" },
-  ],
-  safetyNotes: [
-    "Fe³⁺ and SCN⁻ solutions are mild irritants — avoid skin contact.",
-    "Wear eye protection at all times.",
-    "Do not heat solutions beyond 80 °C.",
-    "Dispose of all solutions in designated waste containers.",
-  ],
-};
 
 const PERTURBATIONS: Array<{
   id:    EquilibriumPerturbation;
@@ -36,24 +21,23 @@ const PERTURBATIONS: Array<{
   icon:  string;
   color: string;
   desc:  string;
+  effect: string;
 }> = [
-  { id: "add-fe3",      label: "Add Fe³⁺",      icon: "⬆", color: "#ef4444", desc: "+0.020 M Fe³⁺" },
-  { id: "add-scn",      label: "Add SCN⁻",      icon: "⬆", color: "#f97316", desc: "+0.020 M SCN⁻" },
-  { id: "remove-fescn", label: "Remove FeSCN²⁺", icon: "⬇", color: "#8b5cf6", desc: "−0.010 M product" },
-  { id: "dilute",       label: "Dilute",         icon: "💧", color: "#0ea5e9", desc: "50% dilution" },
-  { id: "heat",         label: "Heat (+20 K)",   icon: "🔥", color: "#dc2626", desc: "+20 K" },
-  { id: "cool",         label: "Cool (−20 K)",   icon: "❄",  color: "#2563eb", desc: "−20 K" },
+  { id: "add-fe3",      label: "Add Fe³⁺",       icon: "⬆", color: "#ef4444", desc: "+0.020 M Fe³⁺",      effect: "More reactant → shifts right → deeper red" },
+  { id: "add-scn",      label: "Add SCN⁻",       icon: "⬆", color: "#f97316", desc: "+0.020 M SCN⁻",      effect: "More reactant → shifts right → deeper red" },
+  { id: "remove-fescn", label: "Remove FeSCN²⁺", icon: "⬇", color: "#8b5cf6", desc: "−0.010 M product",   effect: "Remove product → shifts right to replace it" },
+  { id: "dilute",       label: "Dilute (Water)",  icon: "💧", color: "#0ea5e9", desc: "50% dilution",       effect: "More water → all concentrations drop → lighter" },
+  { id: "heat",         label: "Heat (+20 K)",    icon: "🔥", color: "#dc2626", desc: "+20 K",              effect: "Heat → reverse reaction favoured → lighter" },
+  { id: "cool",         label: "Cool (−20 K)",    icon: "❄",  color: "#2563eb", desc: "−20 K",              effect: "Cool → forward reaction favoured → deeper red" },
 ];
 
 export default function ChemicalEquilibriumPage() {
-  const [mounted, setMounted]     = useState(false);
   const [showPopup, setShowPopup] = useState(false);
   const store = useChemicalEquilibriumStore();
 
   useEffect(() => {
     store.hydrate();
-    store.startAction();
-    startTransition(() => setMounted(true));
+    if (store.status === "idle") store.startAction();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -65,13 +49,6 @@ export default function ChemicalEquilibriumPage() {
     return () => clearTimeout(t);
   }, [lastObsId]);
 
-  if (!mounted) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="w-8 h-8 rounded-full border-2 border-blue-400 border-t-transparent animate-spin" />
-      </div>
-    );
-  }
 
   const solColor   = equilibriumSolutionColor(store.concFeSCN);
   const keqNow     = keqAtTemp(store.temperatureK);
@@ -130,43 +107,85 @@ export default function ChemicalEquilibriumPage() {
     </div>
   );
 
+  const lastPerturb = store.perturbHistory.length > 0
+    ? PERTURBATIONS.find((p) => p.id === store.perturbHistory[store.perturbHistory.length - 1])
+    : null;
+
   const perturbControls = (
-    <div>
-      <p
-        className="text-[10px] font-semibold uppercase tracking-widest mb-2"
-        style={{ color: "var(--lab-blue-600)" }}
-      >
-        Apply Stress
-      </p>
-      <div className="grid grid-cols-2 gap-2">
-        {PERTURBATIONS.map((p) => (
-          <button
-            key={p.id}
-            onClick={() => store.perturbAction(p.id)}
-            disabled={store.status === "completed"}
-            className="flex flex-col items-center gap-1 rounded-xl p-2.5 text-center border transition-all duration-150 hover:scale-105 active:scale-95 disabled:opacity-40"
-            style={{
-              background:  `${p.color}0d`,
-              borderColor: `${p.color}44`,
-              color:       p.color,
-            }}
-          >
-            <span className="text-base">{p.icon}</span>
-            <span className="text-[9px] font-bold leading-tight">{p.label}</span>
-            <span className="text-[8px] opacity-70">{p.desc}</span>
-          </button>
-        ))}
+    <div className="flex flex-col gap-3">
+      {/* What is happening guide */}
+      <div style={{
+        borderRadius: 10, overflow: "hidden",
+        border: "1px solid rgba(180,83,9,0.18)",
+      }}>
+        <div style={{
+          padding: "6px 12px",
+          background: "rgba(180,83,9,0.08)",
+          borderBottom: "1px solid rgba(180,83,9,0.14)",
+        }}>
+          <p style={{ fontSize: 9.5, fontWeight: 800, color: "#d97706", margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            Le Chatelier&apos;s Principle
+          </p>
+        </div>
+        <div style={{ padding: "8px 12px" }}>
+          <p style={{ fontSize: 10.5, color: "#334155", margin: 0, lineHeight: 1.55 }}>
+            When you disturb an equilibrium (add a chemical, change temperature, dilute), the system <strong>shifts to undo the disturbance</strong> and reach a new balance.
+          </p>
+          {lastPerturb && (
+            <div style={{
+              marginTop: 8, padding: "5px 8px", borderRadius: 7,
+              background: `${lastPerturb.color}0a`,
+              border: `1px solid ${lastPerturb.color}30`,
+            }}>
+              <p style={{ fontSize: 10, color: lastPerturb.color, margin: 0, fontWeight: 700, lineHeight: 1.4 }}>
+                Last action: {lastPerturb.label}
+              </p>
+              <p style={{ fontSize: 9.5, color: "#475569", margin: "2px 0 0", lineHeight: 1.4 }}>
+                {lastPerturb.effect}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Stress buttons */}
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--lab-blue-600)" }}>
+          Apply a Stress
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {PERTURBATIONS.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => store.perturbAction(p.id)}
+              disabled={store.status === "completed"}
+              className="flex flex-col gap-1 rounded-xl p-2.5 border transition-all duration-150 hover:scale-[1.02] active:scale-95 disabled:opacity-40"
+              style={{
+                background:  `${p.color}0d`,
+                borderColor: `${p.color}44`,
+                color:       p.color,
+                textAlign:   "left",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <span style={{ fontSize: 12 }}>{p.icon}</span>
+                <span style={{ fontSize: 10, fontWeight: 800, lineHeight: 1.2 }}>{p.label}</span>
+              </div>
+              <span style={{ fontSize: 8.5, opacity: 0.75, lineHeight: 1.3 }}>{p.effect}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {store.perturbHistory.length > 0 && (
-        <p className="text-[9px] mt-2" style={{ color: "var(--lab-text-subtle)" }}>
-          {store.perturbHistory.length} perturbation(s) applied
+        <p className="text-[9px]" style={{ color: "var(--lab-text-subtle)" }}>
+          {store.perturbHistory.length} stress(es) applied — watch the colour change
         </p>
       )}
 
       <button
         onClick={store.resetAction}
-        className="mt-3 w-full py-1.5 text-xs font-semibold rounded-lg border transition-all hover:bg-red-50"
+        className="w-full py-1.5 text-xs font-semibold rounded-lg border transition-all hover:bg-red-50"
         style={{ borderColor: "var(--lab-glass-border)", color: "var(--lab-text-muted)" }}
       >
         Reset
@@ -174,10 +193,31 @@ export default function ChemicalEquilibriumPage() {
     </div>
   );
 
+  const eqLeftPanel = (
+    <LabContextPanel
+      title="Chemical Equilibrium"
+      accent="#d97706"
+      summary="Disturb the Fe³⁺/SCN⁻ equilibrium and watch the system respond via Le Chatelier's Principle — more reactant shifts the colour deeper red; dilution lightens it."
+      formula="Fe³⁺ + SCN⁻ ⇌ FeSCN²⁺"
+      formulaLabel="The equilibrium"
+      facts={[
+        { icon: "🔴", label: "Blood-red colour",  value: "FeSCN²⁺"             },
+        { icon: "📊", label: "Keq (298 K)",        value: `${keqAtTemp(298).toFixed(0)}` },
+        { icon: "🌡️", label: "Temp effect",        value: "Exothermic fwd"       },
+        { icon: "⚖️", label: "Principle",          value: "Le Chatelier's"       },
+      ]}
+      steps={[
+        { number: 1, title: "Observe baseline",   body: "Note the deep blood-red colour of the FeSCN²⁺ equilibrium solution." },
+        { number: 2, title: "Add a reactant",      body: "Click Add Fe³⁺ or Add SCN⁻ — the colour should deepen." },
+        { number: 3, title: "Try dilution",        body: "Dilute the system — the colour lightens as Keq is maintained." },
+        { number: 4, title: "Heat/Cool",           body: "Temperature shifts Keq — heating favours the reverse reaction." },
+      ]}
+    />
+  );
+
   return (
     <LabPageShell
-      preLabIntro={<PreLabIntro {...INTRO} />}
-
+      leftPanel={eqLeftPanel}
       statusBar={
         <StatusBar
           status={store.status}
@@ -202,7 +242,16 @@ export default function ChemicalEquilibriumPage() {
           temperatureK={store.temperatureK}
         />
       }
-      workspaceMaxW="max-w-sm"
+      education={EXPERIMENT_EDUCATION["chemical-equilibrium"]}
+      reactionNote={
+        store.shiftDirection === "forward"
+          ? `Shifted FORWARD → [FeSCN²⁺]↑ — deeper red. Le Chatelier: system opposes stress by producing more product.`
+          : store.shiftDirection === "reverse"
+            ? `Shifted REVERSE ← [FeSCN²⁺]↓ — lighter colour. Le Chatelier: system consumes product to restore balance.`
+            : store.concFeSCN > 0
+              ? "System at equilibrium — forward and reverse rates are equal. Apply a stress to shift the position."
+              : "Establish the Fe³⁺/SCN⁻ equilibrium, then add stresses to observe Le Chatelier's principle."
+      }
 
       centerBottom={concCard}
 
@@ -246,78 +295,187 @@ function EquilibriumWorkspace({
   shiftDirection: "forward" | "reverse" | "none";
   temperatureK:   number;
 }) {
-  const arrowOpacity = shiftDirection !== "none" ? 1 : 0.15;
   const arrowForward = shiftDirection === "forward";
+  const arrowReverse = shiftDirection === "reverse";
   const temp = temperatureK - 273;
+
+  const shiftColor =
+    arrowForward ? "#16a34a" :
+    arrowReverse ? "#dc2626" :
+    "#64748b";
+
+  const shiftText =
+    arrowForward ? "⟶ Forward shift" :
+    arrowReverse ? "⟵ Reverse shift" :
+    "⇌ At equilibrium";
 
   return (
     <div
-      className="rounded-2xl overflow-hidden"
+      className="relative rounded-3xl overflow-hidden select-none"
       style={{
-        background: "var(--lab-glass-heavy)",
-        border:     "1px solid var(--lab-glass-border)",
-        boxShadow:  "var(--lab-shadow-md)",
+        aspectRatio: "320/250",
+        width:       "100%",
+        height:      "auto",
+        maxHeight:   "100%",
+        background: "radial-gradient(ellipse at 50% 25%, rgba(180,83,9,0.10) 0%, transparent 50%), linear-gradient(180deg, #fffbeb 0%, #fef3c7 40%, #fffdf0 100%)",
+        border: "1px solid rgba(148,163,184,0.28)",
+        boxShadow:
+          "0 10px 30px rgba(15,23,42,0.06), " +
+          "0 2px 6px rgba(15,23,42,0.03), " +
+          "0 0 0 1px rgba(255,255,255,0.80) inset",
       }}
     >
-      <div className="p-4">
-        <p
-          className="text-[10px] font-semibold uppercase tracking-widest mb-3 text-center"
-          style={{ color: "var(--lab-text-muted)" }}
-        >
-          Fe³⁺ + SCN⁻ ⇌ FeSCN²⁺
-        </p>
+      <div aria-hidden="true" className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: "radial-gradient(circle, rgba(212,119,6,0.14) 1px, transparent 1px)",
+          backgroundSize:  "22px 22px",
+        }}
+      />
 
-        <svg viewBox="0 0 320 200" width="100%" aria-label="Equilibrium beaker">
-          <path d="M60 20 L60 160 Q60 175 75 175 L245 175 Q260 175 260 160 L260 20 Z"
-                fill="none" stroke="#cbd5e1" strokeWidth="2" />
+      <svg viewBox="0 0 320 250" width="100%"
+        style={{ display: "block", position: "relative", zIndex: 10 }}
+        aria-label="Equilibrium beaker" role="img"
+      >
+        <defs>
+          <filter id="eq-shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="rgba(0,0,0,0.50)" />
+          </filter>
+          <filter id="eq-glow">
+            <feGaussianBlur stdDeviation="6" />
+          </filter>
+          <clipPath id="eq-vessel-clip">
+            <path d="M61 28 L61 170 Q61 185 76 185 L244 185 Q259 185 259 170 L259 28 Z" />
+          </clipPath>
+        </defs>
 
-          <motion.rect
-            x="61" y="60" width="198" height="114"
-            rx="0"
-            animate={{ fill: solColor }}
-            transition={{ duration: 1.2, ease: "easeOut" }}
-          />
-          <motion.path
-            d="M61 60 Q120 55 160 60 Q200 65 259 60"
-            fill="none" stroke="white" strokeWidth="1.5" strokeOpacity="0.5"
-            animate={{ d: ["M61 60 Q120 55 160 60 Q200 65 259 60", "M61 60 Q120 65 160 60 Q200 55 259 60"] }}
-            transition={{ repeat: Infinity, duration: 2, ease: "easeInOut", repeatType: "mirror" }}
-          />
+        {/* Equation header */}
+        <text x="160" y="16" textAnchor="middle" fontSize="9" fill="#92400e" fontWeight="700">
+          Fe³⁺  +  SCN⁻  ⇌  FeSCN²⁺
+        </text>
 
-          <path d="M60 20 L60 160 Q60 175 75 175 L245 175 Q260 175 260 160 L260 20 Z"
-                fill="none" stroke="#94a3b8" strokeWidth="1.5" />
+        {/* ── Reaction vessel ── */}
+        <path d="M60 28 L60 170 Q60 185 75 185 L245 185 Q260 185 260 170 L260 28 Z"
+          fill="rgba(255,255,255,0.48)" stroke="rgba(71,85,105,0.50)" strokeWidth="2"
+          filter="url(#eq-shadow)" />
+        <path d="M64 34 L64 170" stroke="rgba(255,255,255,0.40)" strokeWidth="4" strokeLinecap="round" />
+        <path d="M72 34 L72 170" stroke="rgba(255,255,255,0.14)" strokeWidth="2" strokeLinecap="round" />
 
-          <g opacity={arrowOpacity} style={{ transition: "opacity 0.5s" }}>
-            <motion.g
-              animate={{ x: arrowForward ? [0, 4, 0] : 0 }}
-              transition={{ repeat: arrowForward ? Infinity : 0, duration: 0.8 }}
-            >
-              <line x1="100" y1="30" x2="220" y2="30" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" />
-              <polygon points="220,26 228,30 220,34" fill="#16a34a" />
-            </motion.g>
-            <motion.g
-              animate={{ x: !arrowForward && shiftDirection !== "none" ? [0, -4, 0] : 0 }}
-              transition={{ repeat: !arrowForward && shiftDirection !== "none" ? Infinity : 0, duration: 0.8 }}
-            >
-              <line x1="220" y1="40" x2="100" y2="40" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" />
-              <polygon points="100,36 92,40 100,44" fill="#dc2626" />
-            </motion.g>
-          </g>
+        {/* Solution fill — blood red for FeSCN²⁺ */}
+        <motion.rect x="61" y="62" width="198" height="122"
+          clipPath="url(#eq-vessel-clip)"
+          animate={{ fill: solColor }}
+          transition={{ duration: 1.4, ease: "easeOut" }}
+        />
+        {/* Solution surface wave */}
+        <motion.path
+          fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5"
+          animate={{ d: [
+            "M 62 62 Q 120 58 160 62 Q 200 66 258 62",
+            "M 62 62 Q 120 66 160 62 Q 200 58 258 62",
+          ]}}
+          transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut", repeatType: "mirror" }}
+          clipPath="url(#eq-vessel-clip)"
+        />
+        {/* Ambient solution glow when FeSCN²⁺ is high */}
+        {concFeSCN > 0.02 && (
+          <ellipse cx="160" cy="123" rx="95" ry="55"
+            fill={solColor} opacity="0.15" filter="url(#eq-glow)" />
+        )}
 
-          <text x="160" y="145" textAnchor="middle" fontSize="11" fill="white" fontWeight="600" opacity="0.85">
-            {temperatureK} K ({temp > 0 ? "+" : ""}{temp} °C)
+        {/* Vessel outline overlay */}
+        <path d="M60 28 L60 170 Q60 185 75 185 L245 185 Q260 185 260 170 L260 28 Z"
+          fill="none" stroke="rgba(99,179,237,0.25)" strokeWidth="1.5" />
+
+        {/* ── Reaction arrows — animate when shifted ── */}
+        <g style={{ transition: "opacity 0.5s" }}>
+          {/* Forward arrow (top) — thicker and bolder when active */}
+          <motion.g
+            animate={{ x: arrowForward ? [0, 6, 0] : 0 }}
+            transition={{ repeat: arrowForward ? Infinity : 0, duration: 0.65, ease: "easeInOut" }}
+          >
+            <line x1="96" y1="34" x2="216" y2="34"
+              stroke={arrowForward ? "#16a34a" : "#94a3b8"} strokeWidth={arrowForward ? 3.5 : 2}
+              strokeLinecap="round"
+              style={{ transition: "stroke 0.5s, stroke-width 0.3s" }} />
+            <polygon
+              points="216,29 228,34 216,39"
+              fill={arrowForward ? "#16a34a" : "#94a3b8"}
+              style={{ transition: "fill 0.5s" }}
+            />
+            {arrowForward && (
+              <text x="156" y="30" textAnchor="middle" fontSize="7.5" fill="#16a34a" fontWeight="800">
+                FORWARD →
+              </text>
+            )}
+          </motion.g>
+          {/* Reverse arrow (bottom) */}
+          <motion.g
+            animate={{ x: arrowReverse ? [0, -6, 0] : 0 }}
+            transition={{ repeat: arrowReverse ? Infinity : 0, duration: 0.65, ease: "easeInOut" }}
+          >
+            <line x1="216" y1="47" x2="96" y2="47"
+              stroke={arrowReverse ? "#dc2626" : "#94a3b8"} strokeWidth={arrowReverse ? 3.5 : 2}
+              strokeLinecap="round"
+              style={{ transition: "stroke 0.5s, stroke-width 0.3s" }} />
+            <polygon
+              points="96,42 84,47 96,52"
+              fill={arrowReverse ? "#dc2626" : "#94a3b8"}
+              style={{ transition: "fill 0.5s" }}
+            />
+            {arrowReverse && (
+              <text x="156" y="58" textAnchor="middle" fontSize="7.5" fill="#dc2626" fontWeight="800">
+                ← REVERSE
+              </text>
+            )}
+          </motion.g>
+        </g>
+
+        {/* Shift label badge — always visible when shifted */}
+        {shiftDirection !== "none" && (
+          <motion.g
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35 }}
+          >
+            <rect x="90" y="54" width="140" height="18" rx="5"
+              fill={`${shiftColor}1a`} stroke={`${shiftColor}70`} strokeWidth="1.2" />
+            <text x="160" y="66" textAnchor="middle" fontSize="8.5"
+              fill={shiftColor} fontWeight="900">
+              {shiftText}
+            </text>
+          </motion.g>
+        )}
+
+        {/* Temperature + FeSCN²⁺ reading inside vessel */}
+        <text x="160" y="148" textAnchor="middle" fontSize="10"
+          fill="rgba(255,240,210,0.85)" fontWeight="700">
+          {temperatureK} K  ({temp > 0 ? "+" : ""}{temp} °C)
+        </text>
+        <text x="160" y="165" textAnchor="middle" fontSize="9"
+          fill="rgba(255,220,180,0.90)" fontWeight="600">
+          [FeSCN²⁺] = {concFeSCN.toFixed(4)} M
+        </text>
+
+        {/* ── Concentration readouts ── */}
+        <g transform="translate(0, 192)">
+          {/* Fe3+ */}
+          <text x="72" y="12" textAnchor="middle" fontSize="8" fill="#64748b">
+            <tspan fill="#f87171">●</tspan>  [Fe³⁺] = {concFe3.toFixed(4)} M
           </text>
-          <text x="160" y="165" textAnchor="middle" fontSize="9" fill="white" opacity="0.7">
-            [FeSCN²⁺] = {concFeSCN.toFixed(4)} M
+          {/* SCN⁻ */}
+          <text x="248" y="12" textAnchor="middle" fontSize="8" fill="#64748b">
+            <tspan fill="#fb923c">●</tspan>  [SCN⁻] = {concSCN.toFixed(4)} M
           </text>
-        </svg>
-
-        <div className="flex justify-around mt-3 text-[9px]" style={{ color: "var(--lab-text-subtle)" }}>
-          <span><span style={{ color: "#ef4444" }}>●</span> Fe³⁺ = {concFe3.toFixed(4)} M</span>
-          <span><span style={{ color: "#f97316" }}>●</span> SCN⁻ = {concSCN.toFixed(4)} M</span>
-          <span><span style={{ color: "#7c3aed" }}>●</span> FeSCN²⁺ = {concFeSCN.toFixed(4)} M</span>
-        </div>
-      </div>
+          {/* FeSCN²⁺ */}
+          <text x="160" y="26" textAnchor="middle" fontSize="8.5" fill="#92400e" fontWeight="700">
+            <tspan fill="#a78bfa">●</tspan>  [FeSCN²⁺] = {concFeSCN.toFixed(4)} M
+          </text>
+          {/* Keq hint */}
+          <text x="160" y="40" textAnchor="middle" fontSize="7.5" fill="#94a3b8">
+            Blood-red colour = high [FeSCN²⁺]  ·  light = low [FeSCN²⁺]
+          </text>
+        </g>
+      </svg>
     </div>
   );
 }

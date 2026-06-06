@@ -96,6 +96,14 @@ export const useFlameTestStore = create<FlameTestStore>((set, get) => ({
 
   hydrate: () => {
     const saved = loadSession<FlameTestState>(STORAGE_KEY);
-    if (saved) set({ ...saved, lastError: null });
+    if (saved) {
+      if (saved.status === "completed" || saved.status === "failed") {
+        const fresh = initialFlameTestState(saved.mode);
+        set({ ...fresh, lastError: null });
+        saveSession(STORAGE_KEY, fresh);
+      } else {
+        set({ ...saved, lastError: null });
+      }
+    }
   },
 }));

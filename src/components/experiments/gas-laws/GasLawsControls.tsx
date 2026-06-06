@@ -22,6 +22,61 @@ interface Props {
   onReset:       () => void;
 }
 
+function sliderPct(value: number, min: number, max: number) {
+  return `${Math.round(((value - min) / (max - min)) * 100)}%`;
+}
+
+const LAW_CARDS: Array<{
+  id: GasLaw;
+  title: string;
+  emoji: string;
+  what: string;
+  changes: string;
+  fixed: string;
+  color: string;
+}> = [
+  {
+    id:      "boyle",
+    title:   "Boyle's Law",
+    emoji:   "🔵",
+    what:    "Squeeze the syringe — pressure rises",
+    changes: "Drag the Volume slider left/right",
+    fixed:   "Temperature stays constant",
+    color:   "#2563eb",
+  },
+  {
+    id:      "charles",
+    title:   "Charles's Law",
+    emoji:   "🔴",
+    what:    "Heat the gas — it expands",
+    changes: "Drag the Temperature slider up/down",
+    fixed:   "Pressure stays constant",
+    color:   "#ea580c",
+  },
+];
+
+// Step indicator shown when experiment is running
+function StepBadge({ step, total, label }: { step: number; total: number; label: string }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 8,
+      padding: "6px 10px", borderRadius: 9,
+      background: "rgba(37,99,235,0.06)", border: "1px solid rgba(37,99,235,0.18)",
+      marginBottom: 2,
+    }}>
+      <span style={{
+        width: 20, height: 20, borderRadius: "50%",
+        background: "var(--lab-blue-600)", color: "white",
+        fontSize: 10, fontWeight: 800,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        flexShrink: 0,
+      }}>{step}</span>
+      <p style={{ fontSize: 10.5, color: "#334155", margin: 0, lineHeight: 1.4 }}>{label}</p>
+      <span style={{ marginLeft: "auto", fontSize: 9, color: "#94a3b8" }}>{step}/{total}</span>
+    </div>
+  );
+}
+
 export default function GasLawsControls({
   status, law, temperature, volume, pressure, dataPoints,
   onSelectLaw, onStartExp, onSetVolume, onSetTemp,
@@ -31,184 +86,280 @@ export default function GasLawsControls({
   const isRunning = status === "running";
   const isSetup   = status === "setup";
 
-  return (
-    <div className="flex flex-col gap-0 divide-y" style={{ borderColor: "var(--lab-glass-border)" }}>
+  // Derive current step for guidance
+  const currentStep = !law ? 1 : isSetup ? 2 : isRunning && dataPoints.length < 3 ? 3 : isRunning ? 4 : 5;
 
-      {/* Law selection */}
-      <div className="px-4 py-3">
-        <p className="text-[10px] font-semibold uppercase tracking-wider mb-2"
-           style={{ color: "var(--lab-text-subtle)" }}>
-          Gas Law
-        </p>
-        <div className="flex gap-2">
-          {(["boyle", "charles"] as const).map((l) => (
-            <button
-              key={l}
-              onClick={() => onSelectLaw(l)}
-              disabled={isDone}
-              className="flex-1 py-2 rounded-lg border text-xs font-semibold transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{
-                borderColor: law === l ? "var(--lab-blue-500)" : "var(--lab-glass-border)",
-                background:  law === l ? "var(--lab-blue-600)" : "transparent",
-                color: law === l ? "white" : "var(--lab-text-secondary)",
-              }}
-              aria-pressed={law === l}
-            >
-              {l === "boyle" ? "Boyle's" : "Charles's"}
-            </button>
-          ))}
+  return (
+    <div className="flex flex-col gap-3">
+
+      {/* Current step guidance */}
+      {!isDone && (
+        <div style={{ borderRadius: 10, overflow: "hidden", border: "1px solid rgba(37,99,235,0.14)" }}>
+          <div style={{
+            padding: "7px 12px",
+            background: "rgba(37,99,235,0.07)",
+            borderBottom: "1px solid rgba(37,99,235,0.12)",
+          }}>
+            <p style={{ fontSize: 9.5, fontWeight: 800, color: "#2563eb", margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              What to do now
+            </p>
+          </div>
+          <div style={{ padding: "8px 12px" }}>
+            {currentStep === 1 && (
+              <p style={{ fontSize: 11, color: "#334155", margin: 0, lineHeight: 1.55 }}>
+                <strong>Step 1:</strong> Choose which gas law you want to explore below.
+              </p>
+            )}
+            {currentStep === 2 && (
+              <p style={{ fontSize: 11, color: "#334155", margin: 0, lineHeight: 1.55 }}>
+                <strong>Step 2:</strong> Click <em>Start Exploration</em> to activate the controls.
+              </p>
+            )}
+            {currentStep === 3 && (
+              <p style={{ fontSize: 11, color: "#334155", margin: 0, lineHeight: 1.55 }}>
+                <strong>Step 3:</strong> Move the slider and click <em>Record Data Point</em> (need 3 points).
+              </p>
+            )}
+            {currentStep === 4 && (
+              <p style={{ fontSize: 11, color: "#334155", margin: 0, lineHeight: 1.55 }}>
+                <strong>Step 4:</strong> Keep recording points to build the curve, then click <em>Complete</em>.
+              </p>
+            )}
+          </div>
         </div>
-        {law && (
-          <p className="text-[9px] mt-1.5" style={{ color: "var(--lab-text-subtle)" }}>
-            {law === "boyle"
-              ? "Vary volume → observe pressure (T fixed at 300 K)"
-              : "Vary temperature → observe volume (P fixed at 1 atm)"}
-          </p>
-        )}
+      )}
+
+      {/* ── GAS LAW selection ── */}
+      <div className="lab-ctrl-section">
+        <div className="lab-ctrl-section-hdr">
+          <span className="lab-ctrl-section-hdr-icon">⚗</span>
+          <span className="lab-ctrl-section-hdr-title">Choose a Gas Law</span>
+        </div>
+        <div className="p-3 flex flex-col gap-2">
+          <div className="flex flex-col gap-2">
+            {LAW_CARDS.map((card) => (
+              <button
+                key={card.id}
+                onClick={() => onSelectLaw(card.id)}
+                disabled={isDone}
+                style={{
+                  borderRadius: 10,
+                  border: `2px solid ${law === card.id ? card.color : "rgba(148,163,184,0.25)"}`,
+                  background: law === card.id ? `${card.color}0d` : "rgba(255,255,255,0.6)",
+                  padding: "10px 12px",
+                  textAlign: "left",
+                  cursor: isDone ? "not-allowed" : "pointer",
+                  opacity: isDone ? 0.4 : 1,
+                  transition: "all 0.15s ease",
+                }}
+                aria-pressed={law === card.id}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 4 }}>
+                  <span style={{ fontSize: 14 }}>{card.emoji}</span>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: law === card.id ? card.color : "#334155" }}>
+                    {card.title}
+                  </span>
+                  {law === card.id && (
+                    <span style={{
+                      marginLeft: "auto", fontSize: 9, fontWeight: 700,
+                      color: card.color, background: `${card.color}18`,
+                      borderRadius: 4, padding: "1px 6px",
+                    }}>SELECTED</span>
+                  )}
+                </div>
+                <p style={{ fontSize: 10, color: "#475569", margin: 0, lineHeight: 1.4 }}>{card.what}</p>
+                <p style={{ fontSize: 9.5, color: "#94a3b8", margin: "2px 0 0", lineHeight: 1.3 }}>Fixed: {card.fixed}</p>
+              </button>
+            ))}
+          </div>
+
+          {law && !isRunning && !isDone && (
+            <button
+              onClick={onStartExp}
+              className="w-full py-2 rounded-lg text-xs font-semibold text-white transition-all duration-150 hover:opacity-90"
+              style={{ background: "var(--lab-blue-600)", marginTop: 4 }}
+            >
+              Start Exploration →
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Start exploration */}
-      {law && !isRunning && !isDone && (
-        <div className="px-4 py-3">
-          <button
-            onClick={onStartExp}
-            disabled={isRunning}
-            className="w-full py-2 rounded-lg text-xs font-semibold text-white transition-all duration-150 hover:opacity-90"
-            style={{ background: "var(--lab-blue-600)" }}
-          >
-            {isSetup ? "Start Exploration" : "Continue"}
-          </button>
-        </div>
-      )}
-
-      {/* Boyle's: Volume slider */}
+      {/* ── PARAMETERS section (Boyle's: Volume) ── */}
       {law === "boyle" && isRunning && (
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wider"
-               style={{ color: "var(--lab-text-subtle)" }}>
-              Volume (L)
-            </p>
-            <span className="text-xs font-bold font-mono" style={{ color: "var(--lab-blue-600)" }}>
-              {volume.toFixed(2)} L
-            </span>
+        <div className="lab-ctrl-section">
+          <div className="lab-ctrl-section-hdr">
+            <span className="lab-ctrl-section-hdr-icon">📐</span>
+            <span className="lab-ctrl-section-hdr-title">Adjust Volume</span>
           </div>
-          <input
-            type="range"
-            min={BOYLE_V_MIN} max={BOYLE_V_MAX} step={0.1}
-            value={volume}
-            onChange={(e) => onSetVolume(Number(e.target.value))}
-            disabled={isDone}
-            className="w-full h-2 rounded-full appearance-none cursor-pointer"
-            style={{ accentColor: "var(--lab-blue-500)" }}
-            aria-label="Volume slider"
-          />
-          <div className="flex justify-between text-[9px] mt-0.5" style={{ color: "var(--lab-text-subtle)" }}>
-            <span>{BOYLE_V_MIN} L</span>
-            <span className="font-mono text-[10px]" style={{ color: "#ef4444" }}>
-              P = {pressure.toFixed(3)} atm
-            </span>
-            <span>{BOYLE_V_MAX} L</span>
+          <div className="lab-ctrl-param">
+            <div className="lab-ctrl-param-top">
+              <span className="lab-ctrl-param-label">Volume (V)</span>
+              <span style={{ fontWeight: 700, color: "var(--lab-blue-600)", fontSize: 13 }}>
+                {volume.toFixed(2)}
+              </span>
+              <span className="lab-ctrl-param-unit">L</span>
+            </div>
+            <input
+              type="range"
+              min={BOYLE_V_MIN} max={BOYLE_V_MAX} step={0.1}
+              value={volume}
+              onChange={(e) => onSetVolume(Number(e.target.value))}
+              disabled={isDone}
+              className="lab-ctrl-slider"
+              style={{
+                "--slider-pct": sliderPct(volume, BOYLE_V_MIN, BOYLE_V_MAX),
+              } as React.CSSProperties}
+              aria-label="Volume slider"
+            />
+            <div className="lab-ctrl-range-row">
+              <span>{BOYLE_V_MIN} L (small)</span>
+              <span>{BOYLE_V_MAX} L (large)</span>
+            </div>
+            <div style={{
+              display: "flex", justifyContent: "space-between",
+              padding: "4px 8px", borderRadius: 7, marginTop: 4,
+              background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.18)",
+            }}>
+              <span style={{ fontSize: 10, color: "#64748b" }}>Resulting Pressure</span>
+              <span style={{ fontSize: 11, fontWeight: 800, color: "#ef4444", fontFamily: "monospace" }}>
+                {pressure.toFixed(3)} atm
+              </span>
+            </div>
+            <p style={{ fontSize: 9.5, color: "#94a3b8", marginTop: 4 }}>
+              Smaller volume → higher pressure (particles collide more)
+            </p>
           </div>
         </div>
       )}
 
-      {/* Charles's: Temperature slider */}
+      {/* ── PARAMETERS section (Charles's: Temperature) ── */}
       {law === "charles" && isRunning && (
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wider"
-               style={{ color: "var(--lab-text-subtle)" }}>
-              Temperature (K)
-            </p>
-            <span className="text-xs font-bold font-mono" style={{ color: "#f59e0b" }}>
-              {temperature} K ({(temperature - 273).toFixed(0)} °C)
-            </span>
+        <div className="lab-ctrl-section">
+          <div className="lab-ctrl-section-hdr">
+            <span className="lab-ctrl-section-hdr-icon">🌡️</span>
+            <span className="lab-ctrl-section-hdr-title">Adjust Temperature</span>
           </div>
-          <input
-            type="range"
-            min={CHARLES_T_MIN} max={CHARLES_T_MAX} step={10}
-            value={temperature}
-            onChange={(e) => onSetTemp(Number(e.target.value))}
-            disabled={isDone}
-            className="w-full h-2 rounded-full appearance-none cursor-pointer"
-            style={{ accentColor: "#f59e0b" }}
-            aria-label="Temperature slider"
-          />
-          <div className="flex justify-between text-[9px] mt-0.5" style={{ color: "var(--lab-text-subtle)" }}>
-            <span>{CHARLES_T_MIN} K</span>
-            <span className="font-mono text-[10px]" style={{ color: "#3b82f6" }}>
-              V = {volume.toFixed(3)} L
-            </span>
-            <span>{CHARLES_T_MAX} K</span>
+          <div className="lab-ctrl-param">
+            <div className="lab-ctrl-param-top">
+              <span className="lab-ctrl-param-label">Temperature (T)</span>
+              <span style={{ fontWeight: 700, color: "#f59e0b", fontSize: 13 }}>
+                {temperature}
+              </span>
+              <span className="lab-ctrl-param-unit">K</span>
+            </div>
+            <input
+              type="range"
+              min={CHARLES_T_MIN} max={CHARLES_T_MAX} step={10}
+              value={temperature}
+              onChange={(e) => onSetTemp(Number(e.target.value))}
+              disabled={isDone}
+              className="lab-ctrl-slider"
+              style={{
+                "--slider-accent": "#f59e0b",
+                "--slider-pct":    sliderPct(temperature, CHARLES_T_MIN, CHARLES_T_MAX),
+              } as React.CSSProperties}
+              aria-label="Temperature slider"
+            />
+            <div className="lab-ctrl-range-row">
+              <span>{CHARLES_T_MIN} K (cold)</span>
+              <span>{CHARLES_T_MAX} K (hot)</span>
+            </div>
+            <p style={{ fontSize: 9.5, color: "#94a3b8", marginTop: 2 }}>
+              {(temperature - 273).toFixed(0)} °C — hotter gas expands
+            </p>
+            <div style={{
+              display: "flex", justifyContent: "space-between",
+              padding: "4px 8px", borderRadius: 7, marginTop: 4,
+              background: "rgba(37,99,235,0.07)", border: "1px solid rgba(37,99,235,0.18)",
+            }}>
+              <span style={{ fontSize: 10, color: "#64748b" }}>Resulting Volume</span>
+              <span style={{ fontSize: 11, fontWeight: 800, color: "#2563eb", fontFamily: "monospace" }}>
+                {volume.toFixed(3)} L
+              </span>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Record data point */}
+      {/* ── Record data point ── */}
       {isRunning && (
-        <div className="px-4 py-3">
+        <div className="flex flex-col gap-1">
           <button
             onClick={onRecordPoint}
-            className="w-full py-2 rounded-lg text-xs font-semibold border transition-all duration-150 hover:bg-blue-50"
+            className="w-full py-2.5 rounded-xl text-xs font-semibold border transition-all duration-150 hover:bg-blue-50 active:scale-[0.98]"
             style={{ borderColor: "var(--lab-blue-500)", color: "var(--lab-blue-600)" }}
           >
-            📍 Record Data Point
+            📍 Record This Data Point
           </button>
-          <p className="text-[9px] mt-1 text-center" style={{ color: "var(--lab-text-subtle)" }}>
-            {dataPoints.length} point{dataPoints.length !== 1 ? "s" : ""} recorded
-            {dataPoints.length < 3 ? ` (${3 - dataPoints.length} more needed)` : " ✓"}
-          </p>
+          <StepBadge
+            step={3}
+            total={5}
+            label={
+              dataPoints.length === 0
+                ? "Record your first measurement"
+                : dataPoints.length < 3
+                ? `${3 - dataPoints.length} more needed for a valid graph`
+                : `${dataPoints.length} points — keep going or complete`
+            }
+          />
         </div>
       )}
 
-      {/* Data table */}
+      {/* ── Data table ── */}
       {dataPoints.length > 0 && (
-        <div className="px-4 py-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wider mb-2"
-             style={{ color: "var(--lab-text-subtle)" }}>
-            Data Table
-          </p>
-          <table className="w-full text-[9px]" style={{ color: "var(--lab-text-secondary)" }}>
-            <thead>
-              <tr style={{ color: "var(--lab-text-subtle)" }}>
-                <th className="text-left pb-1">#</th>
-                <th className="text-right pb-1">{law === "boyle" ? "V (L)" : "T (K)"}</th>
-                <th className="text-right pb-1">{law === "boyle" ? "P (atm)" : "V (L)"}</th>
-                {law === "boyle" && <th className="text-right pb-1">PV</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {dataPoints.map((dp, i) => (
-                <tr key={i} className="border-t" style={{ borderColor: "var(--lab-glass-border)" }}>
-                  <td className="py-0.5">{i + 1}</td>
-                  <td className="text-right font-mono">{dp.x.toFixed(law === "boyle" ? 2 : 0)}</td>
-                  <td className="text-right font-mono">{dp.y.toFixed(3)}</td>
-                  {law === "boyle" && (
-                    <td className="text-right font-mono">{(dp.x * dp.y).toFixed(3)}</td>
-                  )}
+        <div className="lab-ctrl-section">
+          <div className="lab-ctrl-section-hdr">
+            <span className="lab-ctrl-section-hdr-icon">📊</span>
+            <span className="lab-ctrl-section-hdr-title">My Data ({dataPoints.length} points)</span>
+          </div>
+          <div className="p-3">
+            <table className="w-full text-[9.5px]" style={{ color: "var(--lab-text-secondary)" }}>
+              <thead>
+                <tr style={{ color: "var(--lab-text-subtle)" }}>
+                  <th className="text-left pb-1 font-semibold">#</th>
+                  <th className="text-right pb-1 font-semibold">{law === "boyle" ? "V (L)" : "T (K)"}</th>
+                  <th className="text-right pb-1 font-semibold">{law === "boyle" ? "P (atm)" : "V (L)"}</th>
+                  {law === "boyle" && <th className="text-right pb-1 font-semibold">P×V</th>}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {dataPoints.map((dp, i) => (
+                  <tr key={i} className="border-t" style={{ borderColor: "var(--lab-glass-border)" }}>
+                    <td className="py-0.5">{i + 1}</td>
+                    <td className="text-right font-mono">{dp.x.toFixed(law === "boyle" ? 2 : 0)}</td>
+                    <td className="text-right font-mono">{dp.y.toFixed(3)}</td>
+                    {law === "boyle" && (
+                      <td className="text-right font-mono">{(dp.x * dp.y).toFixed(3)}</td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {law === "boyle" && dataPoints.length >= 2 && (
+              <p style={{ fontSize: 9, color: "#94a3b8", marginTop: 6 }}>
+                P×V stays nearly constant — that is Boyle&apos;s Law!
+              </p>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Complete / Reset */}
-      <div className="px-4 py-3 flex flex-col gap-1.5">
+      {/* ── Complete / Reset ── */}
+      <div className="flex flex-col gap-1.5">
         {!isDone && (
           <button
             onClick={onComplete}
             disabled={dataPoints.length < 1}
-            className="w-full py-2 rounded-lg text-xs font-semibold text-white transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90"
+            className="w-full py-2 rounded-xl text-xs font-semibold text-white transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90 active:scale-[0.98]"
             style={{ background: "#059669" }}
           >
-            Complete Experiment
+            Complete Experiment ✓
           </button>
         )}
         <button
           onClick={onReset}
-          className="w-full py-2 rounded-lg text-xs font-semibold border transition-all duration-150 hover:bg-red-50"
+          className="w-full py-2 rounded-xl text-xs font-semibold border transition-all duration-150 hover:bg-red-50 active:scale-[0.98]"
           style={{ borderColor: "#fca5a5", color: "#dc2626" }}
         >
           Reset

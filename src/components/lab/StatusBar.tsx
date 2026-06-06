@@ -2,24 +2,14 @@
 
 import type { ExperimentStatus } from "@/lib/engine/types";
 
-const STATUS_LABEL: Record<ExperimentStatus, string> = {
-  idle:      "Idle",
-  setup:     "Setting Up",
-  ready:     "Ready",
-  running:   "Running",
-  paused:    "Paused",
-  completed: "Complete",
-  failed:    "Failed",
-};
-
-const STATUS_COLOR: Record<ExperimentStatus, string> = {
-  idle:      "#94a3b8",
-  setup:     "#f59e0b",
-  ready:     "#0891b2",
-  running:   "#22c55e",
-  paused:    "#f59e0b",
-  completed: "#2563eb",
-  failed:    "#ef4444",
+const STATUS_CONFIG: Record<ExperimentStatus, { label: string; color: string; bg: string; border: string }> = {
+  idle:      { label: "Idle",        color: "#64748b", bg: "rgba(100,116,139,0.09)", border: "rgba(100,116,139,0.22)" },
+  setup:     { label: "Setting Up",  color: "#d97706", bg: "rgba(217,119,6,0.09)",   border: "rgba(217,119,6,0.22)"   },
+  ready:     { label: "Ready",       color: "#0891b2", bg: "rgba(8,145,178,0.09)",   border: "rgba(8,145,178,0.22)"   },
+  running:   { label: "Running",     color: "#059669", bg: "rgba(5,150,105,0.09)",   border: "rgba(5,150,105,0.22)"   },
+  paused:    { label: "Paused",      color: "#d97706", bg: "rgba(217,119,6,0.09)",   border: "rgba(217,119,6,0.22)"   },
+  completed: { label: "Complete",    color: "#2563eb", bg: "rgba(37,99,235,0.09)",   border: "rgba(37,99,235,0.22)"   },
+  failed:    { label: "Failed",      color: "#dc2626", bg: "rgba(220,38,38,0.09)",   border: "rgba(220,38,38,0.22)"   },
 };
 
 interface Metric { label: string; value: string }
@@ -31,45 +21,89 @@ interface Props {
 }
 
 export default function StatusBar({ status, metrics, error }: Props) {
-  const color = STATUS_COLOR[status];
+  const cfg = STATUS_CONFIG[status];
 
   return (
     <div
-      className="flex flex-wrap items-center gap-3 px-4 py-2 border-b text-xs"
-      style={{ borderColor: "var(--lab-glass-border)", background: "var(--lab-glass)" }}
+      className="flex flex-wrap items-center gap-2 px-4 border-b flex-shrink-0"
+      style={{
+        minHeight:   "40px",
+        paddingTop:  "6px",
+        paddingBottom: "6px",
+        borderColor: "var(--lab-glass-border)",
+        background:  "rgba(255,255,255,0.80)",
+        backdropFilter: "blur(12px) saturate(1.4)",
+        WebkitBackdropFilter: "blur(12px) saturate(1.4)",
+      }}
     >
       {/* Status pill */}
-      <div className="flex items-center gap-1.5">
+      <div
+        className="flex items-center gap-1.5 rounded-lg px-2.5 py-1"
+        style={{
+          background:   cfg.bg,
+          border:       `1px solid ${cfg.border}`,
+          flexShrink:   0,
+        }}
+      >
         <span
-          className="w-2 h-2 rounded-full flex-shrink-0"
+          className="w-1.5 h-1.5 rounded-full flex-shrink-0"
           style={{
-            background:   color,
-            boxShadow:    status === "running" || status === "ready" ? `0 0 6px ${color}` : "none",
-            animation:    status === "running" ? "blink-dot 1.6s ease-in-out infinite" : "none",
+            background:  cfg.color,
+            boxShadow:   status === "running" || status === "ready"
+              ? `0 0 5px ${cfg.color}cc`
+              : "none",
+            animation:   status === "running" ? "blink-dot 1.6s ease-in-out infinite" : "none",
           }}
+          aria-hidden="true"
         />
-        <span className="font-semibold" style={{ color }}>{STATUS_LABEL[status]}</span>
+        <span
+          className="text-[11px] font-bold tracking-wide"
+          style={{ color: cfg.color }}
+        >
+          {cfg.label}
+        </span>
       </div>
 
       {/* Separator */}
-      <span style={{ color: "var(--lab-glass-border)" }}>|</span>
+      {metrics && metrics.length > 0 && (
+        <div
+          className="w-px h-4 flex-shrink-0"
+          style={{ background: "var(--lab-glass-border)" }}
+          aria-hidden="true"
+        />
+      )}
 
-      {/* Metrics */}
+      {/* Metric chips */}
       {metrics?.map(({ label, value }) => (
-        <div key={label} className="flex items-center gap-1">
-          <span style={{ color: "var(--lab-text-subtle)" }}>{label}:</span>
-          <span className="font-semibold font-mono" style={{ color: "var(--lab-text-secondary)" }}>{value}</span>
+        <div
+          key={label}
+          className="metric-chip"
+          style={{ flexShrink: 0 }}
+        >
+          <span className="metric-label">{label}</span>
+          <span className="metric-value">{value}</span>
         </div>
       ))}
 
-      {/* Error */}
+      {/* Error banner */}
       {error && (
-        <span
-          className="ml-auto px-2 py-0.5 rounded-md text-xs font-medium"
-          style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca" }}
+        <div
+          className="flex items-center gap-1.5 ml-auto rounded-lg px-2.5 py-1"
+          style={{
+            background:  "#fef2f2",
+            border:      "1px solid #fecaca",
+            color:       "#dc2626",
+            fontSize:    "11px",
+            fontWeight:  600,
+          }}
         >
-          ⚠ {error}
-        </span>
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
+            <circle cx="5.5" cy="5.5" r="4.5" fill="#ef4444" fillOpacity="0.15" stroke="#ef4444" strokeWidth="1"/>
+            <line x1="5.5" y1="3.5" x2="5.5" y2="6" stroke="#ef4444" strokeWidth="1.1" strokeLinecap="round"/>
+            <circle cx="5.5" cy="7.5" r="0.55" fill="#ef4444"/>
+          </svg>
+          {error}
+        </div>
       )}
     </div>
   );

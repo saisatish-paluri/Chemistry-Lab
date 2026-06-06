@@ -2,20 +2,16 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
+import CATALOG from "@/lib/experiments-catalog";
 
-const EXPERIMENTS = [
-  { key: "titration",             label: "Acid-Base Titration",    color: "#2563eb", tag: "Beginner",     icon: "⚗️", href: "/experiments/titration" },
-  { key: "electrolysis",          label: "Electrolysis",           color: "#0891b2", tag: "Intermediate", icon: "⚡", href: "/experiments/electrolysis" },
-  { key: "flame-test",            label: "Flame Test",             color: "#ea580c", tag: "Beginner",     icon: "🔥", href: "/experiments/flame-test" },
-  { key: "solubility",            label: "Solubility",             color: "#059669", tag: "Beginner",     icon: "💧", href: "/experiments/solubility" },
-  { key: "reaction-rate",         label: "Reaction Kinetics",      color: "#7c3aed", tag: "Advanced",     icon: "📈", href: "/experiments/reaction-rate" },
-  { key: "gas-laws",              label: "Gas Laws",               color: "#db2777", tag: "Intermediate", icon: "🌡️", href: "/experiments/gas-laws" },
-  { key: "chemical-equilibrium",  label: "Chemical Equilibrium",   color: "#d97706", tag: "Advanced",     icon: "⚖️", href: "/experiments/chemical-equilibrium" },
-  { key: "gas-collection",        label: "Gas Collection",         color: "#0284c7", tag: "Intermediate", icon: "🫧", href: "/experiments/gas-collection" },
-  { key: "redox-displacement",    label: "Redox Displacement",     color: "#475569", tag: "Intermediate", icon: "🔋", href: "/experiments/redox-displacement" },
-  { key: "calorimetry",           label: "Calorimetry",            color: "#ef4444", tag: "Advanced",     icon: "🌡️", href: "/experiments/calorimetry" },
-  { key: "separation-techniques", label: "Separation Techniques",  color: "#0284c7", tag: "Beginner",     icon: "🧪", href: "/experiments/separation-techniques" },
-];
+// Derive experiment list directly from the canonical catalog (prevents drift)
+const EXPERIMENTS = CATALOG.map((e) => ({
+  key:   e.slug,
+  label: e.title,
+  color: e.accent,
+  tag:   e.difficulty,
+  href:  e.href,
+}));
 
 const TAG_COLOR: Record<string, { bg: string; text: string }> = {
   Beginner:     { bg: "rgba(34,197,94,0.1)",  text: "#15803d" },
@@ -39,7 +35,7 @@ const QUICK_ACTIONS = [
   },
   {
     label:   "All Experiments",
-    desc:    "Browse all 11 labs",
+    desc:    `Browse all ${CATALOG.length} labs`,
     href:    "/experiments",
     color:   "linear-gradient(135deg,#059669 0%,#06b6d4 100%)",
     shadow:  "0 4px 20px rgba(5,150,105,0.25)",
@@ -83,10 +79,10 @@ const QUICK_ACTIONS = [
 ];
 
 const SUMMARY_CARDS = [
-  { value: "11",   label: "Total Experiments",  sub: "available labs",     color: "#2563eb", bg: "rgba(37,99,235,0.07)" },
-  { value: "118",  label: "Elements",           sub: "in periodic table",  color: "#059669", bg: "rgba(5,150,105,0.07)" },
-  { value: "50+",  label: "MCQ Questions",      sub: "across all labs",    color: "#7c3aed", bg: "rgba(124,58,237,0.07)" },
-  { value: "A+",   label: "Your Level",         sub: "keep it up!",        color: "#d97706", bg: "rgba(217,119,6,0.07)"  },
+  { value: `${CATALOG.length}`, label: "Total Experiments",  sub: "available labs",     color: "#2563eb", bg: "rgba(37,99,235,0.07)" },
+  { value: "118",               label: "Elements",           sub: "in periodic table",  color: "#059669", bg: "rgba(5,150,105,0.07)" },
+  { value: "50+",               label: "MCQ Questions",      sub: "across all labs",    color: "#7c3aed", bg: "rgba(124,58,237,0.07)" },
+  { value: "A+",                label: "Your Level",         sub: "keep it up!",        color: "#d97706", bg: "rgba(217,119,6,0.07)"  },
 ];
 
 const fadeUp = {
@@ -110,7 +106,7 @@ export default function DashboardClient() {
             Welcome to <span className="gradient-text">ChemLab</span>
           </h1>
           <p className="mt-2 text-base" style={{ color: "var(--lab-text-muted)" }}>
-            Your virtual chemistry laboratory — 11 interactive experiments, full periodic table, and post-lab assessments.
+            Your virtual chemistry laboratory — {CATALOG.length} interactive experiments, full periodic table, and post-lab assessments.
           </p>
         </motion.div>
       </section>
@@ -184,7 +180,7 @@ export default function DashboardClient() {
           <div>
             <p className="section-eyebrow mb-0">Experiments</p>
             <h2 className="text-xl font-bold mt-1" style={{ color: "var(--lab-text-primary)" }}>
-              All Available Labs
+              All {CATALOG.length} Available Labs
             </h2>
           </div>
           <Link
@@ -203,7 +199,7 @@ export default function DashboardClient() {
                 key={exp.key}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.2 + i * 0.04 }}
+                transition={{ duration: 0.4, delay: 0.2 + i * 0.03 }}
               >
                 <Link
                   href={exp.href}
@@ -216,10 +212,11 @@ export default function DashboardClient() {
                   />
                   <div className="flex items-start justify-between mb-2">
                     <div
-                      className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
+                      className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
                       style={{ background: `${exp.color}14` }}
                     >
-                      {exp.icon}
+                      {/* Accent dot instead of emoji — always consistent */}
+                      <div className="w-3 h-3 rounded-full" style={{ background: exp.color, opacity: 0.7 }} />
                     </div>
                     <span
                       className="pill-tag text-[10px] mt-0.5"

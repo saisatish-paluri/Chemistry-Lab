@@ -100,7 +100,14 @@ export const useSeparationTechniquesStore = create<SeparationTechniquesStore>((s
 
     hydrate: () => {
       const saved = loadSession<SeparationTechniquesState>(KEY);
-      if (saved) set(saved);
+      if (saved) {
+        if (saved.status === "completed" || saved.status === "failed") {
+          const fresh = resetSeparationTechniques(saved);
+          set(save(fresh));
+        } else {
+          set(saved);
+        }
+      }
     },
   };
 });
