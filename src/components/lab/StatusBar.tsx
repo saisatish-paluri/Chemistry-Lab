@@ -10,6 +10,9 @@ const STATUS_CONFIG: Record<ExperimentStatus, { label: string; color: string; bg
   paused:    { label: "Paused",      color: "#d97706", bg: "rgba(217,119,6,0.09)",   border: "rgba(217,119,6,0.22)"   },
   completed: { label: "Complete",    color: "#2563eb", bg: "rgba(37,99,235,0.09)",   border: "rgba(37,99,235,0.22)"   },
   failed:    { label: "Failed",      color: "#dc2626", bg: "rgba(220,38,38,0.09)",   border: "rgba(220,38,38,0.22)"   },
+  heating:   { label: "Heating",     color: "#e11d48", bg: "rgba(225,29,72,0.09)",   border: "rgba(225,29,72,0.22)"   },
+  cooling:   { label: "Cooling",     color: "#2563eb", bg: "rgba(37,99,235,0.09)",   border: "rgba(37,99,235,0.22)"   },
+  reacting:  { label: "Reacting",    color: "#d97706", bg: "rgba(217,119,6,0.09)",   border: "rgba(217,119,6,0.22)"   },
 };
 
 interface Metric { label: string; value: string }
@@ -21,7 +24,7 @@ interface Props {
 }
 
 export default function StatusBar({ status, metrics, error }: Props) {
-  const cfg = STATUS_CONFIG[status];
+  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.idle;
 
   return (
     <div
@@ -31,7 +34,7 @@ export default function StatusBar({ status, metrics, error }: Props) {
         paddingTop:  "6px",
         paddingBottom: "6px",
         borderColor: "var(--lab-glass-border)",
-        background:  "rgba(255,255,255,0.80)",
+        background:  "var(--lab-glass-heavy)",
         backdropFilter: "blur(12px) saturate(1.4)",
         WebkitBackdropFilter: "blur(12px) saturate(1.4)",
       }}
@@ -49,10 +52,10 @@ export default function StatusBar({ status, metrics, error }: Props) {
           className="w-1.5 h-1.5 rounded-full flex-shrink-0"
           style={{
             background:  cfg.color,
-            boxShadow:   status === "running" || status === "ready"
+            boxShadow:   status === "running" || status === "ready" || status === "reacting" || status === "heating" || status === "cooling"
               ? `0 0 5px ${cfg.color}cc`
               : "none",
-            animation:   status === "running" ? "blink-dot 1.6s ease-in-out infinite" : "none",
+            animation:   status === "running" || status === "reacting" || status === "heating" || status === "cooling" ? "blink-dot 1.6s ease-in-out infinite" : "none",
           }}
           aria-hidden="true"
         />

@@ -83,10 +83,11 @@ function formatTime(ts: number): string {
 }
 
 interface Props {
-  observations: ObservationEvent[];
+  observations?: ObservationEvent[];
 }
 
-export default function ObservationPanel({ observations }: Props) {
+export default function ObservationPanel({ observations = [] }: Props) {
+  const obsList = observations ?? [];
   return (
     <div className="flex flex-col h-full">
       <div
@@ -104,18 +105,18 @@ export default function ObservationPanel({ observations }: Props) {
             Observations
           </span>
         </div>
-        {observations.length > 0 && (
+        {obsList.length > 0 && (
           <span
             className="text-[9px] px-2 py-0.5 rounded-full font-bold"
             style={{ background: "rgba(37,99,235,0.08)", color: "var(--lab-blue-600)", border: "1px solid rgba(37,99,235,0.16)" }}
           >
-            {observations.length}
+            {obsList.length}
           </span>
         )}
       </div>
 
       <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1.5" style={{ maxHeight: "360px" }}>
-        {observations.length === 0 ? (
+        {obsList.length === 0 ? (
           <div className="lab-obs-empty">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
               <circle cx="7" cy="7" r="6" stroke="var(--lab-text-subtle)" strokeWidth="1" strokeDasharray="3 2"/>
@@ -125,7 +126,7 @@ export default function ObservationPanel({ observations }: Props) {
           </div>
         ) : (
           <AnimatePresence initial={false}>
-            {observations.map((obs) => {
+            {obsList.map((obs) => {
               const s = SEVERITY_STYLES[obs.severity];
               return (
                 <motion.div

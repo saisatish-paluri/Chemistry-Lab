@@ -11,6 +11,7 @@ interface Props {
   hasPrecipitate: boolean;
   precipitate:    PrecipitateInfo | null;
   isRunning:      boolean;
+  turbidity:      number;
 }
 
 /** Deterministic particle seed for precipitate settling */
@@ -44,12 +45,18 @@ function pourArc(fromX: number, fromY: number, toX: number, toY: number, sag: nu
 }
 
 export default function SolubilityWorkspace({
-  solutionA, solutionB, mixProgress, hasPrecipitate, precipitate, isRunning,
+  solutionA, solutionB, mixProgress, hasPrecipitate, precipitate, isRunning, turbidity,
 }: Props) {
   const profA = solutionA ? SOLUTIONS[solutionA] : null;
   const profB = solutionB ? SOLUTIONS[solutionB] : null;
+  
+  // Calculate alpha hex based on turbidity
+  const opacityHex = Math.min(255, Math.max(10, Math.round(turbidity * 0.45 * 255)))
+    .toString(16)
+    .padStart(2, '0');
+    
   const combinedColor = mixProgress > 0
-    ? (hasPrecipitate && precipitate ? `${precipitate.color}33` : "rgba(14,165,233,0.22)")
+    ? (hasPrecipitate && precipitate ? `${precipitate.color}${opacityHex}` : "rgba(14,165,233,0.22)")
     : "rgba(224,242,254,0.35)";
   // Seed from formula so each precipitate has a distinct particle layout
   const precipitateSeed = precipitate
@@ -65,7 +72,7 @@ export default function SolubilityWorkspace({
     <div
       className="relative rounded-3xl overflow-hidden select-none"
       style={{
-        aspectRatio: "480/320",
+        aspectRatio: "480/270",
         width:       "100%",
         height:      "auto",
         maxHeight:   "100%",
@@ -104,7 +111,7 @@ export default function SolubilityWorkspace({
       />
 
       <svg
-        viewBox="0 0 480 320"
+        viewBox="0 40 480 270"
         width="100%"
         style={{ display: "block", position: "relative", zIndex: 10 }}
         aria-label="Solubility reaction vessels"
@@ -124,19 +131,21 @@ export default function SolubilityWorkspace({
           </linearGradient>
         </defs>
 
-        {/* ── Lab bench — light steel ── */}
-        <rect x="0" y="278" width="480" height="42" fill="#c8d0db" />
-        <rect x="0" y="274" width="480" height="6"  fill="#cbd5e1" />
-        <rect x="0" y="274" width="480" height="2"  fill="rgba(255,255,255,0.55)" />
+        {/* ── Lab bench — dark slate ── */}
+        <rect x="0" y="274" width="480" height="46" fill="#cbd5e1" />
+        <rect x="0" y="274" width="480" height="4"  fill="#f1f5f9" />
+        <line x1="0" y1="274" x2="480" y2="274" stroke="#475569" strokeWidth="1" />
+        <rect x="0" y="272" width="480" height="2"  fill="#cbd5e1" opacity="0.8" />
 
         {/* ══ BEAKER A (left) ══ */}
         <g>
-          {/* Glass body with depth */}
+          {/* Beaker A base shadow */}
+          <ellipse cx="100" cy="272" rx="54" ry="6" fill="rgba(9,13,22,0.45)" filter="url(#sol-soft)" />
+          {/* Outer glass border (double glass thickness effect) */}
           <path d="M 60 118 L 48 270 L 152 270 L 140 118 Z"
-            fill="rgba(255,255,255,0.04)" filter="url(#sol-soft)" />
-          <path d="M 60 118 L 48 270 L 152 270 L 140 118 Z"
-            fill="rgba(255,255,255,0.48)" stroke="rgba(71,85,105,0.48)" strokeWidth="1.6"
-            filter="url(#sol-shadow)" />
+            fill="none" stroke="rgba(148,163,184,0.75)" strokeWidth="2.2" />
+          <path d="M 61.5 119 L 50 268 L 150 268 L 138.5 119 Z"
+            fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="0.8" />
           {/* Liquid fill */}
           {profA && (
             <motion.path
@@ -175,11 +184,13 @@ export default function SolubilityWorkspace({
 
         {/* ══ BEAKER B (right) ══ */}
         <g>
+          {/* Beaker B base shadow */}
+          <ellipse cx="380" cy="272" rx="54" ry="6" fill="rgba(9,13,22,0.45)" filter="url(#sol-soft)" />
+          {/* Outer glass border (double glass thickness effect) */}
           <path d="M 340 118 L 328 270 L 432 270 L 420 118 Z"
-            fill="rgba(255,255,255,0.04)" filter="url(#sol-soft)" />
-          <path d="M 340 118 L 328 270 L 432 270 L 420 118 Z"
-            fill="rgba(255,255,255,0.48)" stroke="rgba(71,85,105,0.48)" strokeWidth="1.6"
-            filter="url(#sol-shadow)" />
+            fill="none" stroke="rgba(148,163,184,0.75)" strokeWidth="2.2" />
+          <path d="M 341.5 119 L 330 268 L 430 268 L 418.5 119 Z"
+            fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="0.8" />
           {profB && (
             <motion.path
               d="M 342 143 L 330 270 L 430 270 L 418 143 Z"
@@ -212,24 +223,13 @@ export default function SolubilityWorkspace({
 
         {/* ══ COMBINED BEAKER (center) ══ */}
         <g>
-          {/* Glow halo when reaction complete */}
-          {mixProgress >= 1 && hasPrecipitate && precipitate && (
-            <motion.ellipse
-              cx="240" cy="220"
-              rx="64" ry="28"
-              fill={precipitate.color}
-              fillOpacity="0.08"
-              filter="url(#sol-soft)"
-              animate={{ fillOpacity: [0.06, 0.14, 0.08] }}
-              transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-            />
-          )}
-
+          {/* Combined Beaker base shadow */}
+          <ellipse cx="240" cy="272" rx="64" ry="7" fill="rgba(9,13,22,0.45)" filter="url(#sol-soft)" />
+          {/* Outer glass border (double glass thickness effect) */}
           <path d="M 195 138 L 178 270 L 302 270 L 285 138 Z"
-            fill="rgba(255,255,255,0.04)" filter="url(#sol-soft)" />
-          <path d="M 195 138 L 178 270 L 302 270 L 285 138 Z"
-            fill="rgba(255,255,255,0.50)" stroke="rgba(71,85,105,0.52)" strokeWidth="1.8"
-            filter="url(#sol-shadow)" />
+            fill="none" stroke="rgba(148,163,184,0.75)" strokeWidth="2.2" />
+          <path d="M 196.5 139 L 180 268 L 300 268 L 283.5 139 Z"
+            fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="0.8" />
 
           {/* Mixed liquid */}
           {mixProgress > 0 && (
@@ -251,11 +251,11 @@ export default function SolubilityWorkspace({
                   <motion.circle key={i}
                     cx={186 + p.x * 0.88}
                     r={p.r}
-                    fill={precipitate.color} fillOpacity={0.88}
+                    fill={precipitate.color} fillOpacity={0.88 * turbidity}
                     initial={{ cy: 150, opacity: 0, cx: 186 + p.x * 0.88 + p.swirl }}
                     animate={{
                       cy: p.finalY,
-                      opacity: [0, 0.9, 0.9],
+                      opacity: [0, 0.9 * turbidity, 0.9 * turbidity],
                       cx: [186 + p.x * 0.88 + p.swirl, 186 + p.x * 0.88 - p.swirl * 0.4, 186 + p.x * 0.88],
                     }}
                     transition={{
@@ -269,7 +269,7 @@ export default function SolubilityWorkspace({
                 {mixProgress >= 0.9 && (
                   <motion.rect
                     x={185} y={256} height={8} rx={3}
-                    fill={precipitate.color} fillOpacity={0.45}
+                    fill={precipitate.color} fillOpacity={0.45 * turbidity}
                     initial={{ width: 0 }}
                     animate={{ width: Math.min(100, (mixProgress - 0.9) * 1000) }}
                     transition={{ duration: 1.2, ease: "easeOut" }}

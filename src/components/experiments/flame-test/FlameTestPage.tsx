@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState, startTransition } from "react";
 import { useFlameTestStore }                             from "@/lib/store/flame-test-store";
@@ -155,6 +155,16 @@ export default function FlameTestPage() {
           currentFlameColor={store.currentFlameColor}
           contaminated={store.contaminated}
           testHistory={store.testHistory}
+          concentration={store.concentration}
+          airCollarOpen={store.airCollarOpen}
+          contaminationLevel={store.contaminationLevel}
+          cobaltGlass={store.cobaltGlass}
+          flameIntensity={store.flameIntensity}
+          onLightBurner={store.lightBurnerAction}
+          onSelectSample={store.selectSampleAction}
+          onDipLoop={store.dipLoopAction}
+          onPerformTest={store.performTestAction}
+          onCleanLoop={store.cleanLoopAction}
         />
       }
       education={EXPERIMENT_EDUCATION["flame-test"]}
@@ -177,6 +187,10 @@ export default function FlameTestPage() {
           loopClean={store.loopClean}
           contaminated={store.contaminated}
           testHistory={store.testHistory}
+          concentration={store.concentration}
+          airCollarOpen={store.airCollarOpen}
+          contaminationLevel={store.contaminationLevel}
+          cobaltGlass={store.cobaltGlass}
           onLightBurner={store.lightBurnerAction}
           onSelectSample={store.selectSampleAction}
           onDipLoop={store.dipLoopAction}
@@ -184,6 +198,7 @@ export default function FlameTestPage() {
           onCleanLoop={store.cleanLoopAction}
           onComplete={store.completeExperimentAction}
           onReset={store.resetAction}
+          onUpdateParameters={store.updateParametersAction}
         />
       }
 

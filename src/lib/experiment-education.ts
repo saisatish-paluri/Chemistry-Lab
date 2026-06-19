@@ -849,4 +849,337 @@ export const EXPERIMENT_EDUCATION: Record<string, LabEducation> = {
     keyEquation: "Rf = Distance travelled by solute / Distance travelled by solvent front",
     keyEquationLabel: "Retention Factor (0 = no movement, 1 = same as solvent)",
   },
+
+  // ── Crystallization ────────────────────────────────────────────────────────
+  crystallization: {
+    aim: "Purify Copper(II) Sulfate from an impure salt mixture by preparing a saturated solution, filtering insoluble impurities, and crystallizing the product under controlled cooling rates.",
+    theory:
+      "Crystallization is a separation and purification technique based on differences in solubility. Copper(II) sulfate (CuSO₄) solubility increases exponentially with temperature. By dissolving the impure salt in hot water, we form a hot saturated solution. Filtering this hot solution removes insoluble impurities (sand). Upon cooling, the solution becomes supersaturated, forcing CuSO₄ to precipitate out as crystals, leaving soluble impurities in the mother liquor. The rate of cooling determines crystal size: slow cooling yields large, highly structured, high-purity crystals, while rapid cooling leads to small crystals with trapped impurities.",
+    apparatus: [
+      "Beaker (100 mL and 250 mL)",
+      "Heating plate / Bunsen burner",
+      "Glass rod for stirring",
+      "Funnel and filter paper",
+      "Crystallization dish",
+      "Thermometer (0–110°C)",
+      "Evaporating dish",
+    ],
+    chemicals: [
+      { name: "Impure Copper(II) Sulfate", formula: "CuSO₄·5H₂O + Sand", role: "Starting material containing impurities", color: "#38bdf8" },
+      { name: "Distilled Water", formula: "H₂O", role: "Solvent", color: "#93c5fd" },
+    ],
+    procedure: [
+      "Add impure CuSO₄ salt to a beaker of water.",
+      "Heat the solution and stir until the CuSO₄ is completely dissolved and saturated at high temperature.",
+      "Filter the hot solution through filter paper to remove insoluble sand.",
+      "Transfer the clear filtrate to a crystallization dish.",
+      "Set the cooling rate (slow, medium, or fast). Slow cooling grows high-purity crystals; fast cooling precipitates impure crystalline powder.",
+      "Filter and dry the crystals, then analyze the final mass and purity.",
+    ],
+    safetyNotes: [
+      "Copper(II) sulfate is harmful if swallowed and is an environmental hazard. Avoid skin contact.",
+      "Always wear safety goggles when heating chemical solutions.",
+      "Be careful when handling hot glassware to avoid burns.",
+    ],
+    keyEquation: "CuSO₄(aq) + 5H₂O(l) → CuSO₄·5H₂O(s) ↓",
+    keyEquationLabel: "Hydration and crystallization of copper(II) sulfate",
+  },
+
+  // ── Natural Indicators ──────────────────────────────────────────────────────
+  "natural-indicators": {
+    aim: "Extract natural pH indicators from plant materials (Turmeric, China Rose, and Red Cabbage) and investigate their color transitions when mixed with acids and bases of different strengths.",
+    theory:
+      "Natural indicators are organic pigments (such as anthocyanins in red cabbage and curcumin in turmeric) that change color depending on the concentration of hydrogen ions (pH) in the solution. This color change occurs because the indicator molecules undergo protonation (gaining H⁺) or deprotonation (losing H⁺), which changes their chemical structure and light absorption spectra. Red cabbage spans a wide range (red in acid, purple/blue in neutral, green/yellow in base). China rose turns magenta in acid and green in base. Turmeric remains yellow in acid/neutral but turns deep red-orange in basic solutions.",
+    apparatus: [
+      "Mortar and pestle",
+      "Test tubes and test tube rack",
+      "Dropper pipettes",
+      "Filter funnel and filter paper",
+      "pH test strip reference card",
+    ],
+    chemicals: [
+      { name: "Turmeric Extract", formula: "Curcumin", role: "Natural indicator (pH 7.4-8.6 range)", color: "#eab308" },
+      { name: "China Rose Extract", formula: "Anthocyanins", role: "Natural indicator (pH 4-8 range)", color: "#ec4899" },
+      { name: "Red Cabbage Extract", formula: "Anthocyanins", role: "Universal range natural indicator", color: "#8b5cf6" },
+      { name: "Hydrochloric Acid / Vinegar / Lemon Juice", formula: "HCl / CH₃COOH / Citric Acid", role: "Acidic test solutions", color: "#ef4444" },
+      { name: "Sodium Hydroxide / Soap Solution", formula: "NaOH / Na-soap", role: "Basic test solutions", color: "#22c55e" },
+    ],
+    procedure: [
+      "Macerate plant leaves or spices in a mortar with a pestle to extract pigments.",
+      "Steep the mixture in warm water or alcohol to obtain a concentrated indicator solution.",
+      "Pipette test solutions (acids: HCl, vinegar, lemon juice; neutral: water; bases: soap, NaOH) into test tubes.",
+      "Add a few drops of indicator to each test tube and observe the color transitions.",
+      "Note the pH color boundaries and relate the color changes to chemical equilibrium transitions.",
+    ],
+    safetyNotes: [
+      "Sodium hydroxide (NaOH) is a strong base and is highly corrosive. Avoid skin and eye contact.",
+      "Hydrochloric acid (HCl) is corrosive and produces irritating vapors.",
+      "Wear gloves and safety goggles during maceration and titration.",
+    ],
+    keyEquation: "HInd(aq) + H₂O(l) ⇌ Ind⁻(aq) + H₃O⁺(aq)",
+    keyEquationLabel: "Acid-base indicator dissociation equilibrium",
+  },
+
+  // ── Acid-Metal Reactions ────────────────────────────────────────────────────
+  "acid-metal": {
+    aim: "Examine the reaction rates of active metals (Magnesium, Zinc, Iron, and Copper) with hydrochloric and sulfuric acids, collect the evolved hydrogen gas, and perform a lighted splint confirmation test.",
+    theory:
+      "Metals react with acids in single displacement reactions where the metal is oxidized, displacing hydrogen ions which are reduced to hydrogen gas. The reactivity series dictates the reaction kinetics: Mg reacts vigorously, Zn reacts moderately, Fe reacts slowly, and Cu does not react (as its reduction potential is higher than hydrogen's). The reaction rate is affected by acid concentration, temperature, and surface area of the metal. Evolved hydrogen is collected in a gas syringe to measure kinetics and stoichiometric yields. The hydrogen gas is confirmed by the 'squeaky pop' test: 2H₂ + O₂ → 2H₂O.",
+    apparatus: [
+      "Reaction flask with gas-tight stopper",
+      "Gas collection syringe",
+      "Connecting rubber tubing",
+      "Thermometer (exothermicity check)",
+      "Lighted wooden splint",
+      "Stopwatch",
+    ],
+    chemicals: [
+      { name: "Metals (Mg ribbon, Zn granules, Fe filings, Cu turnings)", formula: "Mg / Zn / Fe / Cu", role: "Active metals", color: "#94a3b8" },
+      { name: "Hydrochloric Acid", formula: "HCl", concentration: "1.0 M / 2.0 M", role: "Acid reactant", color: "#fbbf24" },
+      { name: "Sulfuric Acid", formula: "H₂SO₄", concentration: "1.0 M / 2.0 M", role: "Acid reactant", color: "#f59e0b" },
+    ],
+    procedure: [
+      "Place a measured amount of metal (e.g. Magnesium ribbon or Zinc granules) into the reaction flask.",
+      "Fill the gas collection syringe and connect it securely to the flask via the rubber tubing.",
+      "Pour the acid into the flask and immediately seal it with the stopper.",
+      "Measure the volume of gas evolved in the syringe at 10-second intervals. Monitor the temperature rise.",
+      "Once gas evolution ceases, extract a sample of the gas from the syringe and expose it to a lighted splint to perform the pop test.",
+    ],
+    safetyNotes: [
+      "Hydrogen gas is highly flammable and explosive when mixed with air. Perform the pop test away from the main acid flask.",
+      "Hydrochloric and sulfuric acids are highly corrosive; wear goggles and gloves.",
+      "Metal displacement reactions can be highly exothermic; handle the flask carefully.",
+    ],
+    keyEquation: "Mg(s) + 2HCl(aq) → MgCl₂(aq) + H₂(g) ↑",
+    keyEquationLabel: "Single displacement reaction of magnesium and hydrochloric acid",
+  },
+
+  // ── Acid-Carbonate Reactions ────────────────────────────────────────────────
+  "acid-carbonate": {
+    aim: "Investigate the stoichiometry of carbon dioxide gas evolution from the reaction of acids with metal carbonates, and confirm the gas identity by bubbling it through limewater.",
+    theory:
+      "Carbonates and bicarbonates react with acids to form a salt, water, and carbon dioxide gas. The reaction rate depends on the carbonate structure: soluble sodium carbonate (Na₂CO₃) reacts instantly, CaCO₃ powder reacts quickly due to high surface area, and marble chips (CaCO₃) react slowly. The evolved CO₂ gas is bubbled through limewater (calcium hydroxide solution). Initially, a white precipitate of calcium carbonate forms, turning the limewater milky. If bubbling continues, excess CO₂ reacts with the precipitate to form soluble calcium bicarbonate, turning the solution clear again.",
+    apparatus: [
+      "Reaction flask with delivery tube",
+      "Gas syringe or graduated cylinder",
+      "Beaker / test tube containing limewater",
+      "Rubber stopper",
+      "Spatula and balance scale",
+    ],
+    chemicals: [
+      { name: "Carbonates (Marble chips, CaCO₃ powder, Na₂CO₃)", formula: "CaCO₃ / Na₂CO₃", role: "Carbonate reactants", color: "#e2e8f0" },
+      { name: "Hydrochloric Acid", formula: "HCl", concentration: "1.0 M / 2.0 M", role: "Acid reactant", color: "#fbbf24" },
+      { name: "Limewater", formula: "Ca(OH)₂", role: "Carbon dioxide indicator", color: "#bae6fd" },
+    ],
+    procedure: [
+      "Place a weighed amount of metal carbonate in the reaction flask.",
+      "Set up the delivery tube so that gas bubbles directly into a test tube containing limewater.",
+      "Add HCl to the carbonate flask and seal the stopper. Ensure there are no gas leaks (incomplete sealing reduces collected volume).",
+      "Observe the rate of effervescence and bubbles in both flasks.",
+      "Monitor the limewater as it becomes milky (precipitate) and eventually clears (excess CO₂).",
+    ],
+    safetyNotes: [
+      "Carbon dioxide is an asphyxiant in high concentrations; ensure proper ventilation.",
+      "Limewater is alkaline and can irritate eyes and skin. Handle with care.",
+      "Hydrochloric acid is corrosive. Wear gloves and eye protection.",
+    ],
+    keyEquation: "CaCO₃(s) + 2HCl(aq) → CaCl₂(aq) + H₂O(l) + CO₂(g) ↑",
+    keyEquationLabel: "Reaction of calcium carbonate with hydrochloric acid",
+  },
+
+  // ── States of Matter ────────────────────────────────────────────────────────
+  "states-of-matter": {
+    aim: "Study the phase transitions, heating and cooling curves, and latent heat plateaus of Water, Ethanol, and Paraffin Wax under different atmospheric pressures.",
+    theory:
+      "Substances exist in solid, liquid, or gas states depending on temperature and pressure. When heat is added, temperature increases until a phase transition temperature is reached (melting point Tm, or boiling point Tb). During the transition, temperature remains constant despite continued heating because the energy is used to break intermolecular forces (latent heat of fusion Lf, or vaporization Lv) rather than increase kinetic energy. Boiling occurs when a liquid's vapor pressure equals atmospheric pressure. At high altitudes (lower pressure), boiling points decrease. Parallax eye-level alignment errors in thermometer reading can lead to experimental uncertainty.",
+    apparatus: [
+      "Phase change test tube and water bath setup",
+      "Variable power hot plate burner",
+      "Precision laboratory thermometer",
+      "Pressure / Altitude chamber controller",
+      "Stopwatch",
+    ],
+    chemicals: [
+      { name: "Water / Ice", formula: "H₂O", role: "Substance with moderate transition limits", color: "#93c5fd" },
+      { name: "Ethanol", formula: "C₂H₅OH", role: "Volatile organic liquid", color: "#fed7aa" },
+      { name: "Paraffin Wax", formula: "CₙH₂ₙ₊₂", role: "Long-chain hydrocarbon solid", color: "#e2e8f0" },
+    ],
+    procedure: [
+      "Select a substance and set the altitude (which calculates atmospheric pressure).",
+      "Place the thermometer in the sample. Position the eye-level to minimize parallax reading offset.",
+      "Turn on the heating plate and monitor the temperature rise over time.",
+      "Identify the flat latent heat plateaus at the melting and boiling points.",
+      "Turn off heating and activate cooling to record the freezing/condensation curves.",
+      "Note the boiling point shift at high altitude and avoid excessive burner power to prevent splattering.",
+    ],
+    safetyNotes: [
+      "Ethanol is highly flammable. Keep away from open flames and use a water bath for heating.",
+      "Avoid overheating paraffin wax or ethanol above safety levels to prevent violent splattering.",
+      "Hot plate surfaces and hot test tubes can cause severe burns; handle with insulated clamps.",
+    ],
+    keyEquation: "q = m \\cdot c_p \\cdot \\Delta T  \\quad | \\quad q = m \\cdot L",
+    keyEquationLabel: "Sensible heat vs Latent heat calculations",
+  },
+
+  "diffusion-liquids": {
+    aim: "Study the rate of diffusion of solute molecules in a liquid solvent under varying temperatures, molecular sizes, and stirring conditions.",
+    theory: "Diffusion is the passive net movement of particles from a region of higher concentration to a region of lower concentration, driven by random thermal motion (Brownian motion). According to Fick's Second Law, the rate of change of concentration over time is proportional to the second derivative of concentration with space: dC/dt = D * d²C/dx². The diffusion coefficient (D) is temperature-dependent (Einstein-Stokes relation) and molecular-size-dependent: D is proportional to T / (r * viscosity). Stirring introduces convective flow which drastically accelerates mixing.",
+    apparatus: ["Beaker (250 mL)", "Dropper pipette", "Thermometer", "Magnetic stirrer", "Stopwatch"],
+    chemicals: [
+      { name: "Potassium Permanganate", formula: "KMnO₄", role: "Solute — small molecular size, intense purple color", color: "#8b5cf6" },
+      { name: "Food Coloring Dye", formula: "C₂₀H₁₀Na₂O₅", role: "Solute — large organic molecule, red/orange color", color: "#ef4444" },
+      { name: "Copper(II) Sulfate", formula: "CuSO₄", role: "Solute — medium molecular size, blue color", color: "#3b82f6" },
+      { name: "Distilled Water", formula: "H₂O", role: "Solvent medium", color: "#93c5fd" },
+    ],
+    procedure: [
+      "Select your solute (KMnO₄, Dye, or CuSO₄) and set the beaker water temperature.",
+      "Place the dropper pipette above the water surface and click to add a droplet.",
+      "Observe the color transition and cloud expansion as diffusion propagates radially.",
+      "Adjust the magnetic stirrer speed to observe convection-driven mixing acceleration.",
+      "Record the time required to reach concentration equilibrium throughout the beaker.",
+    ],
+    safetyNotes: [
+      "Potassium permanganate is a strong oxidizer and can stain skin and clothes; handle with gloves.",
+      "Do not ingest any food coloring or chemical solutions.",
+      "Use care when heating water to high temperatures to prevent thermal burns.",
+    ],
+    keyEquation: "J = -D \\cdot \\nabla C  \\quad | \\quad \\frac{\\partial C}{\\partial t} = D \\cdot \\nabla^2 C",
+    keyEquationLabel: "Fick's First and Second Laws of Diffusion",
+  },
+
+  "separation-mixtures": {
+    aim: "Separate a heterogeneous three-component mixture of iron filings, sand, and salt using magnetic separation, dissolution, filtration, and thermal crystallization.",
+    theory: "Mixture separation relies on exploiting differing physical and chemical properties of the components. Iron filings are ferromagnetic and can be selectively extracted using a magnet. Sand is insoluble in water and has a large particle size, allowing it to be separated from liquid by filtration (Darcy's Law). Salt is highly soluble in water and forms a solution, which can then be separated from water by evaporation. Purity of the recovered salt depends on complete filtration of sand particles.",
+    apparatus: ["Bar magnet", "Beakers (250 mL)", "Filter funnel and stand", "Whatman filter paper", "Evaporating dish", "Bunsen burner", "Stirring rod"],
+    chemicals: [
+      { name: "Iron Filings", formula: "Fe", role: "Magnetic solid component", color: "#475569" },
+      { name: "Silica Sand", formula: "SiO₂", role: "Insoluble, non-magnetic solid component", color: "#d97706" },
+      { name: "Sodium Chloride (Salt)", formula: "NaCl", role: "Water-soluble solid component", color: "#e2e8f0" },
+      { name: "Distilled Water", formula: "H₂O", role: "Solvent for dissolving salt", color: "#93c5fd" },
+    ],
+    procedure: [
+      "Analyze the dry mixture. Drag the magnet over the beaker to extract all magnetic iron filings.",
+      "Add water and stir the remaining sand-salt mixture to dissolve the salt entirely.",
+      "Pour the slurry into a funnel lined with filter paper to filter out insoluble sand residue.",
+      "Collect the saltwater filtrate in the evaporating dish.",
+      "Heat the evaporating dish with the burner to evaporate the water, leaving purified salt crystals.",
+    ],
+    safetyNotes: [
+      "Wear safety goggles while heating the evaporating dish to prevent salt spitting burns.",
+      "Handle hot evaporating dishes and burners with heat-resistant tongs.",
+      "Iron filings can be sharp; do not touch with bare hands.",
+    ],
+    keyEquation: "\\text{Separation Efficiency } \\eta = \\frac{m_{\\text{recovered}}}{m_{\\text{initial}}} \\cdot 100\\%",
+    keyEquationLabel: "Separation yield calculation",
+  },
+
+  "double-displacement": {
+    aim: "Observe double displacement (precipitation) reactions, calculate the ion activity product Qsp, and study temperature dependency of solubility products (Ksp).",
+    theory: "A double displacement reaction occurs when two ionic compounds dissolve in water and exchange ions, forming an insoluble precipitate. A precipitate forms when the ionic activity product (Q) of the potential product exceeds its solubility product constant (Ksp) at that temperature. The solubility of most ionic precipitates increases with temperature according to the van 't Hoff equation: ln(Ksp) = -dH/RT + dS/R.",
+    apparatus: ["Test tubes", "Pipettes", "Beakers", "Thermometer", "Hot plate"],
+    chemicals: [
+      { name: "Silver Nitrate", formula: "AgNO₃", concentration: "0.1 M", role: "Reactant solution", color: "#cbd5e1" },
+      { name: "Sodium Chloride", formula: "NaCl", concentration: "0.1 M", role: "Reactant solution", color: "#e2e8f0" },
+      { name: "Lead(II) Nitrate", formula: "Pb(NO₃)₂", concentration: "0.1 M", role: "Reactant solution", color: "#cbd5e1" },
+      { name: "Potassium Iodide", formula: "KI", concentration: "0.1 M", role: "Reactant solution", color: "#cbd5e1" },
+      { name: "Barium Chloride", formula: "BaCl₂", concentration: "0.1 M", role: "Reactant solution", color: "#cbd5e1" },
+      { name: "Sodium Sulfate", formula: "Na₂SO₄", concentration: "0.1 M", role: "Reactant solution", color: "#e2e8f0" },
+    ],
+    procedure: [
+      "Select a reactant system (AgNO₃ + NaCl, Pb(NO₃)₂ + KI, or BaCl₂ + Na₂SO₄).",
+      "Set the reaction temperature and select reactant concentrations and volumes.",
+      "Dispense reactant 1 and reactant 2 into the beaker and observe precipitate formation.",
+      "Note the cloudiness and particle spacing in the micro view as ions form solid lattices.",
+      "Study how increasing temperature can redissolve precipitates by increasing Ksp.",
+    ],
+    safetyNotes: [
+      "Silver nitrate stains skin and blackens in light; handle with gloves.",
+      "Lead compounds are highly cumulative toxins; handle with extreme care and avoid any contact.",
+      "Barium salts are toxic if ingested; wash hands thoroughly.",
+    ],
+    keyEquation: "Q_{sp} = [M^{z+}]^a \\cdot [A^{y-}]^b  \\quad | \\quad Q_{sp} > K_{sp} \\rightarrow \\text{Precipitation}",
+    keyEquationLabel: "Solubility Equilibrium & Ion Product Criterion",
+  },
+
+  "decomposition": {
+    aim: "Study the thermal and catalytic decomposition of compounds, measure gas yield, and evaluate Arrhenius kinetics and activation energy values.",
+    theory: "Decomposition reactions involve a single compound breaking down into two or more simpler substances when heated or in the presence of a catalyst. The rate of decomposition follows Arrhenius kinetics: k = A * exp(-Ea / RT). Adding a catalyst (like MnO₂) provides an alternative reaction pathway with a lower activation energy, drastically accelerating gas evolution even at room temperature.",
+    apparatus: ["Hard-glass test tube", "Bunsen burner", "Gas delivery tube", "Inverted gas collection syringe", "Thermometer"],
+    chemicals: [
+      { name: "Calcium Carbonate", formula: "CaCO₃", role: "Reactant — decomposes to CaO and CO₂ at T > 800°C", color: "#e2e8f0" },
+      { name: "Potassium Chlorate", formula: "KClO₃", role: "Reactant — decomposes to KCl and O₂ at T > 350°C", color: "#e2e8f0" },
+      { name: "Hydrogen Peroxide", formula: "H₂O₂", concentration: "10% (3 M)", role: "Reactant — decomposes to H₂O and O₂ at room temp with catalyst", color: "#cbd5e1" },
+      { name: "Manganese Dioxide", formula: "MnO₂", role: "Catalyst — lowers activation energy", color: "#334155" },
+    ],
+    procedure: [
+      "Select a compound to decompose (CaCO₃, KClO₃, or H₂O₂).",
+      "Weigh your starting mass and choose whether to add the MnO₂ catalyst.",
+      "Secure the delivery tube stopper and light the burner. Adjust heating power.",
+      "Observe gas evolution bubbling/collecting in the gas syringe, and the solid mass reduction.",
+      "Plot gas volume against temperature to evaluate kinetics.",
+    ],
+    safetyNotes: [
+      "Potassium chlorate is a strong oxidizer and can react explosively with organic materials; do not mix with carbon.",
+      "Ensure the delivery tube remains unblocked to prevent pressure build-up and tube explosion.",
+      "Hydrogen peroxide can cause skin bleach burns; wear gloves.",
+    ],
+    keyEquation: "k(T) = A \\cdot e^{-\\frac{E_a}{R T}}  \\quad | \\quad 2\\text{KClO}_3(s) \\rightarrow 2\\text{KCl}(s) + 3\\text{O}_2(g)",
+    keyEquationLabel: "Arrhenius Reaction Rate & Potassium Chlorate Decomposition",
+  },
+
+  "physical-chemical": {
+    aim: "Distinguish between physical transformations (melting, freezing, dissolving) and chemical transformations (combustion, oxidation, neutralization).",
+    theory: "Physical changes alter the physical state or appearance of a substance without modifying its chemical identity (reversibility is common, no bonds are broken/formed). Chemical changes involve chemical reactions where original substances transform into new chemical species with different bonds, colors, and properties, often accompanied by significant enthalpy changes (irreversible under ordinary conditions).",
+    apparatus: ["Beaker (100 mL)", "Bunsen burner", "Watch glass", "Thermometer", "Stirring rod"],
+    chemicals: [
+      { name: "Paraffin Wax", formula: "C₂₅H₅₂", role: "Physical phase change (melting)", color: "#f1f5f9" },
+      { name: "Sucrose (Sugar)", formula: "C₁₂H₂₂O₁₁", role: "Physical change (dissolving)", color: "#ffffff" },
+      { name: "Cellulose (Paper)", formula: "(C₆H₁₀O₅)_n", role: "Chemical combustion", color: "#cbd5e1" },
+      { name: "Iron Powder", formula: "Fe", role: "Chemical oxidation (rusting)", color: "#64748b" },
+      { name: "Hydrochloric Acid / NaOH", formula: "HCl / NaOH", role: "Chemical neutralization", color: "#cbd5e1" },
+    ],
+    procedure: [
+      "Select a physical change (Melting Wax, Dissolving Sugar, Freezing Water) or chemical change (Burning Paper, Rusting Iron, Acid-Base reaction).",
+      "Configure starting variables (temperature, concentrations) and trigger the process.",
+      "Observe changes: look for bubbles, flame, heat release, or phase spacing shifts in the micro view.",
+      "Attempt to reverse the process to verify physical reversibility vs chemical irreversibility.",
+    ],
+    safetyNotes: [
+      "Burning paper produces open flames; ensure clear space.",
+      "Strong acids and bases are corrosive; wear gloves.",
+      "Be careful around heated crucible surfaces.",
+    ],
+    keyEquation: "\\text{Physical: } X(s) \\rightleftharpoons X(l) \\quad | \\quad \\text{Chemical: } A + B \\rightarrow C + D",
+    keyEquationLabel: "Comparative Thermodynamic Equations",
+  },
+  
+  "molecular-viewer": {
+    aim: "Explore interactive 3D molecular structures, symmetry point groups, VSEPR shapes, conformers, atomic/hybrid orbitals, and vibrational normal modes (symmetric/asymmetric stretching, bending).",
+    theory: "Molecular vibrations occur when atoms in a molecule undergo periodic motion relative to each other while the molecule as a whole undergoes translation and rotation. A non-linear molecule with N atoms has 3N - 6 normal modes of vibration. Infared (IR) spectroscopy measures these vibrations. Symmetry determines whether a mode is IR-active (if there is a change in the net dipole moment during vibration). Conformers represent different spatial arrangements of atoms that can interconvert by rotation around single bonds, altering steric and torsional strain. VSEPR theory predicts molecular shapes based on minimizing electrostatic repulsion between electron pairs in the valence shell.",
+    apparatus: [
+      "3D Molecular Renderer Canvas",
+      "Vibrational Frequency Spectrograph HUD",
+      "Point Group Symmetry Classifier",
+      "Wave-Function Orbital Phase Renderer"
+    ],
+    chemicals: [
+      { name: "Water", formula: "H₂O", role: "Study symmetric stretch (3657 cm⁻¹), bending (1595 cm⁻¹), and asymmetric stretch (3756 cm⁻¹)", color: "#38bdf8" },
+      { name: "Carbon Dioxide", formula: "CO₂", role: "Study symmetric stretch (IR inactive), asymmetric stretch, and degenerate bending modes", color: "#64748b" },
+      { name: "Methane", formula: "CH₄", role: "Study tetrahedral geometry (T_d point group) and its vibrational modes", color: "#e2e8f0" }
+    ],
+    procedure: [
+      "Select a study category: Vibrations, VSEPR Shapes, Conformations, or Orbitals.",
+      "Choose a molecule or orbital system to load it into the interactive 3D viewport.",
+      "Click and drag on the 3D viewport to rotate the structure and inspect bond angles.",
+      "For Vibrations: Select a normal mode and toggle 'Vibration Active'. Adjust amplitude and speed to observe the motion.",
+      "For Conformations: Toggle between different conformational states (e.g. Staggered vs Eclipsed ethane, Chair vs Boat cyclohexane) to study steric differences.",
+      "For Orbitals: Select an orbital (like 2p or sp3 hybrid) and examine the spatial distribution of positive (red) and negative (blue) phase lobes."
+    ],
+    safetyNotes: [
+      "Use mouse drag/scroll controls carefully to avoid viewport clipping.",
+      "Ensure WebGL rendering acceleration is enabled in your browser settings for optimal performance."
+    ],
+    keyEquation: "E_{\\text{vib}} = \\left(v + \\frac{1}{2}\\right) h \\nu \\quad | \\quad \\text{Normal Modes} = 3N - 6 \\text{ (non-linear) or } 3N - 5 \\text{ (linear)}",
+    keyEquationLabel: "Vibrational Energy Level & Normal Modes Formula",
+  },
 };

@@ -70,8 +70,44 @@ const SAFETY_CONFIG: Record<SafetyLevel, {
 };
 
 function normaliseSafetyNote(n: string | SafetyNote): SafetyNote {
-  if (typeof n === "string") return { level: "warning", message: n };
-  return n;
+  if (typeof n !== "string") return n;
+  
+  const text = n.toLowerCase();
+  let level: SafetyLevel = "warning"; // default
+  
+  if (
+    text.includes("toxic") ||
+    text.includes("poison") ||
+    text.includes("corrosive") ||
+    text.includes("explosive") ||
+    text.includes("flammable") ||
+    text.includes("fire") ||
+    text.includes("hazard") ||
+    text.includes("danger")
+  ) {
+    level = "danger";
+  } else if (
+    text.includes("goggles") ||
+    text.includes("gloves") ||
+    text.includes("ppe") ||
+    text.includes("protective") ||
+    text.includes("lab coat") ||
+    text.includes("required") ||
+    text.includes("mandatory") ||
+    text.includes("must")
+  ) {
+    level = "mandatory";
+  } else if (
+    text.includes("wash") ||
+    text.includes("clean") ||
+    text.includes("ventilat") ||
+    text.includes("caution") ||
+    text.includes("careful")
+  ) {
+    level = "caution";
+  }
+  
+  return { level, message: n };
 }
 
 function groupSafetyNotes(notes: (string | SafetyNote)[]): Map<SafetyLevel, string[]> {
@@ -87,7 +123,7 @@ function groupSafetyNotes(notes: (string | SafetyNote)[]): Map<SafetyLevel, stri
 export default function PreLabIntro({
   title, objective, apparatus, reagents = [], safetyNotes,
 }: PreLabIntroProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
   const grouped = groupSafetyNotes(safetyNotes);
 
   const dangerNotes = grouped.get("danger")!.length + grouped.get("warning")!.length;
@@ -220,7 +256,7 @@ export default function PreLabIntro({
                           key={r.name}
                           className="flex items-center justify-between px-3 py-2.5 text-xs"
                           style={{
-                            background:  i % 2 === 0 ? "var(--lab-surface)" : "rgba(255,255,255,0.6)",
+                            background:  i % 2 === 0 ? "var(--lab-surface)" : "var(--lab-white)",
                             borderTop:   i > 0 ? "1px solid var(--lab-glass-border)" : "none",
                             color:       "var(--lab-text-secondary)",
                           }}
@@ -280,7 +316,7 @@ export default function PreLabIntro({
               {/* Sticky footer CTA */}
               <div
                 className="flex-shrink-0 px-6 py-4 border-t"
-                style={{ borderColor: "var(--lab-glass-border)", background: "rgba(255,255,255,0.8)" }}
+                style={{ borderColor: "var(--lab-glass-border)", background: "var(--lab-glass-heavy)" }}
               >
                 <button
                   onClick={() => setIsOpen(false)}

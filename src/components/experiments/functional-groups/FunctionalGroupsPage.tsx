@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState, startTransition } from "react";
 import { useFunctionalGroupsStore } from "@/lib/store/functional-groups-store";
@@ -131,7 +131,46 @@ export default function FunctionalGroupsPage() {
 
       {/* Run test button */}
       {store.selectedCompound && store.selectedTest && (
-        <div className="space-y-2">
+        <div className="space-y-3">
+          <div className="lab-ctrl-section p-2.5 space-y-3.5">
+            <div className="lab-ctrl-section-hdr pb-1 border-b border-slate-100">
+              <span className="lab-ctrl-section-hdr-title text-[10px]">Reaction Parameters</span>
+            </div>
+            <div>
+              <div className="flex justify-between text-[10px] mb-0.5">
+                <span>Reaction Temperature:</span>
+                <span className="font-bold text-slate-700">{store.temperature} °C</span>
+              </div>
+              <input
+                type="range"
+                min="15"
+                max="85"
+                step="1"
+                value={store.temperature}
+                disabled={store.isTesting}
+                onChange={(e) => store.updateParamsAction({ temperature: parseInt(e.target.value) })}
+                className="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer accent-amber-600"
+              />
+            </div>
+
+            <div>
+              <div className="flex justify-between text-[10px] mb-0.5">
+                <span>Reagent Concentration:</span>
+                <span className="font-bold text-slate-700">{store.reagentConc.toFixed(1)} M</span>
+              </div>
+              <input
+                type="range"
+                min="0.1"
+                max="6.0"
+                step="0.1"
+                value={store.reagentConc}
+                disabled={store.isTesting}
+                onChange={(e) => store.updateParamsAction({ reagentConc: parseFloat(e.target.value) })}
+                className="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer accent-amber-600"
+              />
+            </div>
+          </div>
+
           {!store.isTesting && (
             <button
               onClick={() => store.runTestAction()}

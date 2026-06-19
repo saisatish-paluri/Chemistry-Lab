@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState, startTransition } from "react";
 import { useFiltrationStore }          from "@/lib/store/filtration-basics-store";
@@ -69,30 +69,121 @@ export default function FiltrationPage() {
         </p>
       </div>
 
-      {/* Mixture info */}
+      {/* Mixture & Fluid Properties */}
       <div className="lab-ctrl-section">
         <div className="lab-ctrl-section-hdr">
-          <span className="lab-ctrl-section-hdr-icon">
-            <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M5 2v5L2 10h9L8 7V2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </span>
-          <span className="lab-ctrl-section-hdr-title">Mixture Composition</span>
+          <span className="lab-ctrl-section-hdr-icon">🧪</span>
+          <span className="lab-ctrl-section-hdr-title">Mixture & Fluid Properties</span>
         </div>
-        <div className="p-3 space-y-1.5 text-[11.5px]">
-          {[
-            { label: "Sand (SiO₂)",    value: `${store.sandGrams}g`, note: "Insoluble" },
-            { label: "Salt (NaCl)",    value: `${store.saltGrams}g`, note: "Soluble" },
-            { label: "Water (H₂O)",    value: `${store.waterMl}mL`, note: "Solvent" },
-          ].map(({ label, value, note }) => (
-            <div key={label} className="flex items-center gap-2">
-              <span className="flex-1" style={{ color: "var(--lab-text-muted)" }}>{label}</span>
-              <span className="font-bold font-mono" style={{ color: "var(--lab-text-secondary)" }}>{value}</span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded"
-                style={{ background: note === "Soluble" ? "rgba(5,150,105,0.08)" : "rgba(37,99,235,0.08)",
-                         color:      note === "Soluble" ? "#059669" : "var(--lab-text-muted)" }}>
-                {note}
-              </span>
-            </div>
-          ))}
+        <div className="p-3 space-y-3">
+          {store.stage === "setup" ? (
+            <>
+              {/* Sliders for setup */}
+              <div>
+                <div className="flex justify-between text-[11px] mb-1">
+                  <span className="font-medium">Sand (SiO₂) Mass</span>
+                  <span className="font-bold text-amber-700">{store.sandGrams} g</span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  step="0.5"
+                  value={store.sandGrams}
+                  onChange={(e) => store.updateCompositionAction({ sandGrams: parseFloat(e.target.value) })}
+                  className="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer accent-amber-600"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between text-[11px] mb-1">
+                  <span className="font-medium">Salt (NaCl) Mass</span>
+                  <span className="font-bold text-emerald-700">{store.saltGrams} g</span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  step="0.5"
+                  value={store.saltGrams}
+                  onChange={(e) => store.updateCompositionAction({ saltGrams: parseFloat(e.target.value) })}
+                  className="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer accent-emerald-600"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between text-[11px] mb-1">
+                  <span className="font-medium">Water Volume</span>
+                  <span className="font-bold text-sky-700">{store.waterMl} mL</span>
+                </div>
+                <input
+                  type="range"
+                  min="50"
+                  max="150"
+                  step="5"
+                  value={store.waterMl}
+                  onChange={(e) => store.updateCompositionAction({ waterMl: parseFloat(e.target.value) })}
+                  className="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer accent-sky-600"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between text-[11px] mb-1">
+                  <span className="font-medium">Water Temperature</span>
+                  <span className="font-bold text-red-600">{store.temperature} °C</span>
+                </div>
+                <input
+                  type="range"
+                  min="10"
+                  max="80"
+                  step="1"
+                  value={store.temperature}
+                  onChange={(e) => store.updateCompositionAction({ temperature: parseFloat(e.target.value) })}
+                  className="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer accent-red-600"
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Static display during run */}
+              <div className="space-y-1.5 text-[11.5px]">
+                {[
+                  { label: "Sand (SiO₂)",    value: `${store.sandGrams}g`, note: "Insoluble" },
+                  { label: "Salt (NaCl)",    value: `${store.saltGrams}g`, note: "Soluble" },
+                  { label: "Water (H₂O)",    value: `${store.waterMl}mL`, note: "Solvent" },
+                  { label: "Temperature",    value: `${store.temperature}°C`, note: "Thermal" },
+                ].map(({ label, value, note }) => (
+                  <div key={label} className="flex items-center gap-2">
+                    <span className="flex-1" style={{ color: "var(--lab-text-muted)" }}>{label}</span>
+                    <span className="font-bold font-mono" style={{ color: "var(--lab-text-secondary)" }}>{value}</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded"
+                      style={{ background: note === "Soluble" ? "rgba(5,150,105,0.08)" : note === "Thermal" ? "rgba(239,68,68,0.08)" : "rgba(37,99,235,0.08)",
+                               color:      note === "Soluble" ? "#059669" : note === "Thermal" ? "#ef4444" : "var(--lab-text-muted)" }}>
+                      {note}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Dynamic properties */}
+              <div className="pt-2 border-t border-slate-100 space-y-1 text-[11px] text-slate-500">
+                <div className="flex justify-between">
+                  <span>Fluid Viscosity:</span>
+                  <span className="font-bold text-slate-700">{store.viscosity.toFixed(3)} cP</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Clogging Factor:</span>
+                  <span className="font-bold text-slate-700">{store.cloggingFactor.toFixed(2)}x</span>
+                </div>
+                {store.flowRate > 0 && (
+                  <div className="flex justify-between">
+                    <span>Filter Flow Rate:</span>
+                    <span className="font-bold text-amber-700">{store.flowRate.toFixed(2)} mL/s</span>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -211,6 +302,10 @@ export default function FiltrationPage() {
           residueMass={store.residueMass}
           sandGrams={store.sandGrams}
           waterMl={store.waterMl}
+          cloggingFactor={store.cloggingFactor}
+          flowRate={store.flowRate}
+          onSetupFilter={store.setupFilterAction}
+          onStartPour={store.startPourAction}
         />
       }
       education={EXPERIMENT_EDUCATION["filtration-basics"]}

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState, startTransition } from "react";
 import { motion }                                        from "framer-motion";
@@ -51,8 +51,8 @@ export default function RedoxPage() {
   const popup         = lastObs ? obsToPopup(lastObs.type, lastObs.message) : null;
   const solColor      = cuSolutionColor(store.cupricConc);
   const metalProfile  = store.selectedMetal ? METALS[store.selectedMetal] : null;
-  const pctConsumed   = ((CUPRIC_INITIAL_CONC - store.cupricConc) / CUPRIC_INITIAL_CONC) * 100;
-  const cellPotential = metalProfile ? (0.34 - metalProfile.stdPotential) : null;
+  const pctConsumed   = ((store._cuConc - store.cupricConc) / Math.max(0.01, store._cuConc)) * 100;
+  const cellPotential = metalProfile ? store.cellPotential : null;
 
   const infoCards = metalProfile ? (
     <div
@@ -177,6 +177,52 @@ export default function RedoxPage() {
         </div>
       </div>
 
+      {/* Simulation Controls (Sliders) */}
+      <div style={{
+        padding: "10px 12px", borderRadius: 10,
+        background: "rgba(148,163,184,0.06)", border: "1px solid rgba(148,163,184,0.18)",
+      }} className="flex flex-col gap-3">
+        <p style={{ fontSize: 9.5, fontWeight: 800, color: "#475569", margin: 0, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          Solution Settings
+        </p>
+
+        {/* Temperature slider */}
+        <div>
+          <div className="flex justify-between text-[10px] mb-1 font-medium">
+            <span style={{ color: "var(--lab-text-secondary)" }}>Solution Temperature:</span>
+            <span className="font-mono text-purple-600 font-semibold">{store.temperature.toFixed(0)} °C</span>
+          </div>
+          <input
+            type="range"
+            min="10"
+            max="80"
+            step="1"
+            value={store.temperature}
+            onChange={(e) => store.updateParametersAction({ temperature: parseInt(e.target.value, 10) })}
+            disabled={store.status === "running" || store.status === "completed"}
+            className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+          />
+        </div>
+
+        {/* Concentration slider */}
+        <div>
+          <div className="flex justify-between text-[10px] mb-1 font-medium">
+            <span style={{ color: "var(--lab-text-secondary)" }}>Initial [Cu²⁺] Conc:</span>
+            <span className="font-mono text-blue-600 font-semibold">{store.cupricConc.toFixed(2)} M</span>
+          </div>
+          <input
+            type="range"
+            min="0.05"
+            max="1.00"
+            step="0.05"
+            value={store.cupricConc}
+            onChange={(e) => store.updateParametersAction({ cupricConc: parseFloat(e.target.value) })}
+            disabled={store.status === "running" || store.status === "completed"}
+            className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+          />
+        </div>
+      </div>
+
       <button
         onClick={store.addMetalAction}
         disabled={!store.selectedMetal || store.status === "running" || store.status === "completed"}
@@ -242,6 +288,7 @@ export default function RedoxPage() {
           cupricConc={store.cupricConc}
           isRunning={store.status === "running"}
           reactionOccurs={store.reactionOccurs}
+          initConc={store._cuConc}
         />
       }
       education={EXPERIMENT_EDUCATION["redox-displacement"]}
@@ -285,7 +332,7 @@ export default function RedoxPage() {
 // ── Inline workspace ──────────────────────────────────────────────────────────
 
 function RedoxWorkspace({
-  solColor: _solColor, metalProfile, cuDepositedG, metalMassG, cupricConc, isRunning, reactionOccurs,
+  solColor: _solColor, metalProfile, cuDepositedG, metalMassG, cupricConc, isRunning, reactionOccurs, initConc,
 }: {
   solColor:       string;
   metalProfile:   typeof METALS[MetalId] | null;
@@ -294,19 +341,32 @@ function RedoxWorkspace({
   cupricConc:     number;
   isRunning:      boolean;
   reactionOccurs: boolean;
+  initConc:       number;
 }) {
   const rodColor    = metalProfile ? metalProfile.rodColor : "#a0a0a0";
   const depositFrac = metalMassG > 0 ? Math.min(1, cuDepositedG / (metalMassG * 0.5)) : 0;
+  const depositThickness = Math.min(6, depositFrac * 6);
 
   // Derive a correct CuSO4 blue that fades to near-colorless as Cu2+ is consumed
-  const t = Math.max(0, Math.min(1, cupricConc / 0.5));
-  const solColor = `rgba(37,99,235,${(0.08 + t * 0.60).toFixed(2)})`;
+  const t = Math.max(0, Math.min(1, cupricConc / (initConc || 0.5)));
+  const dissolvedFraction = 1.0 - t;
+
+  let solColor = `rgba(37,99,235, ${(0.08 + t * 0.60).toFixed(2)})`;
+  if (metalProfile?.id === "iron") {
+    const r = Math.round(37 * t + 16 * dissolvedFraction);
+    const g = Math.round(99 * t + 185 * dissolvedFraction);
+    const b = Math.round(235 * t + 129 * dissolvedFraction);
+    const alpha = 0.08 + t * 0.60 + dissolvedFraction * 0.25;
+    solColor = `rgba(${r},${g},${b},${alpha.toFixed(2)})`;
+  } else {
+    solColor = `rgba(37,99,235, ${(0.08 + t * 0.62).toFixed(2)})`;
+  }
 
   return (
     <div
       className="relative rounded-3xl overflow-hidden select-none"
       style={{
-        aspectRatio: "340/295",
+        aspectRatio: "240/280",
         width:       "100%",
         height:      "auto",
         maxHeight:   "100%",
@@ -337,7 +397,7 @@ function RedoxWorkspace({
       />
 
       <svg
-        viewBox="0 0 340 295"
+        viewBox="55 0 240 280"
         width="100%"
         style={{ display: "block", position: "relative", zIndex: 10 }}
         aria-label="Redox displacement beaker"
@@ -345,10 +405,13 @@ function RedoxWorkspace({
       >
         <defs>
           <filter id="rdx-shadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="rgba(0,0,0,0.50)" />
+            <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="rgba(0,0,0,0.40)" />
+          </filter>
+          <filter id="rdx-soft" x="-35%" y="-35%" width="170%" height="170%">
+            <feGaussianBlur stdDeviation="3" />
           </filter>
           <clipPath id="rdx-beaker-clip">
-            <path d="M80 28 L80 205 Q80 220 95 220 L245 220 Q260 220 260 205 L260 28 Z" />
+            <path d="M80 79 L80 256 Q80 271 95 271 L245 271 Q260 271 260 256 L260 79 Z" />
           </clipPath>
         </defs>
 
@@ -357,20 +420,23 @@ function RedoxWorkspace({
         <rect x="0" y="271" width="340" height="6"  fill="#cbd5e1" />
         <rect x="0" y="271" width="340" height="2"  fill="rgba(255,255,255,0.55)" />
 
-        <text x="170" y="18" textAnchor="middle" fontSize="9" fill="#3b6690" fontWeight="600">
-          Metal rod in CuSO₄ solution
+        {/* Soft shadow under beaker */}
+        <ellipse cx="170" cy="274" rx="90" ry="5" fill="rgba(15,23,42,0.28)" filter="url(#rdx-soft)" />
+
+        <text x="170" y="70" textAnchor="middle" fontSize="8" fill="#3b6690" fontWeight="700" opacity="0.8">
+          REACTION VESSEL
         </text>
 
         {/* ── Beaker — clear glass ── */}
-        <path d="M80 28 L80 205 Q80 220 95 220 L245 220 Q260 220 260 205 L260 28"
+        <path d="M80 79 L80 256 Q80 271 95 271 L245 271 Q260 271 260 256 L260 79"
               fill="rgba(255,255,255,0.48)" stroke="rgba(71,85,105,0.50)" strokeWidth="2"
               filter="url(#rdx-shadow)" />
-        <line x1="80" y1="28" x2="260" y2="28" stroke="rgba(71,85,105,0.50)" strokeWidth="2" />
-        <path d="M84 34 L84 205" stroke="rgba(255,255,255,0.40)" strokeWidth="4" strokeLinecap="round" />
-        <path d="M92 34 L92 205" stroke="rgba(255,255,255,0.15)" strokeWidth="2" strokeLinecap="round" />
+        <line x1="80" y1="79" x2="260" y2="79" stroke="rgba(71,85,105,0.50)" strokeWidth="2" />
+        <path d="M84 85 L84 256" stroke="rgba(255,255,255,0.40)" strokeWidth="4" strokeLinecap="round" />
+        <path d="M92 85 L92 256" stroke="rgba(255,255,255,0.15)" strokeWidth="2" strokeLinecap="round" />
 
         {/* CuSO₄ solution — correct medium blue, fades as Cu²⁺ consumed */}
-        <motion.rect x="81" y="70" width="178" height="149"
+        <motion.rect x="81" y="121" width="178" height="149"
           animate={{ fill: solColor }}
           transition={{ duration: 1.5, ease: "easeOut" }}
           clipPath="url(#rdx-beaker-clip)"
@@ -379,9 +445,9 @@ function RedoxWorkspace({
         {/* Animated solution surface */}
         <motion.path
           animate={{ d: [
-            "M 82 70 Q 170 66 258 70",
-            "M 82 70 Q 170 74 258 70",
-            "M 82 70 Q 170 66 258 70",
+            "M 82 121 Q 170 117 258 121",
+            "M 82 121 Q 170 125 258 121",
+            "M 82 121 Q 170 117 258 121",
           ]}}
           transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
           fill="none" stroke={`rgba(37,99,235,${(0.08 + t * 0.30).toFixed(2)})`} strokeWidth="1.2"
@@ -389,11 +455,11 @@ function RedoxWorkspace({
         />
 
         {/* Concentration scale */}
-        <text x="268" y="74"  fontSize="7.5" fill="#3b6690">0.5 M</text>
-        <text x="268" y="218" fontSize="7.5" fill="#3b6690">0 M</text>
-        <line x1="264" y1="70" x2="270" y2="70"
+        <text x="268" y="125"  fontSize="7.5" fill="#3b6690">0.5 M</text>
+        <text x="268" y="269" fontSize="7.5" fill="#3b6690">0 M</text>
+        <line x1="264" y1="121" x2="270" y2="121"
           stroke="#3b6690" strokeWidth="0.8" />
-        <line x1="264" y1="218" x2="270" y2="218"
+        <line x1="264" y1="269" x2="270" y2="269"
           stroke="#3b6690" strokeWidth="0.8" />
 
         {/* Metal rod */}
@@ -405,20 +471,22 @@ function RedoxWorkspace({
             transition={{ type: "spring", stiffness: 80, damping: 14 }}
           >
             {/* Rod body — spans from above beaker rim into solution */}
-            <rect x="158" y="10" width="24" height="198" rx="4"
+            <rect x="158" y="61" width="24" height="198" rx="4"
               fill={rodColor} stroke="rgba(0,0,0,0.18)" strokeWidth="0.8" />
             {/* Rod highlight */}
-            <rect x="160" y="12" width="6" height="190" rx="3"
+            <rect x="160" y="63" width="6" height="190" rx="3"
               fill="rgba(255,255,255,0.22)" />
 
-            {/* Cu deposit coating — grows upward from bottom of rod */}
+            {/* Cu deposit coating — grows upward and gets thicker */}
             {reactionOccurs && cuDepositedG > 0 && (
               <motion.rect
-                x="159"
-                width="22" rx="2"
+                x={159 - depositThickness}
+                width={22 + 2 * depositThickness} rx="2"
                 fill="#b87333"
+                stroke="rgba(154,52,18,0.85)"
+                strokeWidth={depositThickness > 0.5 ? 0.8 + depositThickness / 4 : 0}
                 animate={{
-                  y:      203 - depositFrac * 120,
+                  y:      254 - depositFrac * 120,
                   height: Math.max(2, depositFrac * 120),
                   opacity: 0.88,
                 }}
@@ -427,9 +495,9 @@ function RedoxWorkspace({
             )}
 
             {/* Rod symbol label above beaker */}
-            <rect x="152" y="2" width="36" height="12" rx="3"
+            <rect x="152" y="53" width="36" height="12" rx="3"
               fill={rodColor} opacity="0.85" />
-            <text x="170" y="12" textAnchor="middle" fontSize="9"
+            <text x="170" y="63" textAnchor="middle" fontSize="9"
               fill="rgba(255,255,255,0.95)" fontWeight="800">
               {metalProfile.symbol}
             </text>
@@ -441,16 +509,16 @@ function RedoxWorkspace({
           <motion.circle key={i}
             cx={155 + i * 14} r={2 + (i % 2) * 0.8}
             fill="rgba(184,115,51,0.65)"
-            animate={{ cy: [200, 155, 110], opacity: [0.8, 0.4, 0] }}
+            animate={{ cy: [251, 206, 161], opacity: [0.8, 0.4, 0] }}
             transition={{ repeat: Infinity, duration: 1.8, delay: i * 0.55, ease: "easeOut" }}
           />
         ))}
 
         {/* Solution labels */}
-        <text x="120" y="185" textAnchor="middle" fontSize="10" fill="rgba(255,255,255,0.90)" fontWeight="700">
+        <text x="120" y="236" textAnchor="middle" fontSize="10" fill="rgba(255,255,255,0.90)" fontWeight="700">
           CuSO₄
         </text>
-        <text x="120" y="198" textAnchor="middle" fontSize="8" fill="rgba(186,230,253,0.90)" fontWeight="600">
+        <text x="120" y="249" textAnchor="middle" fontSize="8" fill="rgba(186,230,253,0.90)" fontWeight="600">
           [{cupricConc.toFixed(3)} M]
         </text>
 
@@ -461,9 +529,9 @@ function RedoxWorkspace({
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4 }}
           >
-            <rect x="195" y="160" width="56" height="18" rx="5"
+            <rect x="195" y="211" width="56" height="18" rx="5"
               fill="rgba(184,115,51,0.12)" stroke="rgba(184,115,51,0.35)" strokeWidth="0.8" />
-            <text x="223" y="172" textAnchor="middle" fontSize="7.5" fill="#b45309" fontWeight="700">
+            <text x="223" y="223" textAnchor="middle" fontSize="7.5" fill="#b45309" fontWeight="700">
               Cu: {cuDepositedG.toFixed(3)} g
             </text>
           </motion.g>
@@ -475,23 +543,23 @@ function RedoxWorkspace({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
-            <rect x="100" y="120" width="140" height="26" rx="8"
+            <rect x="100" y="171" width="140" height="26" rx="8"
               fill="rgba(220,38,38,0.09)" stroke="rgba(220,38,38,0.30)" strokeWidth="1" />
-            <text x="170" y="136" textAnchor="middle" fontSize="10" fill="#dc2626" fontWeight="700">
+            <text x="170" y="187" textAnchor="middle" fontSize="10" fill="#dc2626" fontWeight="700">
               No reaction — not reactive enough
             </text>
           </motion.g>
         )}
 
-        {/* ── Metal activity series strip ── */}
-        <text x="170" y="238" textAnchor="middle" fontSize="7" fill="#475569" fontWeight="600" letterSpacing="0.08em">
+        {/* ── Metal activity series strip (moved to top of SVG canvas) ── */}
+        <text x="170" y="15" textAnchor="middle" fontSize="7" fill="#475569" fontWeight="700" letterSpacing="0.08em">
           ACTIVITY SERIES
         </text>
         {METAL_ORDER.map((id, i) => {
           const m   = METALS[id];
           const act = m.displacesCu;
           return (
-            <g key={id} transform={`translate(${27 + i * 48}, 240)`}
+            <g key={id} transform={`translate(${27 + i * 48}, 20)`}
               opacity={metalProfile?.id === id ? 1 : 0.38}>
               <circle cx="18" cy="10" r="10.5"
                 fill={act ? "rgba(5,150,105,0.12)" : "rgba(185,28,28,0.10)"}

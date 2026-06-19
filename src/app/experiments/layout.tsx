@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useActiveLabStore, EXPERIMENT_META } from "@/lib/store/active-lab-store";
 import {
   EXPERIMENT_LABEL_MAP,
@@ -29,13 +30,9 @@ function ActiveLabSync({ pathname }: { pathname: string }) {
 export default function ExperimentsLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
-  if (pathname === "/experiments") {
-    return (
-      <>
-        <ActiveLabSync pathname={pathname} />
-        {children}
-      </>
-    );
+  // Category pages and the index page render their own Navbar/Footer — skip lab shell
+  if (pathname === "/experiments" || pathname.startsWith("/experiments/category")) {
+    return <>{children}</>;
   }
 
   const experimentLabel = EXPERIMENT_LABEL_MAP[pathname]   ?? "Experiment";
@@ -177,7 +174,20 @@ export default function ExperimentsLayout({ children }: { children: ReactNode })
         </div>
       </header>
 
-      <main className="flex flex-col flex-1 overflow-hidden min-h-0">{children}</main>
+      <main className="flex flex-col flex-1 overflow-hidden min-h-0">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+            className="flex flex-col flex-1 overflow-hidden min-h-0"
+          >
+            {children}
+          </motion.div>
+        </AnimatePresence>
+      </main>
     </div>
   );
 }

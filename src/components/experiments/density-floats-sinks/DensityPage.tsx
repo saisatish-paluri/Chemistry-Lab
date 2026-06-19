@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState, startTransition } from "react";
 import { useDensityStore }            from "@/lib/store/density-floats-sinks-store";
@@ -89,8 +89,8 @@ export default function DensityPage() {
                 />
                 <span className="truncate">{m.name}</span>
                 {tested && (
-                  <span className="ml-auto text-[9px]" style={{ color: m.floats ? "#059669" : "#dc2626" }}>
-                    {m.floats ? "↑" : "↓"}
+                  <span className="ml-auto text-[9px]" style={{ color: (m.density < store.fluidDensity) ? "#059669" : "#dc2626" }}>
+                    {(m.density < store.fluidDensity) ? "↑" : "↓"}
                   </span>
                 )}
               </button>
@@ -99,6 +99,100 @@ export default function DensityPage() {
         </div>
       </div>
 
+      {/* Liquid Properties (Always Visible) */}
+      <div className="lab-ctrl-section mb-3">
+        <div className="lab-ctrl-section-hdr">
+          <span className="lab-ctrl-section-hdr-icon">🧪</span>
+          <span className="lab-ctrl-section-hdr-title">Fluid Properties</span>
+        </div>
+        <div className="p-3 space-y-3">
+          <div>
+            <div className="flex justify-between text-[11px] mb-1">
+              <span className="font-medium">Water Temperature</span>
+              <span className="font-bold text-sky-600">{store.temperature} °C</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value={store.temperature}
+              onChange={(e) => store.updateParametersAction({ temperature: parseFloat(e.target.value) })}
+              disabled={store.status === "running" || store.status === "completed"}
+              className="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer accent-sky-600"
+            />
+          </div>
+          <div>
+            <div className="flex justify-between text-[11px] mb-1">
+              <span className="font-medium">Salinity (NaCl)</span>
+              <span className="font-bold text-sky-600">{store.salinity} %</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="30"
+              step="0.5"
+              value={store.salinity}
+              onChange={(e) => store.updateParametersAction({ salinity: parseFloat(e.target.value) })}
+              disabled={store.status === "running" || store.status === "completed"}
+              className="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer accent-sky-600"
+            />
+          </div>
+          <div className="text-[11px] text-slate-500 pt-1 border-t border-slate-100 flex justify-between">
+            <span>Calculated Fluid Density:</span>
+            <span className="font-bold text-slate-700">{store.fluidDensity} g/mL</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Solid Dimensions (Visible only when material is selected) */}
+      {mat && (
+        <div className="lab-ctrl-section mb-3">
+          <div className="lab-ctrl-section-hdr">
+            <span className="lab-ctrl-section-hdr-icon">📐</span>
+            <span className="lab-ctrl-section-hdr-title">Solid Dimensions</span>
+          </div>
+          <div className="p-3 space-y-3">
+            <div>
+              <div className="flex justify-between text-[11px] mb-1">
+                <span className="font-medium">Mass</span>
+                <span className="font-bold text-sky-600">{store.mass} g</span>
+              </div>
+              <input
+                type="range"
+                min="5"
+                max="500"
+                step="0.5"
+                value={store.mass}
+                onChange={(e) => store.updateParametersAction({ mass: parseFloat(e.target.value) })}
+                disabled={store.status === "running" || store.status === "completed"}
+                className="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer accent-sky-600"
+              />
+            </div>
+            <div>
+              <div className="flex justify-between text-[11px] mb-1">
+                <span className="font-medium">Volume</span>
+                <span className="font-bold text-sky-600">{store.volume} cm³</span>
+              </div>
+              <input
+                type="range"
+                min="10"
+                max="100"
+                step="1"
+                value={store.volume}
+                onChange={(e) => store.updateParametersAction({ volume: parseFloat(e.target.value) })}
+                disabled={store.status === "running" || store.status === "completed"}
+                className="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer accent-sky-600"
+              />
+            </div>
+            <div className="text-[11px] text-slate-500 pt-1 border-t border-slate-100 flex justify-between">
+              <span>Calculated Solid Density:</span>
+              <span className="font-bold text-slate-700">{store.solidDensity} g/cm³</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Current material info */}
       {mat && (
         <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.70)", border: "1px solid var(--lab-glass-border)" }}>
@@ -106,10 +200,7 @@ export default function DensityPage() {
             <span className="w-4 h-4 rounded" style={{ background: mat.color, flexShrink: 0 }} />
             <p className="text-[12px] font-bold" style={{ color: "var(--lab-text-primary)" }}>{mat.name}</p>
           </div>
-          <p className="text-[11px] mb-1" style={{ color: "var(--lab-text-muted)" }}>
-            Density: <strong style={{ color: "var(--lab-text-secondary)" }}>{mat.density} g/cm³</strong>
-          </p>
-          <p className="text-[10.5px] leading-relaxed" style={{ color: "var(--lab-text-muted)" }}>
+          <p className="text-[11.5px] leading-relaxed" style={{ color: "var(--lab-text-muted)" }}>
             {mat.description}
           </p>
         </div>
@@ -189,14 +280,14 @@ export default function DensityPage() {
             <div key={id}
               className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[10.5px] font-semibold"
               style={{
-                background:  m.floats ? "rgba(5,150,105,0.07)" : "rgba(220,38,38,0.07)",
-                border:      `1px solid ${m.floats ? "rgba(5,150,105,0.20)" : "rgba(220,38,38,0.20)"}`,
-                color:       m.floats ? "#059669" : "#dc2626",
+                background:  (m.density < store.fluidDensity) ? "rgba(5,150,105,0.07)" : "rgba(220,38,38,0.07)",
+                border:      `1px solid ${(m.density < store.fluidDensity) ? "rgba(5,150,105,0.20)" : "rgba(220,38,38,0.20)"}`,
+                color:       (m.density < store.fluidDensity) ? "#059669" : "#dc2626",
               }}
             >
               <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: m.color }} />
               <span className="truncate">{m.name}</span>
-              <span className="ml-auto flex-shrink-0">{m.floats ? "↑" : "↓"}</span>
+              <span className="ml-auto flex-shrink-0">{(m.density < store.fluidDensity) ? "↑" : "↓"}</span>
             </div>
           );
         })}
@@ -213,7 +304,7 @@ export default function DensityPage() {
           metrics={[
             { label: "Tested", value: `${store.testedMaterials.length}/${ORDERED_MATERIALS.length}` },
             ...(mat ? [{ label: "Selected", value: mat.name }] : []),
-            ...(mat ? [{ label: "Density", value: `${mat.density} g/cm³` }] : []),
+            ...(mat ? [{ label: "Density", value: `${store.solidDensity.toFixed(2)} g/cm³` }] : []),
           ]}
         />
       }
@@ -224,15 +315,18 @@ export default function DensityPage() {
           isSettled={store.isSettled}
           testedMaterials={store.testedMaterials}
           onSettle={store.settleAction}
+          fluidDensity={store.fluidDensity}
+          solidDensity={store.solidDensity}
+          displacementRatio={store.displacementRatio}
         />
       }
       education={EXPERIMENT_EDUCATION["density-floats-sinks"]}
       reactionNote={
         mat
-          ? mat.floats
-            ? `${mat.name} ρ = ${mat.density} g/cm³ < 1.0 g/cm³ → floats (buoyant force = weight displaced).`
-            : `${mat.name} ρ = ${mat.density} g/cm³ > 1.0 g/cm³ → sinks (weight > buoyant force).`
-          : "Select a material to compare its density with water (1.0 g/cm³)."
+          ? store.solidDensity < store.fluidDensity
+            ? `${mat.name} ρ_solid = ${store.solidDensity.toFixed(2)} g/cm³ < ρ_fluid = ${store.fluidDensity.toFixed(2)} g/cm³ → floats (buoyant force = weight displaced).`
+            : `${mat.name} ρ_solid = ${store.solidDensity.toFixed(2)} g/cm³ > ρ_fluid = ${store.fluidDensity.toFixed(2)} g/cm³ → sinks (weight > buoyant force).`
+          : "Select a material to compare its density with water."
       }
       centerBottom={centerBottom}
       controls={controls}

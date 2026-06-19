@@ -24,10 +24,12 @@ interface Props {
   isRunning:         boolean;
   volumeAdded:       number;
   pH:                number;
+  trialCount?:       number;
   onAddIndicator:    (ind: IndicatorName) => void;
   onAddTitrant:      () => void;
   onSetFlowRate:     (rate: TitrantFlowRate) => void;
   onReset:           () => void;
+  onReplicate?:      () => void;
 }
 
 // ── SVG icons ─────────────────────────────────────────────────────────────────
@@ -70,8 +72,8 @@ function CalcIcon() {
 
 export default function TitrationControls({
   indicatorAdded, selectedIndicator, flowRate, status, isRunning,
-  volumeAdded, pH,
-  onAddIndicator, onAddTitrant, onSetFlowRate, onReset,
+  volumeAdded, pH, trialCount = 0,
+  onAddIndicator, onAddTitrant, onSetFlowRate, onReset, onReplicate,
 }: Props) {
   const done      = status === "completed" || status === "failed";
   const canTitrate = indicatorAdded && !done;
@@ -317,14 +319,28 @@ export default function TitrationControls({
         </div>
       </div>
 
-      {/* ── Reset ── */}
-      <button
-        onClick={onReset}
-        className="w-full py-2 rounded-xl text-xs font-semibold border transition-all duration-150 hover:bg-red-50 active:scale-[0.98]"
-        style={{ borderColor: "#fecaca", color: "#dc2626" }}
-      >
-        Reset Experiment
-      </button>
+      {/* ── Replicate / Reset ── */}
+      <div className="flex flex-col gap-2">
+        {done && onReplicate && (
+          <button
+            onClick={onReplicate}
+            className="w-full py-2.5 rounded-xl text-xs font-bold text-white transition-all duration-150 hover:opacity-90 active:scale-[0.98]"
+            style={{
+              background: "linear-gradient(135deg, #059669 0%, #10b981 100%)",
+              boxShadow: "0 4px 12px rgba(16,185,129,0.2)",
+            }}
+          >
+            Run Replicate Trial (completed: {trialCount})
+          </button>
+        )}
+        <button
+          onClick={onReset}
+          className="w-full py-2 rounded-xl text-xs font-semibold border transition-all duration-150 hover:bg-red-50 active:scale-[0.98]"
+          style={{ borderColor: "#fecaca", color: "#dc2626" }}
+        >
+          Reset Entire Session
+        </button>
+      </div>
     </div>
   );
 }

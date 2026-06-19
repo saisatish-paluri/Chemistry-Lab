@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState, startTransition } from "react";
 import { useSolubilityStore }                            from "@/lib/store/solubility-store";
@@ -147,6 +147,7 @@ export default function SolubilityPage() {
           hasPrecipitate={store.hasPrecipitate}
           precipitate={store.precipitate}
           isRunning={store.status === "running"}
+          turbidity={store.turbidity}
         />
       }
       education={EXPERIMENT_EDUCATION.solubility}
@@ -170,6 +171,12 @@ export default function SolubilityPage() {
           onResetMix={store.resetMixAction}
           onComplete={store.completeExperimentAction}
           onReset={store.resetAction}
+          temperature={store.temperature}
+          volumeA={store.volumeA}
+          volumeB={store.volumeB}
+          concA={store.concA}
+          concB={store.concB}
+          onUpdateComposition={store.updateCompositionAction}
         />
       }
 

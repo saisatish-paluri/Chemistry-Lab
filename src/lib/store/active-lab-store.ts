@@ -148,6 +148,36 @@ export const EXPERIMENT_META: Record<string, ActiveLabInfo> = {
     features: ["ΔH calculation", "Temp graph", "Heat capacity"],
     desc: "Measure enthalpy of neutralisation — calculate ΔH from temperature data.",
   },
+  "/experiments/crystallization": {
+    href: "/experiments/crystallization", title: "Crystallization & Purification",
+    accent: "#0ea5e9", bg: "#f0f9ff", difficulty: "Intermediate",
+    features: ["Solubility curves", "Cooling rate kinetics", "Filtration & drying", "Purity analysis"],
+    desc: "Purify Copper(II) Sulfate crystals from an impure salt mixture.",
+  },
+  "/experiments/natural-indicators": {
+    href: "/experiments/natural-indicators", title: "Natural Indicators",
+    accent: "#db2777", bg: "#fdf2f8", difficulty: "Beginner",
+    features: ["3 plant extracts", "6 test solutions", "Mashing & extraction", "pH color scale"],
+    desc: "Extract pigments from natural sources and test them against household acids and bases.",
+  },
+  "/experiments/acid-metal": {
+    href: "/experiments/acid-metal", title: "Acid-Metal Reactions",
+    accent: "#ea580c", bg: "#fff7ed", difficulty: "Intermediate",
+    features: ["4 active metals", "2 acids", "Gas syringe collection", "Squeaky pop test"],
+    desc: "React active metals with acids to produce hydrogen gas and study reactivity trends.",
+  },
+  "/experiments/acid-carbonate": {
+    href: "/experiments/acid-carbonate", title: "Acid-Carbonate Reactions",
+    accent: "#059669", bg: "#f0fdf4", difficulty: "Intermediate",
+    features: ["Carbonate stoichiometry", "Limewater precipitation", "Stopper sealing error", "CO₂ volume tracking"],
+    desc: "React carbonates with acid, collect carbon dioxide, and test it with limewater.",
+  },
+  "/experiments/states-of-matter": {
+    href: "/experiments/states-of-matter", title: "States of Matter",
+    accent: "#7c3aed", bg: "#f5f3ff", difficulty: "Beginner",
+    features: ["Water, Ethanol, & Wax", "Altitude pressure adjustment", "Latent heat plateaus", "Heating & cooling curves"],
+    desc: "Study phase transitions, latent heat plateaus, and pressure dependency of boiling points.",
+  },
   // ── 5 New Experiments ─────────────────────────────────────────────────────
   "/experiments/neutralization": {
     href: "/experiments/neutralization", title: "Neutralization Reaction",
@@ -178,6 +208,36 @@ export const EXPERIMENT_META: Record<string, ActiveLabInfo> = {
     accent: "#0ea5e9", bg: "#f0f9ff", difficulty: "Intermediate",
     features: ["4 ink samples", "Real-time development", "Rf calculation", "Dye identification"],
     desc: "Separate ink dye mixtures by paper chromatography and calculate Rf values.",
+  },
+  "/experiments/diffusion-liquids": {
+    href: "/experiments/diffusion-liquids", title: "Diffusion in Liquids",
+    accent: "#7c3aed", bg: "#f5f3ff", difficulty: "Beginner",
+    features: ["KMnO₄, Dye, & CuSO₄", "Fick's Law math", "Brownian particle motion", "Dynamic spreading rates"],
+    desc: "Observe solute particle spreading speed under thermal, stirring, and size configurations.",
+  },
+  "/experiments/separation-mixtures": {
+    href: "/experiments/separation-mixtures", title: "Separation of Mixtures",
+    accent: "#059669", bg: "#f0fdf4", difficulty: "Beginner",
+    features: ["Magnet extraction", "Stokes' sedimentation", "Funnel filtration", "Evaporation crystals"],
+    desc: "Separate a solid-liquid mixture containing iron filings, sand, and salt.",
+  },
+  "/experiments/double-displacement": {
+    href: "/experiments/double-displacement", title: "Double Displacement",
+    accent: "#0891b2", bg: "#ecfeff", difficulty: "Intermediate",
+    features: ["AgCl, PbI₂, & BaSO₄", "Qsp vs Ksp(T) math", "Vibrant precipitate clouds", "Nucleation micro views"],
+    desc: "Investigate precipitation kinetics and solubility constants (Ksp) of mixed solutions.",
+  },
+  "/experiments/decomposition": {
+    href: "/experiments/decomposition", title: "Decomposition Reactions",
+    accent: "#ea580c", bg: "#fff7ed", difficulty: "Intermediate",
+    features: ["CaCO₃, KClO₃, & H₂O₂", "Arrhenius activation energy", "MnO₂ catalyst acceleration", "Gas syringe collection"],
+    desc: "Heat chemical compounds and analyze gas evolution and solid mass reduction.",
+  },
+  "/experiments/physical-chemical": {
+    href: "/experiments/physical-chemical", title: "Physical vs Chemical",
+    accent: "#ea580c", bg: "#fff7ed", difficulty: "Beginner",
+    features: ["6 comparative workflows", "Rust, ash, & melting wax", "Enthalpy heat release", "Reversibility tests"],
+    desc: "Compare physical phase/dissolution changes with chemical combustion, oxidation, and neutralization reactions.",
   },
 };
 

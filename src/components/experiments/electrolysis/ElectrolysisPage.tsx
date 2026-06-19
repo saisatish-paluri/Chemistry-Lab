@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState, startTransition } from "react";
 import { useElectrolysisStore }                           from "@/lib/store/electrolysis-store";
@@ -14,8 +14,10 @@ import SetupPhase                                         from "@/components/lab
 import LabPageShell                                       from "@/components/lab/LabPageShell";
 import LabContextPanel                                    from "@/components/lab/LabContextPanel";
 import { ELECTROLYTES }                                   from "@/lib/engine/electrolysis-engine";
-import type { ElectrolyteId }                             from "@/lib/engine/types";
+import type { ElectrolyteId, ElectrodeMaterial }          from "@/lib/engine/types";
 import { EXPERIMENT_EDUCATION }                           from "@/lib/experiment-education";
+import MacroMicroViewToggle                                 from "@/components/lab/MacroMicroViewToggle";
+import MicroscopicViewer                                    from "@/components/lab/MicroscopicViewer";
 
 // ── Popup events ─────────────────────────────────────────────────────────────
 const ELECTROLYTE_EVENTS: Record<ElectrolyteId, ChemicalAddEvent> = {
@@ -64,6 +66,7 @@ export default function ElectrolysisPage() {
   const [chemEvent, setChemEvent]         = useState<ChemicalAddEvent | null>(null);
   const [showChemPopup, setShowChemPopup] = useState(false);
   const [setupDone, setSetupDone]         = useState(false);
+  const [viewMode, setViewMode]           = useState<"macro" | "micro">("macro");
 
   const store     = useElectrolysisStore();
   const tickRef   = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -112,8 +115,8 @@ export default function ElectrolysisPage() {
     fireChemPopup(ELECTROLYTE_EVENTS[id]);
   };
 
-  const handleInsertElectrodes = () => {
-    store.insertElectrodesAction();
+  const handleInsertElectrodes = (material: ElectrodeMaterial) => {
+    store.insertElectrodesAction(material);
     fireChemPopup(ELECTRODE_EVENT);
   };
 
@@ -233,18 +236,35 @@ export default function ElectrolysisPage() {
       }
 
       workspace={
-        <ElectrolysisWorkspace
-          electrolyte={store.electrolyte}
-          anode={store.anode}
-          cathode={store.cathode}
-          circuitComplete={store.circuitComplete}
-          current={store.current}
-          voltage={store.voltage}
-          runTimeSeconds={store.runTimeSeconds}
-          isRunning={isRunning}
-          anodeGasMl={store.anodeGasMl}
-          cathodeGasMl={store.cathodeGasMl}
-        />
+        <div className="flex flex-col gap-3 w-full h-full">
+          <div className="flex justify-end pr-4">
+            <MacroMicroViewToggle view={viewMode} onChange={setViewMode} />
+          </div>
+          {viewMode === "macro" ? (
+            <ElectrolysisWorkspace
+              electrolyte={store.electrolyte}
+              anode={store.anode}
+              cathode={store.cathode}
+              circuitComplete={store.circuitComplete}
+              current={store.current}
+              voltage={store.voltage}
+              runTimeSeconds={store.runTimeSeconds}
+              isRunning={isRunning}
+              anodeGasMl={store.anodeGasMl}
+              cathodeGasMl={store.cathodeGasMl}
+              anodeMassLossG={store.anodeMassLossG}
+              cathodeMassGainG={store.cathodeMassGainG}
+            />
+          ) : (
+            <MicroscopicViewer
+              experimentType="electrolysis"
+              temperatureK={store.temperatureC + 273.15}
+              voltage={store.voltage}
+              concentration={store.electrolyteConc}
+              isTriggered={isRunning}
+            />
+          )}
+        </div>
       }
       education={EXPERIMENT_EDUCATION.electrolysis}
       reactionNote={

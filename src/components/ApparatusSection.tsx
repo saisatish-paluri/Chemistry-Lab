@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Interactive3DCard from "@/components/Interactive3DCard";
+
 
 // ── Wikimedia Commons photo backgrounds per apparatus item ─────────────────────
 // Each photo shows the exact apparatus at medium opacity behind the SVG illustration.
@@ -9,37 +11,37 @@ import { motion, AnimatePresence } from "framer-motion";
 // onError fallback silently drops the photo and keeps the SVG visible.
 const APPARATUS_PHOTOS: Record<string, string> = {
   // Glass burette with stopcock — CC-licensed photograph
-  "burette":              "https://upload.wikimedia.org/wikipedia/commons/7/71/Burette.png",
+  "burette":              "/images/apparatus/burette.png",
   // Erlenmeyer (conical) flask — standard laboratory photograph
-  "conical-flask":        "https://upload.wikimedia.org/wikipedia/commons/0/00/Erlenmeyer_flask_hg.jpg",
+  "conical-flask":        "/images/apparatus/conical-flask.png",
   // Bunsen burner with blue flame
-  "bunsen-burner":        "https://upload.wikimedia.org/wikipedia/commons/1/1c/Mechero_Bunsen.jpg",
+  "bunsen-burner":        "/images/apparatus/bunsen-burner.png",
   // Glass beaker — 250 mL borosilicate beaker photograph
-  "beaker":               "https://upload.wikimedia.org/wikipedia/commons/4/4a/Beaker_%28laboratory_equipment%29.jpg",
+  "beaker":               "/images/apparatus/beaker.png",
   // Nichrome wire loop used in flame tests
-  "nichrome-loop":        "https://upload.wikimedia.org/wikipedia/commons/d/d5/Copper_flame_test.JPG",
+  "nichrome-loop":        "/images/apparatus/nichrome-loop.png",
   // DC bench power supply
-  "dc-power-supply":      "https://upload.wikimedia.org/wikipedia/commons/1/1a/Bench_PSU.JPG",
+  "dc-power-supply":      "/images/apparatus/dc-power-supply.png",
   // Carbon electrode pair for electrolysis
-  "electrode":            "https://upload.wikimedia.org/wikipedia/commons/d/d1/Electrolysis_Apparatus.png",
+  "electrode":            "/images/apparatus/electrode.png",
   // Hofmann voltameter — classic electrolysis U-tube
-  "hofmann-voltameter":   "https://upload.wikimedia.org/wikipedia/commons/e/ec/Hofmann_voltameter_1866.jpg",
+  "hofmann-voltameter":   "/images/apparatus/hofmann-voltameter.png",
   // Litmus indicator paper strips
-  "indicator":            "https://upload.wikimedia.org/wikipedia/commons/e/e6/Blue_and_red_litmus_paper.JPG",
+  "indicator":            "/images/apparatus/indicator.png",
   // 250 mL glass graduated cylinder
-  "measuring-cylinder":   "https://upload.wikimedia.org/wikipedia/commons/7/7c/Glass_graduated_cylinder-250ml_1.jpg",
+  "measuring-cylinder":   "/images/apparatus/measuring-cylinder.png",
   // Glass test tubes in rack
-  "test-tube":            "https://upload.wikimedia.org/wikipedia/commons/e/e2/TestTubes.jpg",
+  "test-tube":            "/images/apparatus/test-tube.png",
   // Pasteur dropping pipettes
-  "dropper":              "https://upload.wikimedia.org/wikipedia/commons/9/9b/Pasteur_Pipets.jpg",
+  "dropper":              "/images/apparatus/dropper.png",
   // Porcelain evaporating dish
-  "evaporating-dish":     "https://upload.wikimedia.org/wikipedia/commons/c/cf/Abdampfschalen_verschiedene_Groessen.jpg",
+  "evaporating-dish":     "/images/apparatus/evaporating-dish.png",
   // Laboratory glass thermometer
-  "thermometer":          "https://upload.wikimedia.org/wikipedia/commons/2/22/CelsiusKelvinThermometer.jpg",
+  "thermometer":          "/images/apparatus/thermometer.png",
   // Chromatography paper strip
-  "chromatography-paper": "https://upload.wikimedia.org/wikipedia/commons/3/32/Chromatography_paper.jpg",
+  "chromatography-paper": "/images/apparatus/chromatography-paper.png",
   // Liebig water-cooled condenser
-  "condenser":            "https://upload.wikimedia.org/wikipedia/commons/f/ff/LiebigCondenser.jpg",
+  "condenser":            "/images/apparatus/condenser.png",
 };
 
 // Photo with silent error fallback — renders nothing if URL is unavailable.
@@ -269,34 +271,176 @@ export default function ApparatusSection() {
       className="py-20 px-6"
       style={{ background: "var(--lab-off-white)" }}
     >
+      {/* ── Hero banner ── */}
+      <div
+        className="apparatus-hero"
+        style={{
+          position:     "relative",
+          overflow:     "hidden",
+          borderRadius: "24px",
+          marginBottom: "3rem",
+          background:   "linear-gradient(135deg, #eff6ff 0%, #dbeafe 50%, #f0f9ff 100%)",
+          border:       "1px solid rgba(37,99,235,0.14)",
+          boxShadow:    "var(--lab-shadow-sm)",
+          padding:      "clamp(2.5rem, 5vw, 4rem) clamp(1.5rem, 4vw, 3.5rem)",
+          maxWidth:     "1152px",
+          marginLeft:   "auto",
+          marginRight:  "auto",
+        }}
+        aria-hidden="false"
+      >
+        {/* Background lab photo at very low opacity */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/images/experiments/kinetics.png"
+          alt=""
+          aria-hidden="true"
+          style={{
+            position: "absolute", inset: 0, width: "100%", height: "100%",
+            objectFit: "cover", objectPosition: "center",
+            opacity: 0.06, mixBlendMode: "multiply", pointerEvents: "none",
+          }}
+        />
+        {/* Gradient vignette */}
+        <div aria-hidden="true" style={{
+          position:   "absolute",
+          inset:      0,
+          background: "radial-gradient(ellipse at 70% 50%, rgba(37,99,235,0.08) 0%, transparent 60%)",
+          pointerEvents: "none",
+        }} />
+        {/* Grid dots */}
+        <div aria-hidden="true" style={{
+          position:        "absolute",
+          inset:           0,
+          backgroundImage: "radial-gradient(circle, rgba(37,99,235,0.06) 1px, transparent 1px)",
+          backgroundSize:  "28px 28px",
+          pointerEvents:   "none",
+        }} />
+
+        {/* Floating ambient formula labels */}
+        {[
+          { text: "2H₂O → 2H₂ + O₂", x: "72%", y: "18%",  size: 10, opacity: 0.14, rot:  6 },
+          { text: "pH meter",          x: "6%",  y: "22%",  size: 9,  opacity: 0.10, rot: -4 },
+          { text: "50 mL burette",     x: "82%", y: "66%",  size: 9,  opacity: 0.10, rot:  3 },
+          { text: "Borosilicate",       x: "14%", y: "72%",  size: 9,  opacity: 0.09, rot: -6 },
+          { text: "K_sp",              x: "60%", y: "80%",  size: 11, opacity: 0.09, rot:  5 },
+        ].map((f, i) => (
+          <span
+            key={i}
+            aria-hidden="true"
+            style={{
+              position:   "absolute",
+              left:       f.x,
+              top:        f.y,
+              fontSize:   f.size,
+              fontFamily: "monospace",
+              fontWeight: 600,
+              color:      `rgba(37,99,235,${f.opacity})`,
+              transform:  `rotate(${f.rot}deg)`,
+              pointerEvents: "none",
+              userSelect: "none",
+              animation:      `hero-float ${4.5 + i * 0.7}s ease-in-out infinite`,
+              animationDelay: `${i * 0.9}s`,
+            }}
+          >
+            {f.text}
+          </span>
+        ))}
+
+        {/* Content */}
+        <div style={{ position: "relative", zIndex: 2 }}>
+          <motion.div
+            initial={{ opacity: 0, y: 18 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            viewport={{ once: true }}
+          >
+            <span style={{
+              display:       "inline-flex",
+              alignItems:    "center",
+              gap:           6,
+              fontSize:      10,
+              fontWeight:    700,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color:         "#2563eb",
+              marginBottom:  14,
+            }}>
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#2563eb", display: "inline-block" }} />
+              Laboratory Equipment
+            </span>
+
+            <h1 style={{
+              fontSize:      "clamp(1.75rem, 4vw, 2.75rem)",
+              fontWeight:    900,
+              letterSpacing: "-0.04em",
+              lineHeight:    1.1,
+              color:         "var(--lab-text-primary)",
+              marginBottom:  "1rem",
+            }}>
+              Apparatus{" "}
+              <span style={{
+                background:            "linear-gradient(135deg, #2563eb 0%, #059669 100%)",
+                WebkitBackgroundClip:  "text",
+                WebkitTextFillColor:   "transparent",
+                backgroundClip:        "text",
+              }}>
+                Reference
+              </span>
+            </h1>
+
+            <p style={{
+              fontSize:     "clamp(13px, 2vw, 15px)",
+              color:        "var(--lab-text-muted)",
+              maxWidth:     560,
+              lineHeight:   1.7,
+              marginBottom: "2rem",
+            }}>
+              Every instrument you encounter in the virtual lab — materials, capacity, and its precise role in each procedure.
+            </p>
+
+            {/* Stat badges */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+              {[
+                { v: ITEMS.length, label: "Instruments" },
+                { v: Array.from(new Set(ITEMS.map(i => i.category))).length, label: "Categories" },
+                { v: "16+", label: "SVG Models" },
+              ].map((s) => (
+                <div key={s.label} style={{
+                  display:       "flex",
+                  alignItems:    "center",
+                  gap:           8,
+                  padding:       "8px 16px",
+                  borderRadius:  100,
+                  background:    "rgba(37,99,235,0.08)",
+                  border:        "1px solid rgba(37,99,235,0.20)",
+                }}>
+                  <span style={{ fontSize: 17, fontWeight: 900, color: "#1d4ed8", letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums" }}>
+                    {s.v}
+                  </span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "var(--lab-text-muted)", letterSpacing: "0.04em" }}>
+                    {s.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
+        {/* Subheader for the grid */}
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, ease: "easeOut" }}
+          transition={{ duration: 0.45, ease: "easeOut" }}
           viewport={{ once: true, margin: "-80px" }}
-          className="mb-10"
+          className="mb-6"
         >
-          <p className="text-xs font-semibold uppercase tracking-widest mb-3"
+          <p className="text-xs font-semibold uppercase tracking-widest mb-1"
              style={{ color: "var(--lab-blue-600)" }}>
-            Laboratory Equipment
+            Browse by Category
           </p>
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold leading-tight"
-                  style={{ color: "var(--lab-text-primary)" }}>
-                Apparatus <span className="gradient-text">Reference</span>
-              </h2>
-              <p className="mt-3 text-base max-w-xl" style={{ color: "var(--lab-text-muted)" }}>
-                Every instrument you will encounter in the virtual lab — with materials, capacity, and role in each procedure.
-              </p>
-            </div>
-            <div className="text-right hidden md:block">
-              <span className="text-3xl font-black gradient-text">{ITEMS.length}</span>
-              <p className="text-xs" style={{ color: "var(--lab-text-subtle)" }}>items catalogued</p>
-            </div>
-          </div>
         </motion.div>
 
         {/* Category filter */}
@@ -329,50 +473,52 @@ export default function ApparatusSection() {
               {shown.map((item, i) => {
                 const isSelected = active === item.id;
                 return (
-                  <motion.button
+                  <motion.div
                     key={item.id}
                     layout
                     initial={{ opacity: 0, scale: 0.92 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.88 }}
                     transition={{ duration: 0.22, delay: i * 0.03 }}
-                    whileHover={{ y: -3, transition: { duration: 0.15 } }}
-                    onClick={() => setActive(isSelected ? null : item.id)}
-                    className="flex flex-col rounded-2xl border text-left overflow-hidden transition-all duration-150"
-                    style={{
-                      background:  isSelected ? `${item.accent}08` : "var(--lab-glass-heavy)",
-                      borderColor: isSelected ? item.accent + "55" : "var(--lab-glass-border)",
-                      boxShadow:   isSelected
-                        ? `0 6px 24px ${item.accent}22`
-                        : "var(--lab-shadow-sm)",
-                    }}
-                    aria-pressed={isSelected}
+                    className="h-full"
                   >
-                    {/* Image area — real photo background + SVG illustration overlay */}
-                    <div
-                      className="flex items-center justify-center h-28 w-full overflow-hidden"
-                      style={{ background: `${item.accent}08`, position: "relative" }}
-                    >
-                      <ApparatusPhoto id={item.id} opacity={0.45} />
-                      <div style={{ color: item.accent, width: 64, height: 64, position: "relative", zIndex: 2 }}>
-                        {item.render}
-                      </div>
-                    </div>
-
-                    {/* Info */}
-                    <div className="px-3 py-2.5">
-                      <p className="text-xs font-bold leading-tight mb-0.5"
-                         style={{ color: "var(--lab-text-primary)" }}>
-                        {item.name}
-                      </p>
-                      <span
-                        className="inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
-                        style={{ background: `${item.accent}14`, color: item.accent }}
+                    <Interactive3DCard className="h-full">
+                      <button
+                        onClick={() => setActive(isSelected ? null : item.id)}
+                        className="flex flex-col w-full h-full rounded-2xl border text-left overflow-hidden transition-all duration-150"
+                        style={{
+                          background:  isSelected ? `${item.accent}08` : "var(--lab-glass-heavy)",
+                          borderColor: isSelected ? item.accent + "55" : "var(--lab-glass-border)",
+                          boxShadow:   isSelected
+                            ? `0 6px 24px ${item.accent}22`
+                            : "var(--lab-shadow-sm)",
+                        }}
+                        aria-pressed={isSelected}
                       >
-                        {item.category}
-                      </span>
-                    </div>
-                  </motion.button>
+                        {/* Image area — real photo background */}
+                        <div
+                          className="flex items-center justify-center h-28 w-full overflow-hidden"
+                          style={{ background: `${item.accent}08`, position: "relative" }}
+                        >
+                          <ApparatusPhoto id={item.id} opacity={1.0} />
+                        </div>
+
+                        {/* Info */}
+                        <div className="px-3 py-2.5">
+                          <p className="text-xs font-bold leading-tight mb-0.5"
+                             style={{ color: "var(--lab-text-primary)" }}>
+                            {item.name}
+                          </p>
+                          <span
+                            className="inline-block text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
+                            style={{ background: `${item.accent}14`, color: item.accent }}
+                          >
+                            {item.category}
+                          </span>
+                        </div>
+                      </button>
+                    </Interactive3DCard>
+                  </motion.div>
                 );
               })}
             </AnimatePresence>
@@ -394,15 +540,12 @@ export default function ApparatusSection() {
                   boxShadow:   `0 8px 32px ${detail.accent}1a`,
                 }}
               >
-                {/* Header render — real photo background + SVG overlay */}
+                {/* Header render — real photo background */}
                 <div
                   className="flex items-center justify-center h-36 overflow-hidden"
                   style={{ background: `${detail.accent}0a`, position: "relative" }}
                 >
-                  <ApparatusPhoto id={detail.id} opacity={0.50} />
-                  <div style={{ color: detail.accent, width: 80, height: 80, position: "relative", zIndex: 2 }}>
-                    {detail.render}
-                  </div>
+                  <ApparatusPhoto id={detail.id} opacity={1.0} />
                 </div>
 
                 <div className="p-5">

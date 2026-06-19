@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState, startTransition } from "react";
 import { useDissolvingStore }          from "@/lib/store/dissolving-rate-store";
@@ -9,10 +9,6 @@ import ResultModal                     from "@/components/lab/ResultModal";
 import ContextPopup, { obsToPopup }    from "@/components/lab/ContextPopup";
 import LabPageShell                    from "@/components/lab/LabPageShell";
 import StepGuide                       from "@/components/lab/StepGuide";
-import {
-  calcDissolveTimeFromCelsius,
-  conditionLabelCelsius,
-} from "@/lib/engine/dissolving-rate-engine";
 import type { DissolveGranularity }    from "@/lib/engine/types";
 import { EXPERIMENT_EDUCATION }        from "@/lib/experiment-education";
 
@@ -81,8 +77,6 @@ export default function DissolvingPage() {
     : null;
 
   const celsius       = store.customTempCelsius;
-  const predictedTime = calcDissolveTimeFromCelsius(celsius, store.granularity, store.stirring);
-  const condLabel     = conditionLabelCelsius(celsius, store.granularity, store.stirring);
   const wColor        = waterColorFromCelsius(celsius);
   const isLocked      = store.isDissolving || store.status === "completed";
 
@@ -227,15 +221,60 @@ export default function DissolvingPage() {
         </div>
       </div>
 
-      {/* Prediction */}
+      {/* ── Sugar Mass ── */}
+      <div className="lab-ctrl-section mb-3">
+        <div className="lab-ctrl-section-hdr">
+          <span className="lab-ctrl-section-hdr-icon">⚖️</span>
+          <span className="lab-ctrl-section-hdr-title">Solute Mass (Sugar)</span>
+        </div>
+        <div className="p-3">
+          <div className="flex justify-between text-[11px] mb-1">
+            <span className="font-medium">Mass to Add</span>
+            <span className="font-bold text-emerald-600">{store.massAdded} g</span>
+          </div>
+          <input
+            type="range"
+            min="5"
+            max="300"
+            step="5"
+            value={store.massAdded}
+            disabled={isLocked}
+            onChange={(e) => store.updateSugarMassAction(Number(e.target.value))}
+            className="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer accent-emerald-600"
+            style={{ opacity: isLocked ? 0.45 : 1 }}
+          />
+          <div className="flex justify-between text-[9.5px] text-slate-400 mt-1">
+            <span>5 g (Dilute)</span>
+            <span>300 g (Excess)</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Thermodynamic Saturation Info */}
       <div className="rounded-xl p-3" style={{ background: "rgba(5,150,105,0.06)", border: "1px solid rgba(5,150,105,0.18)" }}>
         <p className="text-[10px] font-bold uppercase tracking-wide mb-1" style={{ color: ACCENT }}>
-          Predicted Dissolve Time
+          Thermodynamic Properties
         </p>
-        <p className="text-lg font-black font-mono" style={{ color: ACCENT }}>{predictedTime}s</p>
-        <p className="text-[10px] mt-0.5" style={{ color: "var(--lab-text-muted)" }}>
-          {condLabel}
-        </p>
+        <div className="space-y-1.5 text-[11.5px] text-slate-700">
+          <div className="flex justify-between">
+            <span>Solubility Limit (Cs):</span>
+            <span className="font-bold">{store.solubilityLimit.toFixed(1)} g/100mL</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Current concentration:</span>
+            <span className="font-bold">{(store.dissolvedMass * (100 / store.waterVolume)).toFixed(1)} g/100mL</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Dissolved Sugar:</span>
+            <span className="font-bold text-emerald-600">{store.dissolvedMass.toFixed(1)}g / {store.massAdded}g</span>
+          </div>
+          <div className="flex justify-between border-t border-emerald-100 pt-1 text-[11px]">
+            <span>Solution Status:</span>
+            <span className="font-bold" style={{ color: store.isSaturated ? "#d97706" : store.dissolvedMass >= store.massAdded ? "#059669" : "#0284c7" }}>
+              {store.isSaturated ? "SATURATED" : store.dissolvedMass >= store.massAdded ? "FULLY DISSOLVED" : store.isDissolving ? "DISSOLVING..." : "IDLE"}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Actions */}
@@ -339,15 +378,18 @@ export default function DissolvingPage() {
           dissolveProgress={store.dissolveProgress}
           dissolveTime={store.dissolveTime}
           dataPoints={store.dataPoints}
+          isSaturated={store.isSaturated}
         />
       }
       education={EXPERIMENT_EDUCATION["dissolving-rate"]}
       reactionNote={
         store.isDissolving
-          ? `Dissolving: ${condLabel} · predicted ${predictedTime} s`
-          : store.dataPoints.length > 0
-            ? `${store.dataPoints.length} point${store.dataPoints.length !== 1 ? "s" : ""} recorded — change one variable and run again to compare.`
-            : "Set temperature (slider), particle size, and stirring, then click Start."
+          ? `Dissolving: ${store.massAdded}g sugar at ${Math.round(celsius)}°C (${store.granularity}, ${store.stirring ? "Stirred" : "Unstirred"})`
+          : store.isSaturated
+            ? `Saturated: reached solubility limit of ${store.solubilityLimit.toFixed(1)} g/100mL.`
+            : store.dataPoints.length > 0
+              ? `${store.dataPoints.length} point${store.dataPoints.length !== 1 ? "s" : ""} recorded — change variables and run again to compare.`
+              : "Set temperature, particle size, sugar mass, and stirring, then click Start."
       }
       centerBottom={centerBottom}
       controls={controls}

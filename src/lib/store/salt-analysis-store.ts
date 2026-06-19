@@ -6,6 +6,7 @@ import {
   runCationTest, finishCationTest,
   runAnionTest, finishAnionTest,
   completeSaltAnalysis, resetSaltAnalysis,
+  recalculateSaltAnalysis,
 } from "@/lib/engine/salt-analysis-engine";
 import { saveSession, loadSession } from "@/lib/persistence";
 
@@ -23,6 +24,7 @@ interface SaltAnalysisStore extends SaltAnalysisState {
   resetAction:            () => void;
   setMode:                (mode: SaltAnalysisState["mode"]) => void;
   hydrate:                () => void;
+  updateParamsAction:     (changes: Partial<Pick<SaltAnalysisState, "reagentDrops" | "reagentConc" | "temperature" | "contamination">>) => void;
 }
 
 export const useSaltAnalysisStore = create<SaltAnalysisStore>((set, get) => ({
@@ -78,6 +80,12 @@ export const useSaltAnalysisStore = create<SaltAnalysisStore>((set, get) => ({
   setMode: (mode) => {
     set({ mode });
     saveSession(STORAGE_KEY, { ...get(), mode });
+  },
+
+  updateParamsAction: (changes) => {
+    const next = recalculateSaltAnalysis({ ...get() as SaltAnalysisState, ...changes });
+    set({ ...next, lastError: null });
+    saveSession(STORAGE_KEY, next);
   },
 
   hydrate: () => {

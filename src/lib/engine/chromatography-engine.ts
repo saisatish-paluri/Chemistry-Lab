@@ -87,6 +87,13 @@ export function initialChromatographyState(mode: ChromatographyState["mode"] = "
     observations:   [],
     result:         null,
     startedAt:      null,
+
+    // Overhaul defaults
+    solventType:    "water",
+    temperature:    25,
+    chamberSealed:  true,
+    spotWidths:     [],
+    experimentalError: (Math.random() - 0.5) * 2,
   };
 }
 
@@ -125,27 +132,91 @@ export function addSolvent(state: ChromatographyState): ChromatographyState {
   return { ...state, solventAdded: true, isRunning: true, steps, objectives: state.objectives.map(o => o.id === "o1" ? { ...o, completed: false } : o), observations: [obs, ...state.observations] };
 }
 
+const DYE_SENSITIVITIES: Record<string, number> = {
+  "Cyan dye":    0.15,
+  "Magenta dye": 0.05,
+  "Yellow dye":  -0.05,
+  "Black dye":   -0.12,
+  "Azure blue":  0.10,
+  "Deep blue":   0.02,
+  "Green dye":   -0.08,
+  "Orange dye":  -0.10,
+  "Red dye":     0.0,
+};
+
+const SOLVENT_POLARITIES: Record<string, number> = {
+  "hexane":        0.1,
+  "ethyl-acetate": 4.4,
+  "ethanol":       5.2,
+  "water":         9.0,
+};
+
+export function updateChromatographyParameters(
+  state: ChromatographyState,
+  changes: Partial<Pick<ChromatographyState, "solventType" | "temperature" | "chamberSealed">>,
+): ChromatographyState {
+  if (state.status !== "idle" && state.status !== "setup" && !state.isRunning) {
+    return state;
+  }
+  return {
+    ...state,
+    solventType: changes.solventType !== undefined ? changes.solventType : state.solventType,
+    temperature: changes.temperature !== undefined ? changes.temperature : state.temperature,
+    chamberSealed: changes.chamberSealed !== undefined ? changes.chamberSealed : state.chamberSealed,
+  };
+}
+
 export function updateSolventFront(state: ChromatographyState, frontCm: number): ChromatographyState {
   if (!state.isRunning || state.runComplete) return state;
   const ink = state.selectedInk ? INKS[state.selectedInk] : null;
   if (!ink) return state;
 
-  const dyes: ChromaDye[] = ink.dyes.map(d => ({
-    name:       d.name,
-    color:      d.color,
-    rfValue:    d.rfValue,
-    distanceCm: Math.min(d.rfValue * frontCm, d.rfValue * 10),
-  }));
+  const t = frontCm * 1.8; // simulated seconds
+  const T_K = state.temperature + 273.15;
+  const viscosity = 0.001 * Math.exp(1800 / T_K);
+
+  let K_sol = 1.2;
+  if (state.solventType === "hexane") K_sol = 7.5;
+  else if (state.solventType === "ethyl-acetate") K_sol = 4.5;
+  else if (state.solventType === "ethanol") K_sol = 2.5;
+
+  const k_flow = K_sol / viscosity;
+  const v_evap = state.chamberSealed ? 0.0 : 0.015 * (state.temperature / 25.0);
+
+  const h_capillary = Math.sqrt(k_flow * t) * (1.0 + 0.03 * state.experimentalError);
+  const h_actual = Math.max(0, h_capillary - v_evap * t);
+  const calculatedFrontCm = Math.min(10.0, h_actual * 4.8); // scale factor to fit within 10cm height limit
+
+  const P_solvent = SOLVENT_POLARITIES[state.solventType] ?? 5.2;
+
+  const spotWidths: number[] = [];
+  const dyes: ChromaDye[] = ink.dyes.map((d, i) => {
+    const chi = DYE_SENSITIVITIES[d.name] ?? 0.0;
+    // Partitioning Rf equation
+    const calculatedRf = Math.max(0.05, Math.min(0.95, d.rfValue * (1.0 + chi * (P_solvent - 5.2)) * (1.0 + 0.002 * (state.temperature - 25))));
+    const distanceCm = calculatedRf * calculatedFrontCm;
+    
+    // Diffusion peak broadening
+    const width = 4.0 + 1.2 * Math.sqrt(t) * (1.0 + 0.003 * (state.temperature - 25)) * (state.chamberSealed ? 1.0 : 1.25);
+    spotWidths.push(width);
+
+    return {
+      name: d.name,
+      color: d.color,
+      rfValue: calculatedRf,
+      distanceCm: Math.min(distanceCm, 9.8),
+    };
+  });
 
   let runComplete: boolean = state.runComplete;
   let observations  = [...state.observations];
   let steps         = [...state.steps];
   let objectives    = [...state.objectives];
 
-  if (frontCm >= 9.5 && !state.runComplete) {
+  if ((calculatedFrontCm >= 9.5 || frontCm >= 9.8) && !state.runComplete) {
     runComplete    = true;
     const rfVals   = dyes.map(d => ({ name: d.name, rf: parseFloat(d.rfValue.toFixed(2)), color: d.color }));
-    const obs1     = mkObs("reaction-complete", `Solvent front reached ${frontCm.toFixed(1)} cm. Development complete — ${dyes.length} band(s) separated.`, "success");
+    const obs1     = mkObs("reaction-complete", `Solvent front reached ${calculatedFrontCm.toFixed(1)} cm. Development complete — ${dyes.length} band(s) separated.`, "success");
     const obs2     = mkObs("color-change", `Rf values: ${rfVals.map(r => `${r.name}: ${r.rf}`).join(", ")}.`, "success");
     observations   = [obs2, obs1, ...observations];
     steps          = steps.map(s => s.id === "s5" ? { ...s, completed: true } : s);
@@ -154,8 +225,9 @@ export function updateSolventFront(state: ChromatographyState, frontCm: number):
 
   return {
     ...state,
-    solventFrontCm: frontCm,
+    solventFrontCm: calculatedFrontCm,
     dyes,
+    spotWidths,
     runComplete,
     isRunning:      !runComplete,
     steps,

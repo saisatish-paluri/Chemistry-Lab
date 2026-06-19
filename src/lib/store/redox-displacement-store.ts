@@ -6,6 +6,7 @@ import {
   addMetalToSolution,
   tickRedox,
   resetRedox,
+  updateRedoxParameters,
 } from "@/lib/engine/redox-displacement-engine";
 import { validateSelectMetal, validateAddMetal } from "@/lib/engine/validation";
 import { saveSession, loadSession } from "@/lib/persistence";
@@ -20,6 +21,7 @@ interface RedoxDisplacementStore extends RedoxDisplacementState {
   resetAction:      () => void;
   setMode:          (mode: RedoxDisplacementState["mode"]) => void;
   hydrate:          () => void;
+  updateParametersAction: (changes: Partial<Pick<RedoxDisplacementState, "temperature" | "cupricConc">>) => void;
 }
 
 export const useRedoxDisplacementStore = create<RedoxDisplacementStore>((set, get) => ({
@@ -57,6 +59,13 @@ export const useRedoxDisplacementStore = create<RedoxDisplacementStore>((set, ge
   },
 
   setMode: (mode) => set({ mode }),
+
+  updateParametersAction: (changes) => {
+    const s = get();
+    const next = updateRedoxParameters(s as RedoxDisplacementState, changes);
+    set({ ...next, lastError: null });
+    saveSession(STORAGE_KEY, next);
+  },
 
   hydrate: () => {
     const saved = loadSession<RedoxDisplacementState>(STORAGE_KEY);

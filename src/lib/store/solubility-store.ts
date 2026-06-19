@@ -3,6 +3,7 @@ import type { SolubilityState, SolutionId } from "@/lib/engine/types";
 import {
   initialSolubilityState, selectSolutionA, selectSolutionB,
   combineSolutions, tickMixing, resetSolubilityMix, completeSolubility, resetSolubility,
+  updateSolubilityParameters,
 } from "@/lib/engine/solubility-engine";
 import {
   validateCombineSolutions, validateCompleteSolubility,
@@ -22,11 +23,17 @@ interface SolubilityStore extends SolubilityState {
   resetAction:              () => void;
   setMode:                  (mode: SolubilityState["mode"]) => void;
   hydrate:                  () => void;
+  updateCompositionAction:  (changes: Partial<Pick<SolubilityState, "temperature" | "volumeA" | "volumeB" | "concA" | "concB">>) => void;
 }
 
 export const useSolubilityStore = create<SolubilityStore>((set, get) => ({
   ...initialSolubilityState("guided"),
   lastError: null,
+
+  updateCompositionAction: (changes) => {
+    const next = updateSolubilityParameters(get() as SolubilityState, changes);
+    set({ ...next, lastError: null });
+  },
 
   selectSolutionAAction: (id) => {
     const next = selectSolutionA(get() as SolubilityState, id);

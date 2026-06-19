@@ -95,12 +95,36 @@ export const METALS: Record<MetalId, MetalProfile> = {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const CUPRIC_INITIAL    = 0.5;    // mol/L
+const CUPRIC_INITIAL    = 0.5;    // mol/L (default)
 const SOLUTION_VOL_L    = 0.100;  // 100 mL
-const METAL_MASS_G      = 5.0;    // grams placed in solution
-const TICK_RATE         = 0.010;  // fraction of available Cu²⁺ moles reacted per second
+const METAL_MASS_G      = 5.0;    // grams placed in solution (default)
+
+/**
+ * Base tick rate at ΔE° = 1.10 V (Zn reference) and 25 °C.
+ * Actual rate scales with cell potential and temperature via Arrhenius.
+ */
+const TICK_RATE_BASE    = 0.010;  // s⁻¹ at reference conditions (Zn, 25 °C)
 
 export const CUPRIC_INITIAL_CONC = CUPRIC_INITIAL;
+
+/**
+ * Electrochemical rate constant for a given metal.
+ *
+ * Rate ∝ ΔE°^0.8  (Butler-Volmer approximation for large overpotential).
+ * Normalised to Zn (ΔE° = 1.10 V) = base rate.
+ * Temperature factor: Q₁₀ rule, ×1.4 per 10 °C (less sensitive than homogeneous).
+ *
+ * @param metal          Metal profile (to get E°)
+ * @param rateMultiplier Session-rolled temperature-derived multiplier
+ */
+function calcTickRate(metal: MetalProfile, rateMultiplier: number): number {
+  if (!metal.displacesCu) return 0;
+  const cellPotential = 0.34 - metal.stdPotential;          // E° vs Cu²⁺/Cu
+  const refPotential  = 0.34 - (-0.76);                     // Zn reference = 1.10 V
+  // Butler-Volmer-like scaling — higher ΔE° gives much faster rate
+  const potentialScale = Math.pow(cellPotential / refPotential, 0.8);
+  return TICK_RATE_BASE * potentialScale * rateMultiplier;
+}
 
 export function cuSolutionColor(cupricConc: number): string {
   const t = Math.max(0, Math.min(1, cupricConc / CUPRIC_INITIAL));
@@ -125,12 +149,18 @@ const INITIAL_OBJECTIVES: ExperimentObjective[] = [
   { id: "full-reaction",  description: "Allow a displacement reaction to run to completion", completed: false },
 ];
 
-export function initialRedoxState(mode: RedoxDisplacementState["mode"]): RedoxDisplacementState {
+export function initialRedoxState(
+  mode: RedoxDisplacementState["mode"],
+  simParams?: import("./sim-bridge").RedoxSimParams,
+): RedoxDisplacementState {
+  const cuConc        = simParams?.cuConc        ?? CUPRIC_INITIAL;
+  const metalMassG    = simParams?.metalMassG    ?? METAL_MASS_G;
+  const rateMultiplier = simParams?.rateMultiplier ?? 1.0;
   return {
     mode, status: "idle",
     selectedMetal:    null,
     metalMassG:       0,
-    cupricConc:       CUPRIC_INITIAL,
+    cupricConc:       cuConc,
     solutionVolumeMl: 100,
     cuDepositedG:     0,
     metalConsumedG:   0,
@@ -138,6 +168,16 @@ export function initialRedoxState(mode: RedoxDisplacementState["mode"]): RedoxDi
     steps:      INITIAL_STEPS.map((s) => ({ ...s })),
     objectives: INITIAL_OBJECTIVES.map((o) => ({ ...o })),
     observations: [], result: null, startedAt: null,
+    _cuConc:         cuConc,
+    _metalMassG:     metalMassG,
+    _rateMultiplier: rateMultiplier,
+
+    // Overhaul defaults
+    temperature:       25,
+    metalConc:         1e-6,
+    cellPotential:     0.0,
+    equilibriumReached: false,
+    experimentalError: (Math.random() - 0.5) * 2,
   };
 }
 
@@ -161,12 +201,61 @@ export function selectMetal(state: RedoxDisplacementState, metalId: MetalId): Re
   };
 }
 
+export function recalculateRedox(state: RedoxDisplacementState): RedoxDisplacementState {
+  if (!state.selectedMetal) return state;
+  const metal = METALS[state.selectedMetal];
+  if (!metal.displacesCu) {
+    return {
+      ...state,
+      cellPotential: 0.0,
+      equilibriumReached: false,
+    };
+  }
+
+  const T_K = state.temperature + 273.15;
+  const R_gas = 8.314;
+  const F = 96485;
+  const z = 2; // Mg2+, Zn2+, Fe2+, Pb2+
+
+  const E_std = 0.34 - metal.stdPotential;
+  const mConc = Math.max(1e-6, state.metalConc ?? 1e-6);
+  const cuConc = Math.max(1e-6, state.cupricConc);
+
+  // Nernst Equation
+  const cellPotential = E_std - (R_gas * T_K / (z * F)) * Math.log(mConc / cuConc);
+
+  return {
+    ...state,
+    cellPotential: cellPotential + 0.02 * state.experimentalError,
+  };
+}
+
+export function updateRedoxParameters(
+  state: RedoxDisplacementState,
+  changes: Partial<Pick<RedoxDisplacementState, "temperature" | "cupricConc">>,
+): RedoxDisplacementState {
+  if (state.status !== "idle" && state.status !== "setup") return state;
+  const next = {
+    ...state,
+    temperature: changes.temperature !== undefined ? changes.temperature : state.temperature,
+    cupricConc: changes.cupricConc !== undefined ? changes.cupricConc : state.cupricConc,
+  };
+  next._cuConc = next.cupricConc;
+  return recalculateRedox(next);
+}
+
 export function addMetalToSolution(state: RedoxDisplacementState): RedoxDisplacementState {
   if (!state.selectedMetal)      return state;
   if (state.status === "running" || state.status === "completed") return state;
+  
   const metal    = METALS[state.selectedMetal];
   const occurs   = metal.displacesCu;
+  
+  const calculatedState = recalculateRedox(state);
+  const cellPotential = calculatedState.cellPotential;
   const newStatus = occurs ? "running" : "completed";
+  
+  const metalMassG    = state._metalMassG > 0 ? state._metalMassG : METAL_MASS_G;
 
   const objectives = state.objectives.map((o) => {
     if (o.id === "active-metal"   && occurs)  return { ...o, completed: true };
@@ -177,21 +266,26 @@ export function addMetalToSolution(state: RedoxDisplacementState): RedoxDisplace
     s.id === "add-metal" ? { ...s, completed: true } : s,
   );
 
+  const rateNote = occurs
+    ? ` Initial cell potential E_cell = ${cellPotential.toFixed(2)} V (calculated via Nernst at ${state.temperature}°C).`
+    : "";
+
   const result = !occurs ? {
     completedAt: Date.now(),
     success: true,
     score: 80,
-    summary: `No reaction — ${metal.name} is less reactive than copper.`,
+    summary: `No reaction — ${metal.name} (E° = ${metal.stdPotential.toFixed(2)} V) is less reactive than copper (E° = +0.34 V).`,
     explanation:
       metal.observation + "\n\n" +
       "In the electrochemical series, only metals with a more negative standard reduction potential " +
-      `(E° < +0.34 V) can displace Cu²⁺. ${metal.name} has E° = ${metal.stdPotential.toFixed(2)} V.`,
+      `(E° < +0.34 V) can displace Cu²⁺. ${metal.name} has E° = ${metal.stdPotential.toFixed(2)} V.\n` +
+      "The cell potential E°_cell would be negative, meaning the reaction is non-spontaneous.",
   } : null;
 
   return {
-    ...state,
+    ...calculatedState,
     status:         newStatus,
-    metalMassG:     METAL_MASS_G,
+    metalMassG:     metalMassG,
     reactionOccurs: occurs,
     startedAt:      occurs ? Date.now() : state.startedAt,
     steps,
@@ -201,7 +295,7 @@ export function addMetalToSolution(state: RedoxDisplacementState): RedoxDisplace
       mkObs(
         occurs ? "deposition" : "no-reaction",
         occurs
-          ? `${metal.name} rod placed in CuSO₄ — ${metal.observation}`
+          ? `${metal.name} rod placed in CuSO₄ (${state.cupricConc.toFixed(2)} M) — ${metal.observation}${rateNote}`
           : `${metal.name} rod placed in CuSO₄ — ${metal.observation}`,
         occurs ? "success" : "info",
       ),
@@ -214,35 +308,77 @@ export function tickRedox(state: RedoxDisplacementState, deltaSec: number): Redo
   if (state.status !== "running" || !state.selectedMetal || !state.reactionOccurs) return state;
   const metal = METALS[state.selectedMetal];
 
-  const cu2PlusMoles   = state.cupricConc * SOLUTION_VOL_L;  // mol in solution
+  // Nernst Cell Potential calculation at current concentrations
+  const T_K = state.temperature + 273.15;
+  const R_gas = 8.314;
+  const F = 96485;
+  const z = 2;
+
+  const E_std = 0.34 - metal.stdPotential;
+  const mConc = Math.max(1e-6, state.metalConc ?? 1e-6);
+  const cuConc = Math.max(1e-6, state.cupricConc);
+  const cellPotential = E_std - (R_gas * T_K / (z * F)) * Math.log(mConc / cuConc);
+
+  if (cellPotential <= 0.001) {
+    // Reaction reaches equilibrium naturally
+    return completeRedox({
+      ...state,
+      cellPotential: 0.0,
+      equilibriumReached: true,
+    }, metal);
+  }
+
+  // Arrhenius Kinetics & Passivation:
+  const Ea = metal.id === "magnesium" ? 15000
+           : metal.id === "zinc" ? 22000
+           : metal.id === "iron" ? 28000
+           : 35000;
+  const A = 120.0; // pre-exponential scale factor
+  const rateK = A * Math.exp(-Ea / (R_gas * T_K)) * (1.0 + 0.04 * state.experimentalError);
+  
+  // Passivation factor: Cu layer limits access to the underlying metal
+  const k_pass = metal.id === "magnesium" ? 1.0 : metal.id === "zinc" ? 3.0 : 6.5; 
+  const passivation = Math.exp(-k_pass * state.cuDepositedG);
+
+  // Reaction rate in moles/second
+  const rate = rateK * cellPotential * cuConc * passivation;
+  const molesThisTick = rate * deltaSec;
+
+  const cu2PlusMoles = state.cupricConc * SOLUTION_VOL_L;
   const metalMoles     = (state.metalMassG - state.metalConsumedG) / metal.molarMass;
-
-  // Stoichiometry: 1 mol metal ⇌ 1 mol Cu²⁺ (simplified for all metals here)
   const limiting       = Math.min(cu2PlusMoles, metalMoles);
-  if (limiting <= 0.0001) {
-    // Complete
-    return completeRedox(state, metal);
+
+  if (limiting <= molesThisTick || limiting <= 1e-4 || (rate < 1e-6 && state.cuDepositedG > 0.05)) {
+    return completeRedox({
+      ...state,
+      cellPotential: 0.0,
+      equilibriumReached: true,
+    }, metal);
   }
 
-  const reacted        = TICK_RATE * limiting * deltaSec;
-  const newCu2Plus     = Math.max(0, cu2PlusMoles - reacted);
+  const newCu2Plus     = Math.max(0, cu2PlusMoles - molesThisTick);
   const newCupricConc  = newCu2Plus / SOLUTION_VOL_L;
-  const cuDepositedNew = state.cuDepositedG + reacted * 63.55; // g
-  const metalConsumed  = state.metalConsumedG + reacted * metal.molarMass;
+  const cuDepositedNew = state.cuDepositedG + molesThisTick * 63.55;
+  const metalConsumed  = state.metalConsumedG + molesThisTick * metal.molarMass;
+  const newMetalConc   = mConc + (molesThisTick / SOLUTION_VOL_L);
 
+  const initConc       = state._cuConc;
   const newObs: ObservationEvent[] = [];
-  if (state.cupricConc > 0.375 && newCupricConc <= 0.375) {
-    newObs.push(mkObs("deposition", "25% of Cu²⁺ consumed — copper deposits clearly visible on metal surface.", "info"));
+  if (state.cupricConc > initConc * 0.75 && newCupricConc <= initConc * 0.75) {
+    newObs.push(mkObs("deposition", `25% of Cu²⁺ consumed — reddish-brown copper deposits visible on ${metal.name} surface.`, "info"));
   }
-  if (state.cupricConc > 0.25 && newCupricConc <= 0.25) {
-    newObs.push(mkObs("deposition", "50% consumed — solution turning noticeably paler blue.", "info"));
+  if (state.cupricConc > initConc * 0.50 && newCupricConc <= initConc * 0.50) {
+    newObs.push(mkObs("deposition", `50% consumed — solution turning noticeably paler blue. Cu deposit thickening.`, "info"));
   }
-  if (state.cupricConc > 0.125 && newCupricConc <= 0.125) {
-    newObs.push(mkObs("deposition", "75% consumed — solution nearly colourless, thick copper deposits on rod.", "success"));
-  }
-
-  if (newCupricConc <= 0.01) {
-    return completeRedox({ ...state, cupricConc: newCupricConc, cuDepositedG: cuDepositedNew, metalConsumedG: metalConsumed }, metal);
+  if (state.cupricConc > initConc * 0.25 && newCupricConc <= initConc * 0.25) {
+    newObs.push(mkObs("deposition",
+      `75% consumed — solution nearly colourless. ${cuDepositedNew.toFixed(3)} g Cu deposited so far. ${
+        metal.id === "magnesium" ? "Vigorous reaction has slowed as Cu²⁺ depletes." :
+        metal.id === "zinc"      ? "Steady deposition continues." :
+        metal.id === "lead"      ? "Slow but steady — Pb has the smallest driving force of active metals." : ""
+      }`,
+      "success",
+    ));
   }
 
   return {
@@ -250,6 +386,8 @@ export function tickRedox(state: RedoxDisplacementState, deltaSec: number): Redo
     cupricConc:      newCupricConc,
     cuDepositedG:    cuDepositedNew,
     metalConsumedG:  metalConsumed,
+    metalConc:       newMetalConc,
+    cellPotential:   cellPotential + 0.02 * state.experimentalError,
     observations: newObs.length ? [...newObs, ...state.observations] : state.observations,
   };
 }
@@ -294,6 +432,9 @@ function completeRedox(state: RedoxDisplacementState, metal: MetalProfile): Redo
   };
 }
 
-export function resetRedox(mode: RedoxDisplacementState["mode"]): RedoxDisplacementState {
-  return initialRedoxState(mode);
+export function resetRedox(
+  mode: RedoxDisplacementState["mode"],
+  simParams?: import("./sim-bridge").RedoxSimParams,
+): RedoxDisplacementState {
+  return initialRedoxState(mode, simParams);
 }

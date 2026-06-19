@@ -3,6 +3,7 @@ import type { FlameTestState, FlameTestSampleId } from "@/lib/engine/types";
 import {
   initialFlameTestState, lightBurner, selectSample, dipLoop,
   performTest, completeTest, cleanLoop, completeFlameTest, resetFlameTest,
+  updateFlameTestParameters,
 } from "@/lib/engine/flame-test-engine";
 import {
   validateLightBurner, validateDipLoop, validatePerformTest, validateCompleteFlameTest,
@@ -23,6 +24,7 @@ interface FlameTestStore extends FlameTestState {
   resetAction:            () => void;
   setMode:                (mode: FlameTestState["mode"]) => void;
   hydrate:                () => void;
+  updateParametersAction: (changes: Partial<Pick<FlameTestState, "concentration" | "airCollarOpen" | "contaminationLevel" | "cobaltGlass">>) => void;
 }
 
 export const useFlameTestStore = create<FlameTestStore>((set, get) => ({
@@ -93,6 +95,13 @@ export const useFlameTestStore = create<FlameTestStore>((set, get) => ({
   },
 
   setMode: (mode) => set({ mode }),
+
+  updateParametersAction: (changes) => {
+    const s = get();
+    const next = updateFlameTestParameters(s as FlameTestState, changes);
+    set({ ...next, lastError: null });
+    saveSession(STORAGE_KEY, next);
+  },
 
   hydrate: () => {
     const saved = loadSession<FlameTestState>(STORAGE_KEY);

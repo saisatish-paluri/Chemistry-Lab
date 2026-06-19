@@ -5,9 +5,8 @@ import {
   addHCl,
   tickGasCollection,
   theoreticalCO2Moles,
-  co2MolToMl,
+  calculateDynamicGasProps,
   CACO3_MOLAR_MASS,
-  CO2_MOLAR_VOL_ML,
 } from "../lib/engine/gas-collection-engine";
 
 describe("theoreticalCO2Moles", () => {
@@ -29,12 +28,12 @@ describe("theoreticalCO2Moles", () => {
   });
 });
 
-describe("co2MolToMl", () => {
-  it("converts 1 mol to 24500 mL", () => {
-    expect(co2MolToMl(1)).toBe(CO2_MOLAR_VOL_ML);
-  });
-  it("converts 0.5 mol to 12250 mL", () => {
-    expect(co2MolToMl(0.5)).toBeCloseTo(12250, 0);
+describe("calculateDynamicGasProps", () => {
+  it("calculates dry volume and purity at standard conditions", () => {
+    const props = calculateDynamicGasProps(0.01, 25, 1.0);
+    expect(props.volumeMl).toBeGreaterThan(240);
+    expect(props.purityPct).toBeCloseTo(96.9, 1);
+    expect(props.pWater).toBeCloseTo(0.031, 2);
   });
 });
 
@@ -123,7 +122,7 @@ describe("tickGasCollection", () => {
 
   it("increases co2CollectedMl on each tick", () => {
     const s    = runningState();
-    const next = tickGasCollection(s, 1);
+    const next = tickGasCollection(s, 15);
     expect(next.co2CollectedMl).toBeGreaterThan(0);
   });
 

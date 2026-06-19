@@ -4,9 +4,10 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 
 const fadeUp = (delay = 0) => ({
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
+  initial: { opacity: 0, y: 24 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, margin: "-40px" },
+  transition: { duration: 0.52, delay, ease: [0.22, 1, 0.36, 1] as [number, number, number, number] },
 });
 
 const FEATURE_ITEMS = [
@@ -283,8 +284,9 @@ export default function AboutClient() {
                 <motion.li
                   key={outcome}
                   initial={{ opacity: 0, x: -12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.35, delay: 0.2 + i * 0.04 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true, margin: "-20px" }}
+                  transition={{ duration: 0.35, delay: i * 0.04 }}
                   className="flex items-start gap-2.5"
                 >
                   <div

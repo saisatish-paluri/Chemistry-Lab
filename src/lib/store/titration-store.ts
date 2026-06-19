@@ -2,25 +2,47 @@ import { create } from "zustand";
 import type { TitrationState, IndicatorName, TitrantFlowRate } from "@/lib/engine/types";
 import {
   initialTitrationState, addIndicator, addTitrant,
-  setFlowRate, resetTitration, buildTitrationResult,
+  setFlowRate, resetTitration, buildTitrationResult, resetForNextTrial, swirlFlask,
 } from "@/lib/engine/titration-engine";
 import { validateAddIndicator, validateAddTitrant } from "@/lib/engine/validation";
 import { saveSession, loadSession } from "@/lib/persistence";
+import { rollErrors, buildDefaultErrorConfig } from "@/lib/instruments/error-engine";
+import { useSimulationStore } from "@/lib/simulation/session";
+import { getTitrationSimParams } from "@/lib/engine/sim-bridge";
+
+function getSession() {
+  return useSimulationStore.getState().getOrCreate({
+    domain:         "titration",
+    reagentIds:     ["hcl-0.1", "naoh-0.1", "phenolphthalein"],
+    apparatusIds:   ["burette", "conical-flask", "pipette"],
+    includeUnknown: true,
+    unknownType:    "solution",
+  });
+}
+
+function freshInit(mode: TitrationState["mode"]): TitrationState {
+  const session = getSession();
+  const params  = getTitrationSimParams(session);
+  const errors  = rollErrors(buildDefaultErrorConfig(session.difficulty)).errors;
+  return initialTitrationState(mode, errors, params);
+}
 
 const STORAGE_KEY = "titration";
 
 interface TitrationStore extends TitrationState {
   lastError: string | null;
-  addIndicatorAction: (indicator: IndicatorName) => void;
-  addTitrantAction:   () => void;
-  setFlowRateAction:  (rate: TitrantFlowRate) => void;
-  resetAction:        () => void;
-  setMode:            (mode: TitrationState["mode"]) => void;
-  hydrate:            () => void;
+  addIndicatorAction:   (indicator: IndicatorName) => void;
+  addTitrantAction:     () => void;
+  setFlowRateAction:    (rate: TitrantFlowRate) => void;
+  swirlFlaskAction:     () => void;
+  resetAction:          () => void;
+  replicateTrialAction: () => void;
+  setMode:              (mode: TitrationState["mode"]) => void;
+  hydrate:              () => void;
 }
 
 export const useTitrationStore = create<TitrationStore>((set, get) => ({
-  ...initialTitrationState("guided"),
+  ...freshInit("guided"),
   lastError: null,
 
   addIndicatorAction: (indicator) => {
@@ -30,6 +52,7 @@ export const useTitrationStore = create<TitrationStore>((set, get) => ({
     const next = addIndicator(s as TitrationState, indicator);
     set({ ...next, lastError: null });
     saveSession(STORAGE_KEY, next);
+    useSimulationStore.getState().recordAction("titration", "add-reagent");
   },
 
   addTitrantAction: () => {
@@ -42,6 +65,15 @@ export const useTitrationStore = create<TitrationStore>((set, get) => ({
       : next;
     set({ ...final, lastError: null });
     saveSession(STORAGE_KEY, final);
+    const actionType = s.burette.flowRate <= 0.1
+      ? "titrate-dropwise"
+      : s.burette.flowRate <= 0.5
+        ? "titrate-slow"
+        : "titrate-fast";
+    useSimulationStore.getState().recordAction("titration", actionType, s.burette.flowRate, "mL");
+    if (final.endpointReached) {
+      useSimulationStore.getState().recordAction("titration", "endpoint-detected", final.volumeAdded, "mL");
+    }
   },
 
   setFlowRateAction: (rate) => {
@@ -49,8 +81,25 @@ export const useTitrationStore = create<TitrationStore>((set, get) => ({
     set({ ...next });
   },
 
+  swirlFlaskAction: () => {
+    const next = swirlFlask(get() as TitrationState);
+    set({ ...next });
+  },
+
   resetAction: () => {
-    const next = resetTitration(get().mode);
+    const next = freshInit(get().mode);
+    useSimulationStore.getState().reset({
+      domain: "titration", reagentIds: ["hcl-0.1", "naoh-0.1", "phenolphthalein"],
+      apparatusIds: ["burette", "conical-flask", "pipette"],
+      includeUnknown: true, unknownType: "solution",
+    });
+    set({ ...next, lastError: null });
+    saveSession(STORAGE_KEY, next);
+  },
+
+  replicateTrialAction: () => {
+    const s = get();
+    const next = resetForNextTrial(s as TitrationState);
     set({ ...next, lastError: null });
     saveSession(STORAGE_KEY, next);
   },
@@ -60,10 +109,8 @@ export const useTitrationStore = create<TitrationStore>((set, get) => ({
   hydrate: () => {
     const saved = loadSession<TitrationState>(STORAGE_KEY);
     if (saved) {
-      // If experiment was completed or failed, always start fresh so the graph
-      // doesn't show a stale completed curve from a previous session.
       if (saved.status === "completed" || saved.status === "failed") {
-        const fresh = initialTitrationState(saved.mode);
+        const fresh = freshInit(saved.mode);
         set({ ...fresh, lastError: null });
         saveSession(STORAGE_KEY, fresh);
       } else {

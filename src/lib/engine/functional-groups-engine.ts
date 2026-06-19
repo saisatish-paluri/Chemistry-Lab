@@ -139,6 +139,13 @@ export function initialFunctionalGroupsState(mode: FunctionalGroupsState["mode"]
     observations:     [],
     result:           null,
     startedAt:        null,
+
+    // Overhaul variables
+    temperature: 25,
+    reagentConc: 1.0,
+    elapsedTime: 0,
+    turbidity: 0,
+    experimentalError: (Math.random() - 0.5) * 2,
   };
 }
 
@@ -154,30 +161,155 @@ export function selectFGCompound(state: FunctionalGroupsState, id: UnknownCompou
     startedAt:        state.startedAt ?? Date.now(),
     steps,
     observations:     [obs, ...state.observations],
+    turbidity:        0,
+    elapsedTime:      0,
   };
 }
 
 export function selectFGTest(state: FunctionalGroupsState, id: FGTestId): FunctionalGroupsState {
   const steps = state.steps.map(s => s.id === "s2" ? { ...s, completed: true } : s);
-  return { ...state, selectedTest: id, steps };
+  return { ...state, selectedTest: id, steps, turbidity: 0, elapsedTime: 0 };
 }
 
 export function runFGTest(state: FunctionalGroupsState): FunctionalGroupsState {
   if (!state.selectedCompound || !state.selectedTest || state.isTesting) return state;
-  return { ...state, isTesting: true };
+  return { ...state, isTesting: true, turbidity: 0, elapsedTime: 0 };
 }
 
 export function finishFGTest(state: FunctionalGroupsState): FunctionalGroupsState {
   if (!state.selectedCompound || !state.selectedTest) return state;
   const compound = COMPOUNDS[state.selectedCompound];
   const test     = TESTS[state.selectedTest];
-  const positive = test.detects === compound.group;
+  
+  // Calculate organic chemistry kinetics and thermodynamic limits
+  let positive = false;
+  let obsText = "";
+  let obsColor = "#dbeafe";
+  let finalTurbidity = 0;
+
+  const T_kelvin = state.temperature + 273.15;
+  const errorFactor = 1.0 + 0.1 * state.experimentalError;
+  const concEffect = state.reagentConc * errorFactor;
+
+  if (state.selectedTest === "lucas-test") {
+    if (compound.group === "alcohol") {
+      // 1-Butanol is a primary alcohol.
+      // S_N1 Rate constants: primary is extremely slow at room temperature, requires heating.
+      // k = A * exp(-Ea / RT)
+      const Ea = 92000; // J/mol
+      const A = 2e10; // s^-1
+      const R = 8.314;
+      const k = A * Math.exp(-Ea / (R * T_kelvin)) * Math.pow(concEffect, 2);
+      
+      // Assume reaction goes for 300 seconds (standard lab wait time)
+      const t_wait = 300;
+      finalTurbidity = 100 * (1.0 - Math.exp(-k * t_wait));
+      
+      if (finalTurbidity > 5.0) {
+        positive = true;
+        obsText = `Lucas Test: Cloudiness/turbidity appeared slowly after heating (turbidity: ${finalTurbidity.toFixed(0)}%). Confirms Primary Alcohol.`;
+        obsColor = "#f8fafc";
+      } else {
+        positive = false;
+        obsText = `Lucas Test: Solution remains clear after 5 minutes at ${state.temperature}°C. No reaction (primary alcohols do not react at room temp).`;
+        obsColor = "#dbeafe";
+      }
+    } else {
+      positive = false;
+      obsText = "Lucas Test: Solution remains clear. No alcohol present.";
+      obsColor = "#dbeafe";
+    }
+  } else if (state.selectedTest === "tollens-test") {
+    if (compound.group === "aldehyde") {
+      // Aldehyde oxidises to carboxylic acid, reduces Ag+ to Ag(s)
+      // k = A * exp(-Ea / RT)
+      const Ea = 54000; // J/mol
+      const A = 1.2e7;
+      const k = A * Math.exp(-Ea / (8.314 * T_kelvin)) * concEffect;
+      
+      const t_wait = 120;
+      const mirrorFraction = 1.0 - Math.exp(-k * t_wait);
+      
+      if (mirrorFraction > 0.15) {
+        positive = true;
+        obsText = `Tollen's Test: A shiny, metallic silver mirror deposited on the test tube walls (coverage: ${(mirrorFraction * 100).toFixed(0)}%).`;
+        obsColor = "#c0c0c0";
+      } else {
+        positive = false;
+        obsText = `Tollen's Test: Solution turned dark grey/black but no silver mirror formed. Reaction rate too slow at ${state.temperature}°C.`;
+        obsColor = "#cbd5e1";
+      }
+    } else {
+      positive = false;
+      obsText = "Tollen's Test: No silver mirror. Ketones and other groups do not reduce Tollen's reagent.";
+      obsColor = "#dbeafe";
+    }
+  } else if (state.selectedTest === "dnp-test") {
+    // 2,4-DNP hydrazone crystallization (precipitate forms)
+    // Solubility product Ksp depends heavily on temperature (crystallization is exothermic)
+    if (compound.group === "ketone" || compound.group === "aldehyde") {
+      const Ksp_25 = 1.5e-4;
+      const Ksp = Ksp_25 * Math.exp(12000 * (1/298.15 - 1/T_kelvin));
+      const Q = 0.05 * concEffect; // ionic product
+      
+      if (Q > Ksp) {
+        positive = true;
+        const mass = (Q - Ksp) * 220 * errorFactor; // in mg
+        obsText = `2,4-DNP Test: Bright orange-yellow crystalline precipitate formed (${mass.toFixed(1)} mg). Confirms Carbonyl (C=O) group.`;
+        obsColor = "#f97316";
+      } else {
+        positive = false;
+        obsText = `2,4-DNP Test: Solution remains clear orange. At ${state.temperature}°C, the hydrazone product is highly soluble (Qsp < Ksp). Cool the tube to crystallize.`;
+        obsColor = "#dbeafe";
+      }
+    } else {
+      positive = false;
+      obsText = "2,4-DNP Test: No precipitate. Non-carbonyl compounds do not react.";
+      obsColor = "#dbeafe";
+    }
+  } else if (state.selectedTest === "nahco3-test") {
+    if (compound.group === "carboxylic-acid") {
+      // Brisk effervescence of CO2
+      const rate = 0.45 * concEffect * Math.exp((state.temperature - 25) / 20);
+      if (rate > 0.1) {
+        positive = true;
+        obsText = `NaHCO₃ Test: Brisk effervescence observed. Rapid release of CO₂ gas bubbles which turn lime water milky. Confirms Carboxylic Acid.`;
+        obsColor = "#d1fae5";
+      } else {
+        positive = false;
+        obsText = `NaHCO₃ Test: Extremely weak gas evolution at ${state.temperature}°C with concentration ${state.reagentConc}M. Insufficient acid strength.`;
+        obsColor = "#dbeafe";
+      }
+    } else {
+      positive = false;
+      obsText = "NaHCO₃ Test: No reaction. Weak acids and neutral compounds do not release CO₂.";
+      obsColor = "#dbeafe";
+    }
+  } else if (state.selectedTest === "hinsberg-test") {
+    if (compound.group === "amine") {
+      // Primary amine (aniline, Compound E)
+      // Forms benzenesulfonamide which dissolves in excess KOH (conc >= 2M)
+      if (state.reagentConc < 1.8) {
+        positive = false;
+        obsText = `Hinsberg Test: White precipitate formed but remains insoluble. Without excess KOH (concentration too low: ${state.reagentConc}M), primary amine cannot be confirmed.`;
+        obsColor = "#f1f5f9";
+      } else {
+        positive = true;
+        obsText = "Hinsberg Test: White precipitate of sulfonamide formed initially and then dissolved completely in excess KOH solution, confirming Primary Amine.";
+        obsColor = "#a78bfa";
+      }
+    } else {
+      positive = false;
+      obsText = "Hinsberg Test: No reaction. No sulfonamide precipitate formed.";
+      obsColor = "#dbeafe";
+    }
+  }
 
   const fgResult: FGTestResult = {
     testId:      state.selectedTest,
     testName:    test.name,
-    observation: positive ? test.posObs : test.negObs,
-    color:       positive ? test.posColor : test.negColor,
+    observation: obsText,
+    color:       obsColor,
     positive,
     timestamp:   Date.now(),
   };
@@ -185,8 +317,8 @@ export function finishFGTest(state: FunctionalGroupsState): FunctionalGroupsStat
   const obs = mkObs(
     positive ? "color-change" : "no-reaction",
     positive
-      ? `POSITIVE: ${test.posObs}. ${test.posExplain}`
-      : `NEGATIVE: ${test.negObs}. ${test.negExplain}`,
+      ? `POSITIVE: ${obsText} ${test.posExplain}`
+      : `NEGATIVE: ${obsText} ${test.negExplain}`,
     positive ? "success" : "info",
   );
 
@@ -200,6 +332,7 @@ export function finishFGTest(state: FunctionalGroupsState): FunctionalGroupsStat
     identified,
     steps,
     observations: [obs, ...state.observations],
+    turbidity:    finalTurbidity,
     objectives:   state.objectives.map(o => {
       if (o.id === "o1") return { ...o, completed: true };
       if (o.id === "o2" && positive) return { ...o, completed: true };
@@ -215,13 +348,13 @@ export function completeFunctionalGroups(state: FunctionalGroupsState): Function
   const result: ExperimentResult = {
     completedAt: Date.now(),
     success:     !!state.identified,
-    score:       state.identified ? 90 : 60,
+    score:       state.identified ? 96 : 60,
     summary:     compound
       ? `Functional group identified: ${compound.groupName} in ${compound.label} (${compound.example}).`
       : "Experiment completed. Run tests on more compounds for practice.",
     explanation: compound
       ? `${compound.label} (${compound.formula}) contains a ${compound.groupName} group. ` +
-        `The ${TESTS[compound.correctTest].name} gave a positive result: ${TESTS[compound.correctTest].posObs}. ` +
+        `The ${TESTS[compound.correctTest].name} gave a positive result under specified conditions: ${TESTS[compound.correctTest].posObs}. ` +
         TESTS[compound.correctTest].posExplain
       : "More tests needed to identify the functional group.",
   };

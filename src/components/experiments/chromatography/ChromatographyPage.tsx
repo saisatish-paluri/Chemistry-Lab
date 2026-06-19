@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState, startTransition } from "react";
 import { useChromatographyStore }  from "@/lib/store/chromatography-store";
@@ -65,6 +65,67 @@ export default function ChromatographyPage() {
 
   const controls = (
     <div className="space-y-4">
+      {/* Simulation parameters */}
+      <div className="lab-ctrl-section bg-slate-50/50 p-3 flex flex-col gap-3 rounded-xl border border-slate-100">
+        <div className="lab-ctrl-section-hdr font-bold uppercase text-[9.5px] flex items-center gap-1.5" style={{ color: "var(--lab-text-secondary)" }}>
+          <span>⚙️</span>
+          <span>Chamber Settings</span>
+        </div>
+
+        {/* Solvent selector */}
+        <div>
+          <label className="block text-[10px] font-semibold mb-1" style={{ color: "var(--lab-text-secondary)" }}>
+            Mobile Phase Solvent:
+          </label>
+          <select
+            value={store.solventType}
+            onChange={(e) => store.updateParametersAction({ solventType: e.target.value as "water" | "ethanol" | "ethyl-acetate" | "hexane" })}
+            disabled={store.isRunning || store.status === "completed" || store.solventAdded}
+            className="w-full text-xs p-1.5 rounded-lg border border-gray-300 bg-white"
+          >
+            <option value="water">Water (P&apos; = 9.0, Polar)</option>
+            <option value="ethanol">Ethanol (P&apos; = 5.2, Medium)</option>
+            <option value="ethyl-acetate">Ethyl Acetate (P&apos; = 4.4, Medium-Low)</option>
+            <option value="hexane">Hexane (P&apos; = 0.1, Non-Polar)</option>
+          </select>
+        </div>
+
+        {/* Temperature slider */}
+        <div>
+          <div className="flex justify-between text-[10px] mb-1 font-medium">
+            <span style={{ color: "var(--lab-text-secondary)" }}>Temperature:</span>
+            <span className="font-mono text-indigo-600 font-semibold">{store.temperature.toFixed(0)} °C</span>
+          </div>
+          <input
+            type="range"
+            min="15"
+            max="55"
+            step="1"
+            value={store.temperature}
+            onChange={(e) => store.updateParametersAction({ temperature: parseInt(e.target.value, 10) })}
+            disabled={store.isRunning || store.status === "completed" || store.solventAdded}
+            className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+          />
+        </div>
+
+        {/* Chamber Lid Toggle */}
+        <div className="flex items-center justify-between text-[10px] font-semibold">
+          <span style={{ color: "var(--lab-text-secondary)" }}>Chamber Lid:</span>
+          <button
+            type="button"
+            onClick={() => store.updateParametersAction({ chamberSealed: !store.chamberSealed })}
+            disabled={store.isRunning || store.status === "completed" || store.solventAdded}
+            className={`px-2.5 py-1 rounded text-[9.5px] font-bold border transition-colors ${
+              store.chamberSealed
+                ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                : "bg-rose-100 text-rose-800 border-rose-300"
+            }`}
+          >
+            {store.chamberSealed ? "SEALED (Lid On)" : "UNSEALED (Evaporating)"}
+          </button>
+        </div>
+      </div>
+
       {/* Ink selector */}
       <div className="lab-ctrl-section">
         <div className="lab-ctrl-section-hdr">
@@ -270,7 +331,15 @@ export default function ChromatographyPage() {
           ]}
         />
       }
-      workspace={<ChromatographyWorkspace state={store} />}
+      workspace={
+        <ChromatographyWorkspace
+          state={store}
+          onApplyInk={store.applyInkAction}
+          onPlacePaper={store.placePaperAction}
+          onAddSolvent={store.addSolventAction}
+          onCalculate={store.calculateRfAction}
+        />
+      }
       education={EXPERIMENT_EDUCATION["chromatography"]}
       reactionNote={
         store.runComplete

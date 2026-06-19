@@ -26,18 +26,15 @@ describe("DENSITY_MATERIALS", () => {
     expect(ORDERED_MATERIALS).toHaveLength(8);
   });
 
-  it("wood has density < 1 and floats", () => {
+  it("wood has density < 1", () => {
     expect(DENSITY_MATERIALS.wood.density).toBeLessThan(1.0);
-    expect(DENSITY_MATERIALS.wood.floats).toBe(true);
   });
 
-  it("steel has density > 1 and sinks", () => {
+  it("steel has density > 1", () => {
     expect(DENSITY_MATERIALS.steel.density).toBeGreaterThan(1.0);
-    expect(DENSITY_MATERIALS.steel.floats).toBe(false);
   });
 
-  it("ice floats (density 0.92)", () => {
-    expect(DENSITY_MATERIALS.ice.floats).toBe(true);
+  it("ice density is 0.92", () => {
     expect(DENSITY_MATERIALS.ice.density).toBeCloseTo(0.92);
   });
 });

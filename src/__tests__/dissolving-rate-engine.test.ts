@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   initialDissolvingState,
-  calcDissolveTime,
+  calculateSolubilityLimit,
   conditionLabel,
   setTemperature,
   setGranularity,
@@ -12,41 +12,11 @@ import {
   resetDissolving,
 } from "@/lib/engine/dissolving-rate-engine";
 
-describe("calcDissolveTime", () => {
-  it("baseline: cold/coarse/unstirred = 120 s", () => {
-    expect(calcDissolveTime("cold", "coarse", false)).toBe(120);
-  });
-
-  it("hot reduces time significantly vs cold", () => {
-    const cold = calcDissolveTime("cold", "coarse", false);
-    const hot  = calcDissolveTime("hot",  "coarse", false);
-    expect(hot).toBeLessThan(cold);
-  });
-
-  it("powder reduces time vs coarse at same temp", () => {
-    const coarse = calcDissolveTime("warm", "coarse", false);
-    const powder = calcDissolveTime("warm", "powder", false);
-    expect(powder).toBeLessThan(coarse);
-  });
-
-  it("stirring roughly halves the time (within 1 s of rounding)", () => {
-    const unstirred = calcDissolveTime("warm", "fine", false);
-    const stirred   = calcDissolveTime("warm", "fine", true);
-    // The engine rounds independently at each call, so ±1 is acceptable
-    expect(stirred).toBeGreaterThanOrEqual(Math.floor(unstirred * 0.5) - 1);
-    expect(stirred).toBeLessThanOrEqual(Math.ceil(unstirred * 0.5) + 1);
-    expect(stirred).toBeLessThan(unstirred);
-  });
-
-  it("fastest condition: hot/powder/stirred", () => {
-    const fastest = calcDissolveTime("hot", "powder", true);
-    expect(fastest).toBeLessThan(15);
-  });
-
-  it("returns a positive integer", () => {
-    const t = calcDissolveTime("cold", "fine", true);
-    expect(t).toBeGreaterThan(0);
-    expect(Number.isInteger(t)).toBe(true);
+describe("calculateSolubilityLimit", () => {
+  it("sucrose solubility increases with temperature", () => {
+    const solubilityAt5 = calculateSolubilityLimit(5);
+    const solubilityAt80 = calculateSolubilityLimit(80);
+    expect(solubilityAt80).toBeGreaterThan(solubilityAt5);
   });
 });
 
@@ -67,14 +37,18 @@ describe("initialDissolvingState", () => {
     expect(state.isDissolving).toBe(false);
     expect(state.dissolveProgress).toBe(0);
     expect(state.dataPoints).toHaveLength(0);
+    expect(state.massAdded).toBe(10);
+    expect(state.dissolvedMass).toBe(0);
   });
 });
 
 describe("setTemperature / setGranularity / setStirring", () => {
-  it("updates temperature", () => {
+  it("updates temperature and solubility limit", () => {
     const state = initialDissolvingState("free");
     const next  = setTemperature(state, "hot");
     expect(next.temperature).toBe("hot");
+    expect(next.celsius).toBe(80);
+    expect(next.solubilityLimit).toBe(calculateSolubilityLimit(80));
     expect(next.dissolveProgress).toBe(0);
   });
 
@@ -109,41 +83,19 @@ describe("startDissolving", () => {
 });
 
 describe("tickDissolveProgress", () => {
-  it("increments progress proportionally to delta", () => {
-    let state = initialDissolvingState("free");
-    state     = setTemperature(state, "cold");
-    state     = startDissolving(state);
-
-    const totalTime = calcDissolveTime("cold", "coarse", false);
-    const delta     = totalTime * 0.1;
-    const next      = tickDissolveProgress(state, delta);
-    expect(next.dissolveProgress).toBeGreaterThan(0);
-    expect(next.dissolveProgress).toBeLessThanOrEqual(100);
-  });
-
-  it("reaches 100 % and adds a data point", () => {
+  it("increments dissolved mass when ticks are processed", () => {
     let state = initialDissolvingState("free");
     state     = setTemperature(state, "hot");
-    state     = setGranularity(state, "powder");
-    state     = setStirring(state, true);
     state     = startDissolving(state);
 
-    const totalTime = calcDissolveTime("hot", "powder", true);
-    let prev = state;
-    for (let i = 0; i < 200; i++) {
-      state = tickDissolveProgress(state, totalTime / 10);
-      if (state.dataPoints.length > 0) break;
-      if (state === prev) break;
-      prev = state;
-    }
-
-    expect(state.dataPoints.length).toBeGreaterThan(0);
-    expect(state.dissolveProgress).toBe(100);
+    const next = tickDissolveProgress(state, 1.0);
+    expect(next.dissolvedMass).toBeGreaterThan(0);
+    expect(next.dissolveProgress).toBeGreaterThan(0);
   });
 
   it("does nothing when isDissolving is false", () => {
     const state = initialDissolvingState("free");
-    const next  = tickDissolveProgress(state, 10);
+    const next  = tickDissolveProgress(state, 1.0);
     expect(next).toBe(state);
   });
 });

@@ -6,6 +6,7 @@ import {
   addHCl,
   tickGasCollection,
   resetGasCollection,
+  updateGasCollectionParameters,
 } from "@/lib/engine/gas-collection-engine";
 import {
   validateAddMarbleChips,
@@ -23,6 +24,7 @@ interface GasCollectionStore extends GasCollectionState {
   resetAction:       () => void;
   setMode:           (mode: GasCollectionState["mode"]) => void;
   hydrate:           () => void;
+  updateParametersAction: (changes: Partial<Pick<GasCollectionState, "temperature" | "pressure" | "leakRate">>) => void;
 }
 
 export const useGasCollectionStore = create<GasCollectionStore>((set, get) => ({
@@ -60,6 +62,12 @@ export const useGasCollectionStore = create<GasCollectionStore>((set, get) => ({
   },
 
   setMode: (mode) => set({ mode }),
+
+  updateParametersAction: (changes) => {
+    const next = updateGasCollectionParameters(get() as GasCollectionState, changes);
+    set({ ...next });
+    saveSession(STORAGE_KEY, next);
+  },
 
   hydrate: () => {
     const saved = loadSession<GasCollectionState>(STORAGE_KEY);

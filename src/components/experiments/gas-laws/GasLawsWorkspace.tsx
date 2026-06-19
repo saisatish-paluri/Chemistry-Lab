@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import type { GasLaw, GasDataPoint } from "@/lib/engine/types";
 import {
@@ -15,8 +16,126 @@ interface Props {
   pressure:    number;
   dataPoints:  GasDataPoint[];
   isRunning:   boolean;
+  gasType?:    "he" | "n2" | "co2";
+  sealQuality?: number;
 }
 
+// ── Real-physics gas particle simulation ──────────────────────────────────────
+
+interface GasMolecule { x: number; y: number; vx: number; vy: number; }
+
+const MOLECULE_COUNT = 28;
+const BASE_SPEED     = 1.4; // SVG units per 40 ms frame at 300 K
+
+function initMolecules(xMin: number, xMax: number, yMin: number, yMax: number, speed: number): GasMolecule[] {
+  return Array.from({ length: MOLECULE_COUNT }, () => {
+    const angle = Math.random() * Math.PI * 2;
+    return {
+      x: xMin + Math.random() * (xMax - xMin),
+      y: yMin + Math.random() * (yMax - yMin),
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+    };
+  });
+}
+
+function GasParticlesInner({
+  containerW, containerH, containerX, containerY, temperature, law, pressure,
+}: {
+  containerW: number; containerH: number; containerX: number; containerY: number;
+  temperature: number; law: GasLaw | null; pressure: number;
+}) {
+  const speed = BASE_SPEED * Math.sqrt(temperature / 300);
+
+  const xMin = containerX + 5;
+  const xMax = containerX + containerW - (law === "boyle" ? 22 : 5);
+  const yMin = containerY + 5;
+  const yMax = containerY + containerH - 5;
+
+  const molRef  = useRef<GasMolecule[]>([]);
+  const [render, setRender] = useState<GasMolecule[]>([]);
+
+  // Initialise
+  useEffect(() => {
+    molRef.current = initMolecules(xMin, xMax, yMin, yMax, speed);
+    setRender([...molRef.current]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Clamp to new container when volume changes
+  useEffect(() => {
+    molRef.current = molRef.current.map(m => ({
+      ...m,
+      x: Math.max(xMin + 2, Math.min(xMax - 2, m.x)),
+      y: Math.max(yMin + 2, Math.min(yMax - 2, m.y)),
+    }));
+  }, [xMin, xMax, yMin, yMax]);
+
+  // Physics loop
+  useEffect(() => {
+    const id = setInterval(() => {
+      molRef.current = molRef.current.map(m => {
+        // Rescale velocity to current speed (temperature change)
+        const curSpd = Math.sqrt(m.vx * m.vx + m.vy * m.vy);
+        let vx = curSpd > 0 ? (m.vx / curSpd) * speed : speed;
+        let vy = curSpd > 0 ? (m.vy / curSpd) * speed : 0;
+
+        let x = m.x + vx;
+        let y = m.y + vy;
+
+        // Elastic bounce
+        if (x < xMin) { x = xMin; vx = Math.abs(vx); }
+        if (x > xMax) { x = xMax; vx = -Math.abs(vx); }
+        if (y < yMin) { y = yMin; vy = Math.abs(vy); }
+        if (y > yMax) { y = yMax; vy = -Math.abs(vy); }
+
+        return { x, y, vx, vy };
+      });
+      setRender([...molRef.current]);
+    }, 40);
+    return () => clearInterval(id);
+  }, [speed, xMin, xMax, yMin, yMax]);
+
+  // Temperature → colour: blue (cold) → white (ambient) → red (hot)
+  const tempFrac = Math.max(0, Math.min(1, (temperature - 200) / 400));
+  const r  = Math.round(59  + (220 - 59)  * tempFrac);
+  const g  = Math.round(130 + (80  - 130) * tempFrac);
+  const bl = Math.round(246 + (60  - 246) * tempFrac);
+  const molColor  = `rgb(${r},${g},${bl})`;
+  const molGlow   = `rgba(${r},${g},${bl},0.18)`;
+
+  // Pressure effect: wall-collision flash intensity
+  const wallFlash = pressure > 6;
+
+  return (
+    <g>
+      {render.map((m, i) => (
+        <g key={i}>
+          {/* Glow halo */}
+          <circle cx={m.x} cy={m.y} r={7} fill={molGlow} />
+          {/* Molecule body */}
+          <circle cx={m.x} cy={m.y} r={3.8}
+            fill={molColor}
+            fillOpacity={0.88}
+            stroke="rgba(255,255,255,0.35)"
+            strokeWidth="0.6"
+          />
+          {/* Specular highlight */}
+          <circle cx={m.x - 1.1} cy={m.y - 1.1} r={1.3} fill="rgba(255,255,255,0.45)" />
+          {/* Wall-collision flash at high pressure */}
+          {wallFlash && (m.x <= xMin + 5 || m.x >= xMax - 5 || m.y <= yMin + 5 || m.y >= yMax - 5) && (
+            <circle cx={m.x} cy={m.y} r={6}
+              fill={molColor} fillOpacity="0.22"
+              style={{ animation: "lab-glow-pulse 0.6s ease-in-out" }}
+            />
+          )}
+        </g>
+      ))}
+    </g>
+  );
+}
+
+// ── Pressure gauge ────────────────────────────────────────────────────────────
 function PressureGauge({ pressure, maxP = 12 }: { pressure: number; maxP?: number }) {
   const fraction = Math.min(1, pressure / maxP);
   const angle    = -150 + fraction * 300;
@@ -255,7 +374,10 @@ function VariableLegend({ law, temperature, volume, pressure }: {
 }
 
 // ── Main workspace ─────────────────────────────────────────────────────────────
-export default function GasLawsWorkspace({ law, temperature, volume, pressure, isRunning }: Props) {
+export default function GasLawsWorkspace({
+  law, temperature, volume, pressure, isRunning,
+  gasType = "co2", sealQuality = 1.0,
+}: Props) {
   if (!law) {
     return (
       <div
@@ -311,18 +433,23 @@ export default function GasLawsWorkspace({ law, temperature, volume, pressure, i
   const volFraction   = (volume - volMin) / (volMax - volMin);
   const containerW    = containerMinW + volFraction * (containerMaxW - containerMinW);
   const particleCount = Math.max(5, Math.min(32, Math.round(pressure * 2.8)));
-  const lawColor      = law === "boyle" ? "#3b82f6" : "#ea580c";
-  const lawBg         = law === "boyle" ? "rgba(59,130,246,0.16)" : "rgba(245,158,11,0.15)";
-  const lawBgMid      = law === "boyle" ? "rgba(96,165,250,0.20)" : "rgba(251,146,60,0.20)";
+  const lawColor      = law === "boyle" ? "#3b82f6" : law === "charles" ? "#ea580c" : "#10b981";
+  const lawBg         = law === "boyle" ? "rgba(59,130,246,0.16)" : law === "charles" ? "rgba(245,158,11,0.15)" : "rgba(16,185,129,0.15)";
+  const lawBgMid      = law === "boyle" ? "rgba(96,165,250,0.20)" : law === "charles" ? "rgba(251,146,60,0.20)" : "rgba(52,211,153,0.20)";
   const particleSpeed = law === "boyle"
     ? 1 + (pressure / 6) * 0.8
     : 1 + ((temperature - 273) / 100) * 1.2;
 
-  const lawTitle = law === "boyle" ? "Boyle's Law" : "Charles's Law";
+  const pColor = gasType === "he" ? "#ec4899" : gasType === "n2" ? "#3b82f6" : "#f59e0b";
+  const speedFactor = particleSpeed * (gasType === "he" ? 1.8 : gasType === "n2" ? 1.3 : 1.0);
+
+  const lawTitle = law === "boyle" ? "Boyle's Law" : law === "charles" ? "Charles's Law" : "Gay-Lussac's Law";
   const lawSubtitle = law === "boyle"
     ? "Compress → pressure rises · Expand → pressure drops"
-    : "Heat → gas expands · Cool → gas contracts";
-  const svgH = law === "charles" ? 268 : 208;
+    : law === "charles"
+    ? "Heat → gas expands · Cool → gas contracts"
+    : "Heat → pressure rises · Cool → pressure drops (syringe locked)";
+  const svgH = (law === "charles" || law === "gay-lussac") ? 268 : 208;
   const formulaBannerY = svgH - 46;
 
   return (
@@ -367,20 +494,34 @@ export default function GasLawsWorkspace({ law, temperature, volume, pressure, i
               <feGaussianBlur stdDeviation="4" result="blur" />
               <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
             </filter>
+            <filter id="flame-blur" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="3.5" />
+            </filter>
+            <filter id="inner-flame-blur" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="1.2" />
+            </filter>
             <linearGradient id="gl-gas-grad" x1="0" y1="0" x2="1" y2="0">
               <stop offset="0%"   stopColor={lawBgMid} />
               <stop offset="60%"  stopColor={lawBg} />
               <stop offset="100%" stopColor={lawBg} stopOpacity="0.5" />
             </linearGradient>
             <linearGradient id="gl-glass-sheen" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%"   stopColor="rgba(255,255,255,0.30)" />
-              <stop offset="28%"  stopColor="rgba(255,255,255,0.06)" />
-              <stop offset="100%" stopColor="rgba(0,0,0,0.04)" />
+              <stop offset="0%"   stopColor="rgba(255,255,255,0.45)" />
+              <stop offset="25%"  stopColor="rgba(255,255,255,0.15)" />
+              <stop offset="85%"  stopColor="rgba(255,255,255,0.0)" />
+              <stop offset="100%" stopColor="rgba(255,255,255,0.35)" />
             </linearGradient>
             <linearGradient id="gl-piston-grad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%"  stopColor="#cbd5e1" />
               <stop offset="50%" stopColor="#94a3b8" />
               <stop offset="100%" stopColor="#64748b" />
+            </linearGradient>
+            <linearGradient id="chrome-grad" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#475569" />
+              <stop offset="25%" stopColor="#cbd5e1" />
+              <stop offset="50%" stopColor="#ffffff" />
+              <stop offset="75%" stopColor="#cbd5e1" />
+              <stop offset="100%" stopColor="#334155" />
             </linearGradient>
           </defs>
 
@@ -436,8 +577,8 @@ export default function GasLawsWorkspace({ law, temperature, volume, pressure, i
               </motion.g>
             )}
 
-            {/* Temperature heat glow for Charles's */}
-            {law === "charles" && temperature > 350 && (
+            {/* Temperature heat glow for Charles's or Gay-Lussac's */}
+            {(law === "charles" || law === "gay-lussac") && temperature > 350 && (
               <motion.rect x="2" y="2" height={containerH - 4} rx="5"
                 fill="rgba(239,68,68,0.08)"
                 animate={{ width: Math.max(8, containerW - 4), opacity: [0.05, 0.15, 0.05] }}
@@ -445,34 +586,35 @@ export default function GasLawsWorkspace({ law, temperature, volume, pressure, i
               />
             )}
 
-            {/* Gas particles */}
-            {Array.from({ length: particleCount }, (_, i) => {
-              const seed = i * 7919;
-              const maxPX = Math.max(containerW - (law === "boyle" ? 26 : 18), 22);
-              const bx = 5 + ((seed * 1234567) % 1000) / 1000 * maxPX;
-              const by = 6 + ((seed * 7654321) % 1000) / 1000 * (containerH - 18);
-              const dx = (((seed * 2345678) % 1000) / 1000 - 0.5) * 14 * particleSpeed;
-              const dy = (((seed * 3456789) % 1000) / 1000 - 0.5) * 14 * particleSpeed;
-              const r  = law === "boyle" ? 3 + (i % 3) * 0.6 : 3.5 + (i % 3) * 0.5;
-              return (
-                <motion.circle key={i}
-                  r={r}
-                  fill={lawColor} fillOpacity={0.80}
-                  filter={i % 4 === 0 ? "url(#gl-inner-glow)" : undefined}
-                  animate={isRunning
-                    ? {
-                        cx: [bx, bx + dx, bx - dx * 0.5, bx + dx * 0.3, bx],
-                        cy: [by, by + dy, by - dy * 0.6, by + dy * 0.2, by],
-                      }
-                    : { cx: bx, cy: by }
-                  }
-                  transition={{
-                    duration: (1.1 + (i % 5) * 0.18) / particleSpeed,
-                    repeat: Infinity, ease: "easeInOut", delay: (i % 7) * 0.14,
-                  }}
+            {/* Leak escape visualizer */}
+            {sealQuality < 1.0 && isRunning && (
+              <g>
+                <motion.path
+                  d="M -5 30 Q -15 25 -25 35"
+                  fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="1.5"
+                  animate={{ d: ["M -5 30 Q -15 25 -25 35", "M -5 30 Q -20 15 -35 25", "M -5 30 Q -15 25 -25 35"], opacity: [0.8, 0, 0.8] }}
+                  transition={{ duration: 0.8, repeat: Infinity }}
                 />
-              );
-            })}
+                <motion.path
+                  d="M -5 80 Q -15 85 -25 75"
+                  fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="1.5"
+                  animate={{ d: ["M -5 80 Q -15 85 -25 75", "M -5 80 Q -20 95 -35 85", "M -5 80 Q -15 85 -25 75"], opacity: [0.8, 0, 0.8] }}
+                  transition={{ duration: 0.8, repeat: Infinity, delay: 0.3 }}
+                />
+                <text x="10" y="20" fontSize="7.5" fill="#ef4444" fontWeight="800">💨 LEAK</text>
+              </g>
+            )}
+
+            {/* Real-physics gas molecules — speed ∝ √T, bounce off walls */}
+            <GasParticlesInner
+              containerW={containerW}
+              containerH={containerH}
+              containerX={0}
+              containerY={0}
+              temperature={temperature}
+              law={law}
+              pressure={pressure}
+            />
 
             {/* Glass sheen */}
             <path d={`M 6 6 L 6 ${containerH - 6}`} stroke="rgba(255,255,255,0.42)" strokeWidth="5" strokeLinecap="round" />
@@ -539,13 +681,15 @@ export default function GasLawsWorkspace({ law, temperature, volume, pressure, i
             )}
           </g>
 
-          {/* ── CHARLES'S LAW: Bunsen burner heat source ── */}
-          {law === "charles" && (
+          {/* ── CHARLES'S / GAY-LUSSAC'S LAW: Bunsen burner heat source ── */}
+          {(law === "charles" || law === "gay-lussac") && (
             <g>
               {/* Outer flame — orange-yellow, animated flicker */}
               <motion.path
+                initial={false}
                 d="M 141 196 Q 131 178 148 162 Q 165 178 155 196 Z"
                 fill="rgba(251,146,60,0.88)"
+                filter="url(#flame-blur)"
                 animate={{ d: [
                   "M 141 196 Q 131 178 148 162 Q 165 178 155 196 Z",
                   "M 141 196 Q 129 176 148 160 Q 167 176 155 196 Z",
@@ -556,25 +700,27 @@ export default function GasLawsWorkspace({ law, temperature, volume, pressure, i
               />
               {/* Inner flame — blue-white hot core */}
               <motion.path
+                initial={false}
                 d="M 144 196 Q 141 185 148 177 Q 155 185 152 196 Z"
                 fill="rgba(186,230,253,0.92)"
+                filter="url(#inner-flame-blur)"
                 animate={{ scaleY: [1, 1.10, 0.94, 1.06, 1] }}
                 transition={{ duration: 0.60, repeat: Infinity, ease: "easeInOut" }}
                 style={{ transformBox: "fill-box", transformOrigin: "center bottom" }}
               />
               {/* Bunsen burner barrel */}
               <rect x="141" y="196" width="14" height="22" rx="3"
-                fill="#64748b" stroke="#475569" strokeWidth="0.9" />
+                fill="url(#chrome-grad)" stroke="#475569" strokeWidth="0.9" />
               {/* Air inlet collar */}
               <ellipse cx="148" cy="198" rx="8" ry="2.5"
-                fill="none" stroke="#94a3b8" strokeWidth="1" />
+                fill="none" stroke="url(#chrome-grad)" strokeWidth="1" />
               {/* Gas supply tube */}
               <line x1="141" y1="211" x2="118" y2="211"
-                stroke="#94a3b8" strokeWidth="3.5" strokeLinecap="round" />
+                stroke="url(#chrome-grad)" strokeWidth="3.5" strokeLinecap="round" />
               <circle cx="118" cy="211" r="3.5" fill="#94a3b8" />
               {/* Base foot */}
               <rect x="136" y="218" width="24" height="5" rx="2.5"
-                fill="#475569" stroke="#334155" strokeWidth="0.7" />
+                fill="url(#chrome-grad)" stroke="#334155" strokeWidth="0.7" />
               {/* Bunsen burner label */}
               <text x="148" y="234" textAnchor="middle" fontSize="6.5"
                 fill="#64748b" fontWeight="600" letterSpacing="0.04em">
@@ -621,9 +767,10 @@ export default function GasLawsWorkspace({ law, temperature, volume, pressure, i
           </g>
 
           {/* Lab bench */}
-          <rect x="0" y={svgH - 8} width="480" height="8" fill="#c8d0db" />
-          <rect x="0" y={svgH - 12} width="480" height="4" fill="#cbd5e1" />
-          <rect x="0" y={svgH - 12} width="480" height="1.5" fill="rgba(255,255,255,0.50)" />
+          <rect x="0" y={svgH - 12} width="480" height="12" fill="#1e293b" />
+          <rect x="0" y={svgH - 16} width="480" height="4" fill="#334155" />
+          <line x1="0" y1={svgH - 16} x2="480" y2={svgH - 16} stroke="#475569" strokeWidth="1" />
+          <rect x="0" y={svgH - 18} width="480" height="2" fill="#64748b" opacity="0.8" />
         </svg>
       </div>
 

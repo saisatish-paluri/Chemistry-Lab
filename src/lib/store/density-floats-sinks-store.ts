@@ -3,7 +3,7 @@ import type { DensityState, DensityMaterialId } from "@/lib/engine/types";
 import {
   initialDensityState,
   selectMaterial, dropMaterial, settleAnimation,
-  completeDensity, resetDensity,
+  completeDensity, resetDensity, updateDensityParameters
 } from "@/lib/engine/density-floats-sinks-engine";
 import { saveSession, loadSession } from "@/lib/persistence";
 
@@ -18,6 +18,7 @@ interface DensityStore extends DensityState {
   resetAction:           () => void;
   setMode:               (mode: DensityState["mode"]) => void;
   hydrate:               () => void;
+  updateParametersAction: (changes: Partial<Pick<DensityState, "mass" | "volume" | "temperature" | "salinity">>) => void;
 }
 
 export const useDensityStore = create<DensityStore>((set, get) => ({
@@ -26,6 +27,11 @@ export const useDensityStore = create<DensityStore>((set, get) => ({
 
   selectMaterialAction: (id) => {
     const next = selectMaterial(get() as DensityState, id);
+    set({ ...next, lastError: null });
+  },
+
+  updateParametersAction: (changes) => {
+    const next = updateDensityParameters(get() as DensityState, changes);
     set({ ...next, lastError: null });
   },
 

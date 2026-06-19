@@ -13,67 +13,17 @@ function mkObs(
   return { id: uid(), timestamp: Date.now(), type, message, severity };
 }
 
-// ── Dissolving time model ─────────────────────────────────────────────────────
-// Base time (seconds) that stirring, temp, and granularity each modify.
-const BASE_TIME = 120; // 120 simulated seconds for cold, coarse, no-stir
-
-const TEMP_FACTOR: Record<DissolveTemp, number> = {
-  cold: 1.00,
-  warm: 0.55,
-  hot:  0.25,
-};
-
-const GRAIN_FACTOR: Record<DissolveGranularity, number> = {
-  coarse: 1.00,
-  fine:   0.65,
-  powder: 0.35,
-};
-
-const STIR_FACTOR = 0.50; // halves the time
-
-export function calcDissolveTime(
-  temp:        DissolveTemp,
-  granularity: DissolveGranularity,
-  stirring:    boolean,
-): number {
-  const t = BASE_TIME * TEMP_FACTOR[temp] * GRAIN_FACTOR[granularity] * (stirring ? STIR_FACTOR : 1);
-  return Math.round(t);
+// ── Solubility limit of sucrose in water ──────────────────────────────────────
+export function calculateSolubilityLimit(temp: number): number {
+  // Sucrose solubility (g/100mL) vs temperature in °C
+  return 180 + 1.5 * temp + 0.005 * Math.pow(temp, 2);
 }
 
-/**
- * Variant that accepts a continuous Celsius temperature (5–100 °C).
- * Interpolates the temperature factor between the reference points:
- *   5 °C → 1.00 (cold), 40 °C → 0.55 (warm), 80 °C → 0.25 (hot)
- */
-export function calcDissolveTimeFromCelsius(
-  tempCelsius: number,
-  granularity: DissolveGranularity,
-  stirring:    boolean,
-): number {
-  const factor = interpolateTempFactor(tempCelsius);
-  const t = BASE_TIME * factor * GRAIN_FACTOR[granularity] * (stirring ? STIR_FACTOR : 1);
-  return Math.round(Math.max(3, t));
-}
-
-/** Map Celsius → dissolving-time factor via linear interpolation. */
-export function interpolateTempFactor(tempCelsius: number): number {
-  const t = Math.max(5, Math.min(100, tempCelsius));
-  if (t <= 5)  return 1.00;
-  if (t <= 40) return 1.00 + ((t - 5)  / 35) * (0.55 - 1.00);
-  if (t <= 80) return 0.55 + ((t - 40) / 40) * (0.25 - 0.55);
-  return 0.25 + ((t - 80) / 20) * (0.15 - 0.25); // very hot tail
-}
-
-/** Snap a Celsius value to the nearest named DissolveTemp. */
+// Snaps a Celsius value to named temp
 export function celsiusToDissolveTemp(tempCelsius: number): DissolveTemp {
   if (tempCelsius <= 22) return "cold";
   if (tempCelsius <= 60) return "warm";
   return "hot";
-}
-
-/** Human-readable label for a celsius temperature value. */
-export function celsiusLabel(tempCelsius: number): string {
-  return `${Math.round(tempCelsius)} °C`;
 }
 
 export function conditionLabel(
@@ -87,23 +37,13 @@ export function conditionLabel(
   return `${tempLabel} / ${grainLabel} / ${stirLabel}`;
 }
 
-export function conditionLabelCelsius(
-  tempCelsius: number,
-  granularity: DissolveGranularity,
-  stirring:    boolean,
-): string {
-  const grainLabel = { coarse: "Coarse", fine: "Fine", powder: "Powder" }[granularity];
-  const stirLabel = stirring ? "Stirred" : "Unstirred";
-  return `${Math.round(tempCelsius)} °C / ${grainLabel} / ${stirLabel}`;
-}
-
 // ── Steps & objectives ────────────────────────────────────────────────────────
 function makeSteps(): StepDef[] {
   return [
-    { id: "s1", instruction: "Choose water temperature: Cold (5°C), Warm (40°C), or Hot (80°C).", hint: "Temperature gives molecules more kinetic energy.", completed: false },
-    { id: "s2", instruction: "Choose sugar particle size: Coarse, Fine, or Powder.", hint: "Smaller particles have more surface area exposed.", completed: false },
-    { id: "s3", instruction: "Toggle stirring on or off.", hint: "Stirring brings fresh solvent into contact with the solid.", completed: false },
-    { id: "s4", instruction: "Click \"Start Dissolving\" and watch the progress.", hint: "The beaker animation speeds up with favourable conditions.", completed: false },
+    { id: "s1", instruction: "Choose water temperature: Cold (5°C), Warm (40°C), or Hot (80°C).", hint: "Temperature increases diffusion coefficient and solubility.", completed: false },
+    { id: "s2", instruction: "Choose sugar particle size: Coarse, Fine, or Powder.", hint: "Smaller particles have more exposed surface area.", completed: false },
+    { id: "s3", instruction: "Select sugar mass to add and toggle stirring on/off.", hint: "Stirring reduces boundary layer thickness.", completed: false },
+    { id: "s4", instruction: "Click \"Start Dissolving\" and watch the progress.", hint: "Will it dissolve fully or saturate the solution?", completed: false },
     { id: "s5", instruction: "Record the result then change one variable and repeat.", hint: "Change only ONE variable at a time (controlled experiment).", completed: false },
     { id: "s6", instruction: "Collect at least 3 data points then click \"Complete Lab\".", hint: "Compare the bar chart to see which factor has the biggest effect.", completed: false },
   ];
@@ -135,6 +75,13 @@ export function initialDissolvingState(mode: DissolvingRateState["mode"]): Disso
     observations:     [],
     result:           null,
     startedAt:        null,
+    massAdded:        10,
+    dissolvedMass:    0,
+    waterVolume:      100,
+    celsius:          40,
+    solubilityLimit:  248,
+    surfaceArea:      1.0,
+    isSaturated:      false,
   };
 }
 
@@ -143,18 +90,53 @@ export function setTemperature(
   state: DissolvingRateState,
   temp:  DissolveTemp,
 ): DissolvingRateState {
-  return { ...state, temperature: temp, dissolveProgress: 0, isDissolving: false, dissolveTime: null };
+  const celsius = temp === "cold" ? 5 : temp === "warm" ? 40 : 80;
+  const solubilityLimit = calculateSolubilityLimit(celsius);
+  return {
+    ...state,
+    temperature:      temp,
+    celsius,
+    solubilityLimit,
+    dissolveProgress: 0,
+    isDissolving:     false,
+    dissolveTime:     null,
+    dissolvedMass:    0,
+    isSaturated:      false,
+  };
 }
 
 export function setGranularity(
   state:       DissolvingRateState,
   granularity: DissolveGranularity,
 ): DissolvingRateState {
-  return { ...state, granularity, dissolveProgress: 0, isDissolving: false, dissolveTime: null };
+  return { ...state, granularity, dissolveProgress: 0, isDissolving: false, dissolveTime: null, dissolvedMass: 0, isSaturated: false };
 }
 
 export function setStirring(state: DissolvingRateState, stirring: boolean): DissolvingRateState {
-  return { ...state, stirring, dissolveProgress: 0, isDissolving: false, dissolveTime: null };
+  return { ...state, stirring, dissolveProgress: 0, isDissolving: false, dissolveTime: null, dissolvedMass: 0, isSaturated: false };
+}
+
+export function updateDissolvingParameters(
+  state: DissolvingRateState,
+  changes: Partial<Pick<DissolvingRateState, "massAdded" | "waterVolume" | "celsius">>,
+): DissolvingRateState {
+  const massAdded = changes.massAdded !== undefined ? changes.massAdded : state.massAdded;
+  const waterVolume = changes.waterVolume !== undefined ? changes.waterVolume : state.waterVolume;
+  const celsius = changes.celsius !== undefined ? changes.celsius : state.celsius;
+  const solubilityLimit = calculateSolubilityLimit(celsius);
+  const temperature = celsiusToDissolveTemp(celsius);
+
+  return {
+    ...state,
+    massAdded,
+    waterVolume,
+    celsius,
+    temperature,
+    solubilityLimit,
+    dissolveProgress: 0,
+    dissolvedMass:    0,
+    isSaturated:      false,
+  };
 }
 
 export function startDissolving(state: DissolvingRateState): DissolvingRateState {
@@ -168,8 +150,9 @@ export function startDissolving(state: DissolvingRateState): DissolvingRateState
     status:           "running",
     isDissolving:     true,
     dissolveProgress: 0,
-    dissolveTime:     null,
-    startedAt:        state.startedAt ?? Date.now(),
+    dissolvedMass:    0,
+    isSaturated:      false,
+    startedAt:        Date.now(),
     steps,
     objectives:       state.objectives.map((o) =>
       o.id === "o1" ? { ...o, completed: true } : o,
@@ -177,7 +160,7 @@ export function startDissolving(state: DissolvingRateState): DissolvingRateState
     observations: [
       mkObs(
         "reaction-start",
-        `Dissolving started: ${conditionLabel(state.temperature, state.granularity, state.stirring)}`,
+        `Dissolving started: ${state.massAdded}g sugar in ${state.waterVolume}mL water. Condition: ${conditionLabel(state.temperature, state.granularity, state.stirring)}. Temperature: ${state.celsius}°C, Solubility limit: ${state.solubilityLimit.toFixed(1)} g/100mL.`,
         "info",
       ),
       ...state.observations,
@@ -187,23 +170,67 @@ export function startDissolving(state: DissolvingRateState): DissolvingRateState
 
 export function tickDissolveProgress(
   state: DissolvingRateState,
-  delta: number, // seconds elapsed (real-time tick)
+  delta: number, // simulated seconds elapsed per tick
 ): DissolvingRateState {
   if (!state.isDissolving) return state;
-  const totalTime = calcDissolveTime(state.temperature, state.granularity, state.stirring);
-  const increment = (delta / totalTime) * 100;
-  const newProgress = Math.min(100, state.dissolveProgress + increment);
-  if (newProgress >= 100) {
-    return finishDissolving({ ...state, dissolveProgress: 100 });
+
+  const V = state.waterVolume;
+  const T = state.celsius;
+  const Cs = state.solubilityLimit;
+  const dissolved = state.dissolvedMass;
+  const remaining = state.massAdded - dissolved;
+
+  // Concentration in g/100mL
+  const C = dissolved * (100 / V);
+
+  if (remaining <= 0.001) {
+    return finishDissolving({ ...state, dissolvedMass: state.massAdded, dissolveProgress: 100 });
   }
-  return { ...state, dissolveProgress: newProgress };
+
+  if (C >= Cs) {
+    return finishDissolving({ ...state, isSaturated: true });
+  }
+
+  // Noyes-Whitney calculation
+  const D = 0.5 + 0.015 * T; // Diffusion coefficient
+  const a0 = state.granularity === "powder" ? 5.0 : state.granularity === "fine" ? 2.5 : 1.0;
+  const A = a0 * Math.pow(remaining / state.massAdded, 2 / 3); // dynamic shrinking surface area
+  const d = state.stirring ? 0.35 : 1.0; // boundary layer thickness
+
+  const k_tune = 0.08; // tuning coefficient for visual time steps
+  const rate = (D * A * Math.max(0, Cs - C) / d) * k_tune;
+
+  // Add small experimental uncertainty/variance
+  const noise = (Math.random() - 0.5) * 0.08 * rate;
+  const dM = Math.max(0, (rate + noise) * delta);
+
+  const nextDissolved = Math.min(state.massAdded, dissolved + dM);
+  const nextC = nextDissolved * (100 / V);
+  const progress = Math.min(100, (nextDissolved / state.massAdded) * 100);
+
+  if (nextC >= Cs) {
+    return finishDissolving({ ...state, dissolvedMass: nextDissolved, dissolveProgress: progress, isSaturated: true });
+  }
+
+  if (nextDissolved >= state.massAdded) {
+    return finishDissolving({ ...state, dissolvedMass: state.massAdded, dissolveProgress: 100 });
+  }
+
+  return {
+    ...state,
+    dissolvedMass: nextDissolved,
+    dissolveProgress: progress,
+    surfaceArea: A,
+  };
 }
 
 function finishDissolving(state: DissolvingRateState): DissolvingRateState {
-  const time    = calcDissolveTime(state.temperature, state.granularity, state.stirring);
-  const label   = conditionLabel(state.temperature, state.granularity, state.stirring);
+  const elapsedMs = Date.now() - (state.startedAt ?? Date.now());
+  const time = Math.round(elapsedMs / 100) / 10; // simulated elapsed time (seconds)
+  
+  const label = conditionLabel(state.temperature, state.granularity, state.stirring) + 
+    ` (${state.massAdded}g sugar)`;
   const newPoint: DissolvingDataPoint = { label, time };
-
   const dataPoints = [...state.dataPoints, newPoint];
 
   // Check for objective completions
@@ -226,20 +253,24 @@ function finishDissolving(state: DissolvingRateState): DissolvingRateState {
     return s;
   });
 
+  const msg = state.isSaturated
+    ? `Solution saturated! Saturated at ${state.dissolvedMass.toFixed(1)}g dissolved. Solubility limit: ${state.solubilityLimit.toFixed(1)} g/100mL. (time: ${time}s)`
+    : `Sugar fully dissolved in ${time}s under: ${label}`;
+
   return {
     ...state,
     status:           "ready",
     isDissolving:     false,
-    dissolveProgress: 100,
+    dissolveProgress: state.isSaturated ? state.dissolveProgress : 100,
     dissolveTime:     time,
     dataPoints,
     steps,
     objectives,
     observations: [
       mkObs(
-        "reaction-complete",
-        `Sugar fully dissolved in ${time}s under: ${label}`,
-        "success",
+        state.isSaturated ? "endpoint-reached" : "reaction-complete",
+        msg,
+        state.isSaturated ? "warning" : "success",
       ),
       ...state.observations,
     ],
@@ -261,7 +292,8 @@ export function completeDissolvingRate(state: DissolvingRateState): DissolvingRa
       explanation:
         "Dissolving rate increases with: (1) Higher temperature — molecules have more energy to break bonds. " +
         "(2) Smaller particle size — more surface area exposed to the solvent. " +
-        "(3) Stirring — keeps fresh solvent in contact with undissolved solid.",
+        "(3) Stirring — keeps fresh solvent in contact with undissolved solid. " +
+        "If you add more solute than the solubility limit, the solution reaches saturation, and no more solid dissolves.",
     },
   };
 }

@@ -11,6 +11,9 @@ interface Props {
   isSettled:        boolean;
   testedMaterials:  DensityMaterialId[];
   onSettle:         () => void;
+  fluidDensity:     number;
+  solidDensity:     number;
+  displacementRatio: number;
 }
 
 // Water level in SVG coords (viewBox 460×370)
@@ -59,14 +62,15 @@ function MaterialShape({ materialId, color }: {
 
 export default function DensityWorkspace({
   selectedMaterial, isDropping, isSettled, testedMaterials, onSettle,
+  fluidDensity, solidDensity, displacementRatio,
 }: Props) {
   const mat    = selectedMaterial ? DENSITY_MATERIALS[selectedMaterial] : null;
-  const floats = mat?.floats ?? true;
+  const floats = solidDensity < fluidDensity;
 
   const [showRipple, setShowRipple] = useState(false);
 
-  // Resting Y: floating near surface, sinking to bottom
-  const restY    = floats ? WATER_TOP - 8  : WATER_BOT - 16;
+  // Resting Y: floating near surface based on displacement ratio, or sinking to bottom
+  const restY    = floats ? WATER_TOP - 14 + displacementRatio * 14  : WATER_BOT - 16;
   const preDropY = floats ? WATER_TOP - 52 : 75;
   const targetY  = isDropping ? restY : preDropY;
 
@@ -79,36 +83,76 @@ export default function DensityWorkspace({
 
   // Map density to Y on the scale widget (water line at y=140 local)
   const scaleMarkerY = mat
-    ? Math.min(264, Math.max(20, 140 + (mat.density - 1.0) * 70))
+    ? Math.min(264, Math.max(20, 140 + (solidDensity - fluidDensity) * 70))
     : null;
 
   return (
     <div
       className="relative rounded-3xl overflow-hidden select-none"
       style={{
-        aspectRatio: "460/370",
+        aspectRatio: "420/338",
         width:       "100%",
         height:      "auto",
         maxHeight:   "100%",
-        background:  "linear-gradient(180deg, #e0f2fe 0%, #bfdbfe 40%, #f0f9ff 100%)",
-        border:      "1px solid rgba(148,163,184,0.28)",
-        boxShadow:   "0 10px 30px rgba(15,23,42,0.06), 0 0 0 1px rgba(2,132,199,0.18) inset",
+        background:  "radial-gradient(ellipse at 50% 25%, rgba(15,23,42,0.6) 0%, transparent 60%), linear-gradient(180deg, #1e293b 0%, #0f172a 100%)",
+        border:      "1px solid rgba(255,255,255,0.1)",
+        boxShadow:   "0 15px 35px rgba(0,0,0,0.5)",
       }}
     >
-      <svg viewBox="0 0 460 370" width="100%" style={{ display: "block", position: "relative", zIndex: 10 }}>
+      <svg viewBox="35 25 420 338" width="100%" style={{ display: "block", position: "relative", zIndex: 10 }}>
         <defs>
-          <linearGradient id="dw-water-grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor="rgba(59,130,246,0.55)" />
-            <stop offset="100%" stopColor="rgba(14,165,233,0.72)" />
+          <pattern id="ac-dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+            <circle cx="10" cy="10" r="0.75" fill="rgba(148,163,184,0.06)" />
+          </pattern>
+          <linearGradient id="ac-wall" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#f8fafc" />
+            <stop offset="100%" stopColor="#eff6ff" />
           </linearGradient>
-          <filter id="dw-blur">
-            <feGaussianBlur stdDeviation="1" />
+          <linearGradient id="ac-bench" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#cbd5e1" />
+            <stop offset="3%" stopColor="#e2e8f0" />
+            <stop offset="10%" stopColor="#f1f5f9" />
+            <stop offset="100%" stopColor="#cbd5e1" />
+          </linearGradient>
+          <linearGradient id="dw-water-grad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="rgba(56, 189, 248, 0.4)" />
+            <stop offset="100%" stopColor="rgba(14, 165, 233, 0.65)" />
+          </linearGradient>
+          <linearGradient id="glass-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.65)" />
+            <stop offset="10%" stopColor="rgba(255,255,255,0.18)" />
+            <stop offset="50%" stopColor="rgba(240,253,250,0.03)" />
+            <stop offset="85%" stopColor="rgba(240,253,250,0.12)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0.4)" />
+          </linearGradient>
+          <linearGradient id="glass-sheen" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.3)" />
+            <stop offset="50%" stopColor="rgba(255,255,255,0.02)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0.1)" />
+          </linearGradient>
+          <linearGradient id="metal-clamp" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#cbd5e1" />
+            <stop offset="50%" stopColor="#64748b" />
+            <stop offset="100%" stopColor="#334155" />
+          </linearGradient>
+          <filter id="shadow" x="-10%" y="-10%" width="125%" height="125%">
+            <feDropShadow dx="3" dy="12" stdDeviation="6" floodColor="#020617" floodOpacity="0.45" />
           </filter>
         </defs>
 
+        {/* ── Background Wall & Dots ── */}
+        <rect x="0" y="25" width="480" height="338" fill="url(#ac-wall)" />
+        <rect x="0" y="25" width="480" height="338" fill="url(#ac-dots)" opacity="0.4" />
+
+        {/* ── Lab bench ── */}
+        <rect x="0" y="325" width="480" height="40" fill="url(#ac-bench)" />
+        <rect x="0" y="325" width="480" height="2"  fill="rgba(255,255,255,0.18)" />
+
         {/* ── Tank Background ── */}
-        <rect x={TANK_L} y="52" width={TANK_W} height="278" rx="10"
-          fill="rgba(248,250,252,0.30)" stroke="rgba(71,85,105,0.35)" strokeWidth="2" />
+        <rect x={TANK_L} y="52" width={TANK_W} height="273" rx="10"
+          fill="url(#glass-grad)" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5" filter="url(#shadow)" />
+        <rect x={TANK_L + 2.5} y="54.5" width={TANK_W - 5} height="268" rx="8"
+          fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1.2" />
 
         {/* ── Water Fill ── */}
         <rect x={TANK_L + 3} y={WATER_TOP} width={TANK_W - 6} height={WATER_BOT - WATER_TOP}
@@ -121,13 +165,13 @@ export default function DensityWorkspace({
             `M ${TANK_L+3} ${WATER_TOP} Q ${TANK_L+TANK_W/4} ${WATER_TOP+4} ${TANK_L+TANK_W/2} ${WATER_TOP} Q ${TANK_L+3*TANK_W/4} ${WATER_TOP-4} ${TANK_R-3} ${WATER_TOP}`,
           ]}}
           transition={{ duration: 3.0, repeat: Infinity, ease: "easeInOut", repeatType: "mirror" }}
-          fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5"
+          fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="1.8"
         />
 
         {/* Water label */}
         <text x={TANK_L + TANK_W / 2} y={WATER_TOP + 20} textAnchor="middle"
-          fontSize="8" fill="rgba(255,255,255,0.80)" fontWeight="700" letterSpacing="0.10em">
-          WATER  ·  ρ = 1.00 g/cm³
+          fontSize="8.5" fill="rgba(255,255,255,0.85)" fontWeight="800" letterSpacing="0.10em" filter="drop-shadow(0px 1px 2px rgba(0,0,0,0.8))">
+          FLUID  ·  ρ = {fluidDensity.toFixed(3)} g/cm³
         </text>
 
         {/* ── Ripple on water impact ── */}
@@ -135,14 +179,14 @@ export default function DensityWorkspace({
           {showRipple && (
             <>
               <motion.ellipse key="rip1" cx={OBJ_X} cy={WATER_TOP}
-                fill="none" stroke="rgba(255,255,255,0.70)" strokeWidth="2"
+                fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="2.2"
                 initial={{ rx: 6, ry: 3, opacity: 0.9 }}
                 animate={{ rx: 68, ry: 15, opacity: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.88, ease: "easeOut" }}
               />
               <motion.ellipse key="rip2" cx={OBJ_X} cy={WATER_TOP}
-                fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.5"
+                fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5"
                 initial={{ rx: 4, ry: 2, opacity: 0.7 }}
                 animate={{ rx: 42, ry: 9, opacity: 0 }}
                 exit={{ opacity: 0 }}
@@ -156,10 +200,11 @@ export default function DensityWorkspace({
         {testedMaterials.filter((m) => m !== selectedMaterial).map((mId, i) => {
           const m = DENSITY_MATERIALS[mId];
           const x = TANK_L + 28 + (i % 6) * 50;
-          const y = m.floats ? WATER_TOP - 8 : WATER_BOT - 14;
+          const mFloats = m.density < fluidDensity;
+          const y = mFloats ? WATER_TOP - 8 : WATER_BOT - 14;
           return (
             <g key={mId} transform={`translate(${x}, ${y})`} opacity={0.38}>
-              <MaterialShape materialId={mId} floats={m.floats} color={m.color} settled />
+              <MaterialShape materialId={mId} floats={mFloats} color={m.color} settled />
             </g>
           );
         })}
@@ -174,8 +219,8 @@ export default function DensityWorkspace({
               transition={
                 isDropping
                   ? floats
-                    ? { type: "spring", stiffness: 90, damping: 10 }
-                    : { type: "spring", stiffness: 55, damping: 9 }
+                    ? { type: "spring", stiffness: 50 + 80 * (1 - displacementRatio), damping: 5 + 10 * displacementRatio }
+                    : { duration: 0.5 + 1.5 * (fluidDensity / solidDensity) }
                   : { duration: 0 }
               }
               onAnimationComplete={handleAnimComplete}
@@ -195,7 +240,7 @@ export default function DensityWorkspace({
                 {/* Waterline reflection for floating objects */}
                 {isSettled && floats && (
                   <ellipse cx="0" cy="9" rx="15" ry="4"
-                    fill="rgba(59,130,246,0.28)" />
+                    fill="rgba(56,189,248,0.35)" />
                 )}
 
                 {/* Density badge — appears after settling */}
@@ -205,14 +250,14 @@ export default function DensityWorkspace({
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.45, delay: 0.3 }}
                   >
-                    <rect x="-56" y="-42" width="112" height="22" rx="6"
-                      fill="rgba(255,255,255,0.96)"
-                      stroke={floats ? "#059669" : "#dc2626"}
-                      strokeWidth="1.4"
+                    <rect x="-72" y="-44" width="144" height="24" rx="6"
+                      fill="rgba(15, 23, 42, 0.85)"
+                      stroke={floats ? "#10b981" : "#ef4444"}
+                      strokeWidth="1.6"
                     />
-                    <text y="-27" textAnchor="middle"
-                      fontSize="10" fill={floats ? "#059669" : "#dc2626"} fontWeight="800">
-                      ρ = {mat.density} g/cm³ — {floats ? "FLOATS ▲" : "SINKS ▼"}
+                    <text y="-28" textAnchor="middle"
+                      fontSize="11.5" fill={floats ? "#10b981" : "#ef4444"} fontWeight="900" fontFamily="monospace">
+                      ρ = {solidDensity.toFixed(2)} g/cm³ — {floats ? "FLOATS ▲" : "SINKS ▼"}
                     </text>
                   </motion.g>
                 )}
@@ -222,29 +267,30 @@ export default function DensityWorkspace({
         </AnimatePresence>
 
         {/* ── Tank glass sheen ── */}
-        <rect x={TANK_L + 3} y="54" width="12" height="274" rx="4"
-          fill="rgba(255,255,255,0.18)" />
+        <rect x={TANK_L + 3} y="54" width="15" height="269" fill="url(#glass-sheen)" rx="4" />
         {/* Tank outline (on top) */}
-        <rect x={TANK_L} y="52" width={TANK_W} height="278" rx="10"
-          fill="none" stroke="rgba(71,85,105,0.30)" strokeWidth="2" />
+        <rect x={TANK_L} y="52" width={TANK_W} height="273" rx="10"
+          fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" />
 
         {/* ── Density scale ── */}
-        <g transform="translate(392, 52)">
-          <rect x="0" y="0" width="58" height="280" rx="6"
-            fill="rgba(255,255,255,0.65)" stroke="#e2e8f0" strokeWidth="1" />
-          <text x="29" y="14" textAnchor="middle" fontSize="7" fill="#64748b" fontWeight="700">ρ (g/cm³)</text>
+        <g transform="translate(390, 52)" filter="url(#shadow)">
+          <rect x="0" y="0" width="62" height="273" rx="6"
+            fill="rgba(15, 23, 42, 0.85)" stroke="rgba(255,255,255,0.12)" strokeWidth="1.2" />
+          <text x="31" y="16" textAnchor="middle" fontSize="10.5" fill="#94a3b8" fontWeight="800">ρ (g/cm³)</text>
 
-          {/* 1.0 water line */}
-          <line x1="2" y1={140} x2="56" y2={140}
-            stroke="#2563eb" strokeWidth="1.5" strokeDasharray="3 2" />
-          <text x="34" y={137} textAnchor="middle" fontSize="7.5" fill="#2563eb" fontWeight="800">1.00</text>
-          <text x="34" y={148} textAnchor="middle" fontSize="6" fill="#64748b">water</text>
+          {/* fluid density line */}
+          <line x1="2" y1={140} x2="60" y2={140}
+            stroke="#38bdf8" strokeWidth="1.8" strokeDasharray="3 2" />
+          <text x="31" y={134} textAnchor="middle" fontSize="13" fill="#38bdf8" fontWeight="950">
+            {fluidDensity.toFixed(2)}
+          </text>
+          <text x="31" y={148} textAnchor="middle" fontSize="8" fill="#94a3b8" fontWeight="700">fluid</text>
 
           {/* Zone labels */}
-          <text x="29" y="80"  textAnchor="middle" fontSize="6.5" fill="#059669" fontWeight="700">FLOATS</text>
-          <text x="29" y="91"  textAnchor="middle" fontSize="6"   fill="#059669">&lt; 1.0</text>
-          <text x="29" y="208" textAnchor="middle" fontSize="6.5" fill="#dc2626" fontWeight="700">SINKS</text>
-          <text x="29" y="219" textAnchor="middle" fontSize="6"   fill="#dc2626">&gt; 1.0</text>
+          <text x="31" y="78"  textAnchor="middle" fontSize="10.5" fill="#34d399" fontWeight="800">FLOATS</text>
+          <text x="31" y="90"  textAnchor="middle" fontSize="8.5"   fill="#34d399" fontWeight="700">&lt; {fluidDensity.toFixed(2)}</text>
+          <text x="31" y="210" textAnchor="middle" fontSize="10.5" fill="#f87171" fontWeight="800">SINKS</text>
+          <text x="31" y="222" textAnchor="middle" fontSize="8.5"   fill="#f87171" fontWeight="700">&gt; {fluidDensity.toFixed(2)}</text>
 
           {/* Animated density marker */}
           {scaleMarkerY !== null && isSettled && (
@@ -268,20 +314,20 @@ export default function DensityWorkspace({
         {!mat && (
           <>
             <text x={TANK_L + TANK_W / 2} y={WATER_TOP - 15}
-              textAnchor="middle" fontSize="8" fill="rgba(5,150,105,0.70)" fontWeight="700" letterSpacing="0.08em">
-              ▲ FLOAT ZONE (ρ &lt; 1.0)
+              textAnchor="middle" fontSize="8.5" fill="rgba(52,211,153,0.75)" fontWeight="800" letterSpacing="0.08em" filter="drop-shadow(0px 1px 2px rgba(0,0,0,0.8))">
+              ▲ FLOAT ZONE (ρ &lt; {fluidDensity.toFixed(2)})
             </text>
             <text x={TANK_L + TANK_W / 2} y={WATER_BOT - 15}
-              textAnchor="middle" fontSize="8" fill="rgba(220,38,38,0.50)" fontWeight="700" letterSpacing="0.08em">
-              ▼ SINK ZONE (ρ &gt; 1.0)
+              textAnchor="middle" fontSize="8.5" fill="rgba(248,113,113,0.65)" fontWeight="800" letterSpacing="0.08em" filter="drop-shadow(0px 1px 2px rgba(0,0,0,0.8))">
+              ▼ SINK ZONE (ρ &gt; {fluidDensity.toFixed(2)})
             </text>
           </>
         )}
 
         {/* ── Bottom label ── */}
-        <text x="215" y="352" textAnchor="middle" fontSize="8.5" fill="#475569" fontWeight="600">
+        <text x="215" y="348" textAnchor="middle" fontSize="9" fill="#cbd5e1" fontWeight="600" filter="drop-shadow(0px 1px 2px rgba(0,0,0,0.8))">
           {mat
-            ? `${mat.name}  ·  ${mat.density} g/cm³  ·  ${floats ? "Less dense than water → FLOATS" : "Denser than water → SINKS"}`
+            ? `${mat.name}  ·  Solid ρ = ${solidDensity.toFixed(2)} g/cm³  ·  Fluid ρ = ${fluidDensity.toFixed(3)} g/cm³`
             : "Select a material from the controls panel to begin"}
         </text>
       </svg>

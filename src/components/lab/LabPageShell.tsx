@@ -6,6 +6,8 @@ import { useActiveLabStore } from "@/lib/store/active-lab-store";
 import LabInfoCard from "./LabInfoCard";
 import LabEducationPanel from "./LabEducationPanel";
 import type { LabEducation } from "@/lib/experiment-education";
+import type { ExperimentMode } from "@/lib/engine/types";
+import PreLabIntro from "./PreLabIntro";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type RightTab = "controls" | "guide" | "info";
@@ -25,7 +27,7 @@ export interface LabPageShellProps {
   setupPhase?: ReactNode;
   stepGuide?:  ReactNode;
   infoCards?:  ReactNode;
-  mode:      "guided" | "free";
+  mode:      ExperimentMode;
   onSetMode: (m: "guided" | "free") => void;
   observations: ReactNode;
   chemNotif?: ReactNode;
@@ -84,12 +86,28 @@ export default function LabPageShell({
   education,
   reactionNote,
 }: LabPageShellProps) {
-  const [activeTab, setActiveTab] = useState<RightTab>("controls");
+  const [activeTab, setActiveTab]   = useState<RightTab>("controls");
+  const [panelOpen, setPanelOpen]   = useState(true);
 
   const accent   = useActiveLabStore((s) => s.accent);
   const isActive = useActiveLabStore((s) => s.isActive);
+  const title    = useActiveLabStore((s) => s.title);
 
   const effectiveAccent = isActive ? accent : "var(--lab-blue-600)";
+
+  const dynamicPreLab =
+    !preLabIntro && education && isActive && title ? (
+      <PreLabIntro
+        title={title}
+        objective={education.aim}
+        apparatus={education.apparatus}
+        reagents={education.chemicals.map((c) => ({
+          name: c.formula ? `${c.name} (${c.formula})` : c.name,
+          concentration: c.concentration,
+        }))}
+        safetyNotes={education.safetyNotes}
+      />
+    ) : null;
 
   const hasTabs = !!stepGuide;
   const tabs: { id: RightTab; label: string; icon: (a: boolean) => ReactNode }[] = [
@@ -107,7 +125,7 @@ export default function LabPageShell({
           : "var(--lab-off-white)",
       }}
     >
-      {preLabIntro}
+      {preLabIntro || dynamicPreLab}
 
       {/* ── Education Panel ── */}
       {education && <LabEducationPanel data={education} accent={effectiveAccent} />}
@@ -197,16 +215,30 @@ export default function LabPageShell({
             RIGHT COLUMN — controls / guide / info panel
         ═══════════════════════════════════════════════════ */}
         <aside
-          className="lab-right-panel flex flex-col"
+          className={`lab-right-panel flex flex-col${panelOpen ? "" : " lab-right-panel--collapsed"}`}
+          aria-label="Lab controls panel"
           style={{
+            position: "relative",
             background:
-              "linear-gradient(180deg, var(--lab-glass-heavy) 0%, rgba(255,255,255,0.94) 100%)",
+              "linear-gradient(180deg, var(--lab-glass-heavy) 0%, var(--lab-white) 100%)",
             backdropFilter:       "blur(16px) saturate(1.6)",
             WebkitBackdropFilter: "blur(16px) saturate(1.6)",
             boxShadow:            "-1px 0 0 var(--lab-glass-border)",
           }}
-          aria-label="Lab controls panel"
         >
+          {/* Collapse toggle */}
+          <button
+            className="lab-panel-toggle"
+            onClick={() => setPanelOpen((v) => !v)}
+            aria-label={panelOpen ? "Collapse controls panel" : "Expand controls panel"}
+            title={panelOpen ? "Collapse controls" : "Expand controls"}
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true"
+              style={{ transform: panelOpen ? "none" : "scaleX(-1)", transition: "transform 0.25s ease" }}>
+              <path d="M3 1.5L6.5 5 3 8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+
           {/* Accent line at top */}
           <div
             className="h-0.5 w-full flex-shrink-0"
@@ -222,7 +254,7 @@ export default function LabPageShell({
             className="flex border-b flex-shrink-0"
             style={{
               borderColor: "var(--lab-glass-border)",
-              background:  "rgba(255,255,255,0.65)",
+              background:  "var(--lab-glass-light)",
             }}
             role="tablist"
             aria-label="Lab panel tabs"
@@ -320,7 +352,7 @@ export default function LabPageShell({
                     className="flex border-b sticky top-0"
                     style={{
                       borderColor: "var(--lab-glass-border)",
-                      background:  "rgba(255,255,255,0.85)",
+                      background:  "var(--lab-glass-heavy)",
                       backdropFilter: "blur(8px)",
                       zIndex: 2,
                     }}
@@ -370,7 +402,7 @@ export default function LabPageShell({
             className="lab-obs-panel flex-shrink-0 border-t overflow-hidden"
             style={{
               borderColor: "var(--lab-glass-border)",
-              background:  "rgba(255,255,255,0.55)",
+              background:  "var(--lab-glass-heavy)",
             }}
           >
             {observations}

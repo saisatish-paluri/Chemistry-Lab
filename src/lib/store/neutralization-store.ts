@@ -4,6 +4,7 @@ import {
   initialNeutralizationState,
   measureHCl, measureNaOH, startMixing, updateMixProgress,
   recordNeutObservations, completeNeutralization, resetNeutralization,
+  updateNeutralizationParameters,
 } from "@/lib/engine/neutralization-engine";
 import { saveSession, loadSession } from "@/lib/persistence";
 
@@ -20,6 +21,7 @@ interface NeutralizationStore extends NeutralizationState {
   resetAction:               () => void;
   setMode:                   (mode: NeutralizationState["mode"]) => void;
   hydrate:                   () => void;
+  updateParametersAction:    (changes: Partial<Pick<NeutralizationState, "acidType" | "baseType" | "acidConc" | "baseConc" | "beakerInsulated" | "indicator">>) => void;
 }
 
 export const useNeutralizationStore = create<NeutralizationStore>((set, get) => ({
@@ -70,6 +72,12 @@ export const useNeutralizationStore = create<NeutralizationStore>((set, get) => 
   setMode: (mode) => {
     set({ mode });
     saveSession(STORAGE_KEY, { ...get(), mode });
+  },
+
+  updateParametersAction: (changes) => {
+    const next = updateNeutralizationParameters(get() as NeutralizationState, changes);
+    set({ ...next });
+    saveSession(STORAGE_KEY, next);
   },
 
   hydrate: () => {

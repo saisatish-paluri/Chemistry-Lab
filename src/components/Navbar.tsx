@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
+import MolecularBuilder from "@/components/lab/MolecularBuilder";
 
 const NAV_LINKS = [
   { label: "Home",        href: "/",           exact: true  },
@@ -18,13 +19,42 @@ const NAV_LINKS = [
 export default function Navbar() {
   const [scrolled,  setScrolled]  = useState(false);
   const [menuOpen,  setMenuOpen]  = useState(false);
+  const [molBuilderOpen, setMolBuilderOpen] = useState(false);
+  const [molBuilderMolecule, setMolBuilderMolecule] = useState<string>("H2O");
+  const [molBuilderTab, setMolBuilderTab] = useState<"molecules" | "orbitals" | "lattices">("molecules");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const pathname = usePathname();
   const router   = useRouter();
 
+  // Scroll listener
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 16);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Force light theme on mount
+  useEffect(() => {
+    localStorage.removeItem("theme");
+    document.documentElement.classList.remove("dark");
+  }, []);
+
+  // Visualizer external launcher listener
+  useEffect(() => {
+    const handleOpen = (e: Event) => {
+      const customEvent = e as CustomEvent<{ molecule?: string; tab?: "molecules" | "orbitals" | "lattices" }>;
+      if (customEvent.detail) {
+        if (customEvent.detail.molecule) {
+          setMolBuilderMolecule(customEvent.detail.molecule);
+        }
+        if (customEvent.detail.tab) {
+          setMolBuilderTab(customEvent.detail.tab);
+        }
+      }
+      setMolBuilderOpen(true);
+    };
+    window.addEventListener("open-3d-builder", handleOpen);
+    return () => window.removeEventListener("open-3d-builder", handleOpen);
   }, []);
 
   const isActive = (href: string, exact: boolean) => {
@@ -124,6 +154,77 @@ export default function Navbar() {
 
         {/* ── CTA + mobile toggle ── */}
         <div className="flex items-center gap-2.5 flex-shrink-0">
+          
+
+
+          {/* 3D Visualizer Engines Dropdown Menu */}
+          <div className="relative">
+            <button
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all duration-150 border border-cyan-500/30 text-cyan-500 hover:bg-cyan-500/10 cursor-pointer"
+              style={{
+                background: "rgba(34, 211, 238, 0.05)",
+              }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              3D Engines
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" className={`transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`}>
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+            <AnimatePresence>
+              {dropdownOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 mt-2 w-52 rounded-2xl border bg-white border-slate-200 shadow-xl overflow-hidden z-50 p-1.5 flex flex-col gap-0.5"
+                  >
+                    <button
+                      onClick={() => {
+                        setMolBuilderMolecule("H2O");
+                        setMolBuilderTab("molecules");
+                        setMolBuilderOpen(true);
+                        setDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs font-bold rounded-xl text-slate-700 hover:bg-slate-100 transition-colors flex items-center gap-2 cursor-pointer"
+                    >
+                      <span className="text-sm">🧬</span>
+                      Molecular Builder
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMolBuilderMolecule("1s");
+                        setMolBuilderTab("orbitals");
+                        setMolBuilderOpen(true);
+                        setDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs font-bold rounded-xl text-slate-700 hover:bg-slate-100 transition-colors flex items-center gap-2 cursor-pointer"
+                    >
+                      <span className="text-sm">⚛️</span>
+                      Atomic Orbitals
+                    </button>
+                    <button
+                      onClick={() => {
+                        setMolBuilderMolecule("SC");
+                        setMolBuilderTab("lattices");
+                        setMolBuilderOpen(true);
+                        setDropdownOpen(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs font-bold rounded-xl text-slate-700 hover:bg-slate-100 transition-colors flex items-center gap-2 cursor-pointer"
+                    >
+                      <span className="text-sm">🧊</span>
+                      Crystal Lattices
+                    </button>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+
           <Link
             href="/experiments"
             className="hidden md:inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all duration-150 hover:opacity-90 hover:-translate-y-0.5 hover:shadow-md active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
@@ -138,7 +239,7 @@ export default function Navbar() {
 
           {/* Mobile hamburger */}
           <button
-            className="lg:hidden w-9 h-9 flex flex-col items-center justify-center gap-1.5 rounded-lg transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="lg:hidden w-9 h-9 flex flex-col items-center justify-center gap-1.5 rounded-lg transition-colors hover:bg-slate-100/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             onClick={() => setMenuOpen((o) => !o)}
             aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
             aria-expanded={menuOpen}
@@ -216,14 +317,63 @@ export default function Navbar() {
               >
                 Open Laboratory
               </Link>
+              
+              {/* Separate Mobile Buttons for 3D Visualizer Modes */}
+              <div className="grid grid-cols-3 gap-1.5 mt-2">
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setMolBuilderMolecule("H2O");
+                    setMolBuilderTab("molecules");
+                    setMolBuilderOpen(true);
+                  }}
+                  className="py-2 px-1 text-[10px] font-black text-cyan-400 rounded-lg text-center border border-cyan-500/30 transition-all cursor-pointer"
+                  style={{ background: "rgba(34, 211, 238, 0.06)" }}
+                >
+                  🧬 Molecules
+                </button>
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setMolBuilderMolecule("1s");
+                    setMolBuilderTab("orbitals");
+                    setMolBuilderOpen(true);
+                  }}
+                  className="py-2 px-1 text-[10px] font-black text-cyan-400 rounded-lg text-center border border-cyan-500/30 transition-all cursor-pointer"
+                  style={{ background: "rgba(34, 211, 238, 0.06)" }}
+                >
+                  ⚛️ Orbitals
+                </button>
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setMolBuilderMolecule("SC");
+                    setMolBuilderTab("lattices");
+                    setMolBuilderOpen(true);
+                  }}
+                  className="py-2 px-1 text-[10px] font-black text-cyan-400 rounded-lg text-center border border-cyan-500/30 transition-all cursor-pointer"
+                  style={{ background: "rgba(34, 211, 238, 0.06)" }}
+                >
+                  🧊 Lattices
+                </button>
+              </div>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {molBuilderOpen && (
+          <MolecularBuilder
+            isOpen={molBuilderOpen}
+            onClose={() => setMolBuilderOpen(false)}
+            initialMolecule={molBuilderMolecule}
+            initialTab={molBuilderTab}
+          />
         )}
       </AnimatePresence>
     </header>
   );
 }
-
 function FlaskIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">

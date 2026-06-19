@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState, startTransition } from "react";
 import { useSaltAnalysisStore }   from "@/lib/store/salt-analysis-store";
@@ -131,13 +131,88 @@ export default function SaltAnalysisPage() {
                 </p>
               </div>
             )}
+            
+            <div className="space-y-3 mt-2 mb-3 border-t pt-2 border-dashed border-slate-200">
+              {salt && salt.cation !== "calcium" && (
+                <>
+                  <div>
+                    <div className="flex justify-between text-[10px] mb-0.5">
+                      <span>Reagent Drops:</span>
+                      <span className="font-bold text-slate-700">{store.reagentDrops} drops</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="40"
+                      step="1"
+                      value={store.reagentDrops}
+                      disabled={store.isTesting}
+                      onChange={(e) => store.updateParamsAction({ reagentDrops: parseInt(e.target.value) })}
+                      className="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer accent-violet-600"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between text-[10px] mb-0.5">
+                      <span>Reagent Concentration:</span>
+                      <span className="font-bold text-slate-700">{store.reagentConc.toFixed(1)} M</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="6.0"
+                      step="0.1"
+                      value={store.reagentConc}
+                      disabled={store.isTesting}
+                      onChange={(e) => store.updateParamsAction({ reagentConc: parseFloat(e.target.value) })}
+                      className="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer accent-violet-600"
+                    />
+                  </div>
+                </>
+              )}
+
+              <div>
+                <div className="flex justify-between text-[10px] mb-0.5">
+                  <span>Temperature:</span>
+                  <span className="font-bold text-slate-700">{store.temperature} °C</span>
+                </div>
+                <input
+                  type="range"
+                  min="15"
+                  max="85"
+                  step="1"
+                  value={store.temperature}
+                  disabled={store.isTesting}
+                  onChange={(e) => store.updateParamsAction({ temperature: parseInt(e.target.value) })}
+                  className="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer accent-violet-600"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between text-[10px] mb-0.5">
+                  <span>Contamination / Impurity:</span>
+                  <span className="font-bold text-slate-700">{store.contamination}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  step="1"
+                  value={store.contamination}
+                  disabled={store.isTesting}
+                  onChange={(e) => store.updateParamsAction({ contamination: parseInt(e.target.value) })}
+                  className="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer accent-violet-600"
+                />
+              </div>
+            </div>
+
             <button
-              disabled={store.isTesting}
+              disabled={store.isTesting || (salt?.cation !== "calcium" && store.reagentDrops === 0)}
               onClick={() => store.runCationTestAction()}
               className="w-full py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-150 hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: `linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)`, boxShadow: "0 4px 14px rgba(37,99,235,0.35)" }}
             >
-              {store.isTesting ? "Running test..." : "Run Cation Test →"}
+              {store.isTesting ? "Running test..." : salt?.cation !== "calcium" && store.reagentDrops === 0 ? "Add drops first" : "Run Cation Test →"}
             </button>
           </div>
         </div>
@@ -159,13 +234,84 @@ export default function SaltAnalysisPage() {
                 </p>
               </div>
             )}
+
+            <div className="space-y-3 mt-2 mb-3 border-t pt-2 border-dashed border-slate-200">
+              <div>
+                <div className="flex justify-between text-[10px] mb-0.5">
+                  <span>Reagent Drops:</span>
+                  <span className="font-bold text-slate-700">{store.reagentDrops} drops</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="40"
+                  step="1"
+                  value={store.reagentDrops}
+                  disabled={store.isTesting}
+                  onChange={(e) => store.updateParamsAction({ reagentDrops: parseInt(e.target.value) })}
+                  className="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer accent-violet-600"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between text-[10px] mb-0.5">
+                  <span>Reagent Concentration:</span>
+                  <span className="font-bold text-slate-700">{store.reagentConc.toFixed(1)} M</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="6.0"
+                  step="0.1"
+                  value={store.reagentConc}
+                  disabled={store.isTesting}
+                  onChange={(e) => store.updateParamsAction({ reagentConc: parseFloat(e.target.value) })}
+                  className="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer accent-violet-600"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between text-[10px] mb-0.5">
+                  <span>Temperature:</span>
+                  <span className="font-bold text-slate-700">{store.temperature} °C</span>
+                </div>
+                <input
+                  type="range"
+                  min="15"
+                  max="85"
+                  step="1"
+                  value={store.temperature}
+                  disabled={store.isTesting}
+                  onChange={(e) => store.updateParamsAction({ temperature: parseInt(e.target.value) })}
+                  className="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer accent-violet-600"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between text-[10px] mb-0.5">
+                  <span>Contamination / Impurity:</span>
+                  <span className="font-bold text-slate-700">{store.contamination}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  step="1"
+                  value={store.contamination}
+                  disabled={store.isTesting}
+                  onChange={(e) => store.updateParamsAction({ contamination: parseInt(e.target.value) })}
+                  className="w-full h-1 bg-slate-200 rounded appearance-none cursor-pointer accent-violet-600"
+                />
+              </div>
+            </div>
+
             <button
-              disabled={store.isTesting}
+              disabled={store.isTesting || store.reagentDrops === 0}
               onClick={() => store.runAnionTestAction()}
               className="w-full py-2.5 rounded-xl text-sm font-bold text-white transition-all duration-150 hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: `linear-gradient(135deg, #059669 0%, #047857 100%)`, boxShadow: "0 4px 14px rgba(5,150,105,0.35)" }}
             >
-              {store.isTesting ? "Running test..." : "Run Anion Test →"}
+              {store.isTesting ? "Running test..." : store.reagentDrops === 0 ? "Add drops first" : "Run Anion Test →"}
             </button>
           </div>
         </div>

@@ -13,6 +13,10 @@ interface Props {
   loopClean:       boolean;
   contaminated:    boolean;
   testHistory:     FlameTestRecord[];
+  concentration:   number;
+  airCollarOpen:   boolean;
+  contaminationLevel: number;
+  cobaltGlass:     boolean;
   onLightBurner:   () => void;
   onSelectSample:  (id: FlameTestSampleId) => void;
   onDipLoop:       () => void;
@@ -20,6 +24,7 @@ interface Props {
   onCleanLoop:     () => void;
   onComplete:      () => void;
   onReset:         () => void;
+  onUpdateParameters: (changes: Partial<Pick<Props, "concentration" | "airCollarOpen" | "contaminationLevel" | "cobaltGlass">>) => void;
 }
 
 function Btn({
@@ -55,9 +60,10 @@ function Btn({
 
 export default function FlameTestControls({
   status, flameLit, selectedSample, loopDipped, loopClean,
-  contaminated, testHistory,
+  contaminated, testHistory, concentration, airCollarOpen,
+  contaminationLevel, cobaltGlass,
   onLightBurner, onSelectSample, onDipLoop, onPerformTest,
-  onCleanLoop, onComplete, onReset,
+  onCleanLoop, onComplete, onReset, onUpdateParameters,
 }: Props) {
   const isDone    = status === "completed" || status === "failed";
   const isRunning = status === "running";
@@ -81,6 +87,85 @@ export default function FlameTestControls({
           variant="primary"
           label={flameLit ? "✓ Burner lit" : "🔥 Light Burner"}
         />
+      </div>
+
+      {/* Simulation Controls (Sliders & Switches) */}
+      <div className="px-4 py-3 bg-slate-50/50 flex flex-col gap-3">
+        <p className="text-[10px] font-bold uppercase tracking-wider mb-0.5"
+           style={{ color: "var(--lab-text-secondary)" }}>
+          🧪 Bunsen & Solution Settings
+        </p>
+
+        {/* Concentration Slider */}
+        <div>
+          <div className="flex justify-between text-[10px] mb-1 font-medium">
+            <span style={{ color: "var(--lab-text-secondary)" }}>Sample Concentration:</span>
+            <span className="font-mono text-blue-600 font-semibold">{concentration.toFixed(2)} M</span>
+          </div>
+          <input
+            type="range"
+            min="0.05"
+            max="2.00"
+            step="0.05"
+            value={concentration}
+            onChange={(e) => onUpdateParameters({ concentration: parseFloat(e.target.value) })}
+            disabled={!flameLit || isRunning || isDone}
+            className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+          />
+        </div>
+
+        {/* Sodium Impurity level */}
+        <div>
+          <div className="flex justify-between text-[10px] mb-1 font-medium">
+            <span style={{ color: "var(--lab-text-secondary)" }}>Na⁺ Impurity (Contamination):</span>
+            <span className="font-mono text-amber-600 font-semibold">{contaminationLevel.toFixed(0)}%</span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="50"
+            step="1"
+            value={contaminationLevel}
+            onChange={(e) => onUpdateParameters({ contaminationLevel: parseInt(e.target.value, 10) })}
+            disabled={!flameLit || isRunning || isDone}
+            className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amber-500"
+          />
+        </div>
+
+        {/* Toggles: Air Collar & Cobalt Blue Glass */}
+        <div className="flex flex-col gap-2 pt-1 border-t border-gray-100">
+          <div className="flex items-center justify-between text-[10px] font-medium">
+            <span style={{ color: "var(--lab-text-secondary)" }}>Burner Air Collar:</span>
+            <button
+              type="button"
+              onClick={() => onUpdateParameters({ airCollarOpen: !airCollarOpen })}
+              disabled={!flameLit || isRunning || isDone}
+              className={`px-2 py-0.5 rounded text-[9px] font-bold border transition-colors ${
+                airCollarOpen
+                  ? "bg-blue-100 text-blue-800 border-blue-300"
+                  : "bg-amber-100 text-amber-800 border-amber-300"
+              }`}
+            >
+              {airCollarOpen ? "OPEN (Non-luminous)" : "CLOSED (Sooty)"}
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between text-[10px] font-medium">
+            <span style={{ color: "var(--lab-text-secondary)" }}>Cobalt Blue Glass Filter:</span>
+            <button
+              type="button"
+              onClick={() => onUpdateParameters({ cobaltGlass: !cobaltGlass })}
+              disabled={!flameLit || isRunning || isDone}
+              className={`px-2 py-0.5 rounded text-[9px] font-bold border transition-colors ${
+                cobaltGlass
+                  ? "bg-indigo-600 text-white border-indigo-700"
+                  : "bg-gray-100 text-gray-800 border-gray-300"
+              }`}
+            >
+              {cobaltGlass ? "FILTER ACTIVE" : "INACTIVE"}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* 2 — Sample selection */}

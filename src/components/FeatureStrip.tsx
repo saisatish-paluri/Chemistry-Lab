@@ -1,275 +1,331 @@
 "use client";
 
-import { motion } from "framer-motion";
 import Link from "next/link";
+import { motion, useInView, useReducedMotion } from "framer-motion";
+import { useRef, useEffect, useState } from "react";
 
-const FEATURES = [
+const STATS = [
+  { value: 20,  suffix: "",  label: "Virtual Labs",        color: "#2563eb" },
+  { value: 118, suffix: "",  label: "Elements",            color: "#7c3aed" },
+  { value: 5,   suffix: "",  label: "Chemistry Domains",   color: "#059669" },
+];
+
+const SHOWCASE = [
   {
-    icon:      <PhysicsIcon />,
-    title:     "Accurate Simulations",
-    desc:      "Every reaction follows real chemistry — pH curves, gas laws, Le Chatelier's principle, and more, all driven by accurate equations.",
-    color:     "#2563eb",
-    bg:        "rgba(37,99,235,0.07)",
-    border:    "rgba(37,99,235,0.16)",
-    glow:      "rgba(37,99,235,0.10)",
-    tag:       "Simulated",
-    stat:      "20",
-    statLabel: "Experiments",
+    slug:  "titration",
+    title: "Acid-Base Titration",
+    photo: "/images/experiments/titration.png",
+    accent: "#2563eb",
   },
   {
-    icon:      <GuidedIcon />,
-    title:     "Guided Step-by-Step",
-    desc:      "Each lab walks you through the setup, procedure, and result — with explanations at every stage so you always know what is happening.",
-    color:     "#0891b2",
-    bg:        "rgba(8,145,178,0.07)",
-    border:    "rgba(8,145,178,0.16)",
-    glow:      "rgba(8,145,178,0.09)",
-    tag:       "Guided",
-    stat:      "118",
-    statLabel: "Elements",
+    slug:  "flame-test",
+    title: "Flame Test",
+    photo: "/images/experiments/flame.png",
+    accent: "#f97316",
   },
   {
-    icon:      <AssessIcon />,
-    title:     "Free, No Signup",
-    desc:      "Open the app and start experimenting immediately. No account, no equipment, no cost — just chemistry you can learn by doing.",
-    color:     "#059669",
-    bg:        "rgba(5,150,105,0.07)",
-    border:    "rgba(5,150,105,0.16)",
-    glow:      "rgba(5,150,105,0.09)",
-    tag:       "Free",
-    stat:      "6–12",
-    statLabel: "Class",
+    slug:  "electrolysis",
+    title: "Electrolysis",
+    photo: "/images/experiments/electrolysis.png",
+    accent: "#06b6d4",
   },
 ];
 
-const stagger = {
-  hidden:  {},
-  visible: { transition: { staggerChildren: 0.10 } },
-};
-const card = {
-  hidden:  { opacity: 0, y: 24 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.55, ease: [0.22, 1, 0.36, 1] as [number,number,number,number] } },
-};
+function AnimatedStat({ target, suffix, color }: { target: number; suffix: string; color: string }) {
+  const [value, setValue] = useState(0);
+  const ref   = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-60px" });
+
+  useEffect(() => {
+    if (!inView) return;
+    const duration = 1200;
+    const start    = Date.now();
+    const raf = requestAnimationFrame(function tick() {
+      const elapsed   = Date.now() - start;
+      const progress  = Math.min(elapsed / duration, 1);
+      const eased     = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.round(eased * target));
+      if (progress < 1) requestAnimationFrame(tick);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [inView, target]);
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        fontSize:          "clamp(2.8rem, 6vw, 4.5rem)",
+        fontWeight:        900,
+        color,
+        lineHeight:        1,
+        letterSpacing:     "-0.04em",
+        fontVariantNumeric: "tabular-nums",
+      }}
+    >
+      {value}{suffix}
+    </div>
+  );
+}
 
 export default function FeatureStrip() {
+  const reduced = useReducedMotion() ?? false;
+
   return (
     <section
       id="features"
       style={{
-        background: "var(--lab-white)",
-        borderTop:  "1px solid var(--lab-glass-border)",
-        padding:    "clamp(4rem, 8vw, 7rem) clamp(16px, 4vw, 48px)",
+        background: "transparent",
         position:   "relative",
         overflow:   "hidden",
+        padding:    "clamp(4rem, 8vw, 8rem) clamp(16px, 4vw, 48px)",
+        borderTop:  "1px solid var(--lab-glass-border)",
       }}
     >
-      {/* Background radial glow */}
-      <div aria-hidden="true" style={{
-        position:     "absolute",
-        top:          "30%",
-        left:         "50%",
-        transform:    "translateX(-50%)",
-        width:        "900px",
-        height:       "500px",
-        borderRadius: "50%",
-        background:   "radial-gradient(ellipse at center, rgba(37,99,235,0.04) 0%, transparent 60%)",
-        pointerEvents:"none",
-      }} />
+      {/* Light dot grid */}
+      <div
+        aria-hidden="true"
+        style={{
+          position:             "absolute",
+          inset:                0,
+          backgroundImage:      "radial-gradient(circle, rgba(37,99,235,0.042) 1px, transparent 1px)",
+          backgroundSize:       "28px 28px",
+          pointerEvents:        "none",
+        }}
+      />
 
-      <div style={{ maxWidth: "1200px", margin: "0 auto", position: "relative", zIndex: 10 }}>
+      {/* Central radial glow */}
+      <div
+        aria-hidden="true"
+        style={{
+          position:     "absolute",
+          top:          "50%",
+          left:         "50%",
+          transform:    "translate(-50%, -50%)",
+          width:        "900px",
+          height:       "440px",
+          borderRadius: "50%",
+          background:   "radial-gradient(ellipse, rgba(37,99,235,0.06) 0%, transparent 60%)",
+          pointerEvents: "none",
+        }}
+      />
 
-        {/* ── Section heading ── */}
+      <div style={{ maxWidth: "1200px", margin: "0 auto", position: "relative", zIndex: 2 }}>
+
+        {/* Section eyebrow + headline */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 18 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, ease: "easeOut" }}
-          viewport={{ once: true, margin: "-50px" }}
-          style={{ textAlign: "center", marginBottom: "4rem" }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          style={{ textAlign: "center", marginBottom: "clamp(2.5rem, 5vw, 4.5rem)" }}
         >
-          <span className="section-tag section-tag-blue" style={{ marginBottom: 14, display: "inline-flex" }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#2563eb", flexShrink: 0 }} />
-            Why ChemLab
-          </span>
-          <h2 className="section-heading" style={{ marginTop: "0.75rem" }}>
-            Why{" "}
-            <span className="gradient-text">ChemLab</span>
+          <p style={{
+            fontSize:       10,
+            fontWeight:     700,
+            letterSpacing:  "0.20em",
+            textTransform:  "uppercase",
+            color:          "var(--lab-text-muted)",
+            marginBottom:   18,
+          }}>
+            The Platform
+          </p>
+          <h2 style={{
+            fontSize:       "clamp(1.9rem, 5vw, 3.5rem)",
+            fontWeight:     900,
+            color:          "var(--lab-text-primary)",
+            lineHeight:     1.05,
+            letterSpacing:  "-0.035em",
+            margin:         0,
+          }}>
+            Chemistry at Scale
           </h2>
-          <p className="section-subheading" style={{ maxWidth: "480px", margin: "0.85rem auto 0" }}>
-            Designed so any student — beginner or advanced — can understand
-            chemistry by seeing it happen in real time.
+          <p style={{
+            fontSize:   "clamp(13px, 1.7vw, 15px)",
+            color:      "var(--lab-text-muted)",
+            marginTop:  "1rem",
+            maxWidth:   "340px",
+            margin:     "1rem auto 0",
+            lineHeight: 1.6,
+          }}>
+            From periodic table to full simulations — one ecosystem.
           </p>
         </motion.div>
 
-        {/* ── Feature cards ── */}
+        {/* ── Large stat numbers ── */}
         <motion.div
-          variants={stagger}
-          initial="hidden"
-          whileInView="visible"
+          initial={{ opacity: 0, y: 22 }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-50px" }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-6"
+          transition={{ duration: 0.6, delay: 0.08 }}
+          style={{
+            display:        "flex",
+            justifyContent: "center",
+            alignItems:     "center",
+            gap:            "clamp(2.5rem, 10vw, 9rem)",
+            marginBottom:   "clamp(3rem, 6vw, 5.5rem)",
+            flexWrap:       "wrap",
+          }}
         >
-          {FEATURES.map(({ icon, title, desc, color, bg, border, glow, tag, stat, statLabel }) => (
+          {STATS.map(({ value, suffix, label, color }, i) => (
             <motion.div
-              key={title}
-              variants={card}
-              whileHover={{ y: -5, boxShadow: `0 20px 52px rgba(15,23,42,0.11), 0 4px 14px rgba(15,23,42,0.05), 0 0 0 1.5px ${color}28 inset` }}
-              style={{
-                display:       "flex",
-                flexDirection: "column",
-                padding:       "32px",
-                borderRadius:  "24px",
-                border:        `1px solid ${border}`,
-                background:    "rgba(255,255,255,0.97)",
-                boxShadow:     "0 4px 24px rgba(15,23,42,0.07), 0 1px 4px rgba(15,23,42,0.04)",
-                position:      "relative",
-                overflow:      "hidden",
-                transition:    "box-shadow 0.22s ease",
-              }}
+              key={label}
+              initial={reduced ? false : { opacity: 0, y: 14 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.45, delay: 0.18 + i * 0.10, ease: [0.22, 1, 0.36, 1] }}
+              style={{ textAlign: "center" }}
             >
-              {/* Corner glow */}
-              <div aria-hidden="true" style={{
-                position: "absolute", top: 0, right: 0,
-                width: 160, height: 160, borderRadius: "50%",
-                background: `radial-gradient(circle at 100% 0%, ${glow} 0%, transparent 60%)`,
-                pointerEvents: "none",
-              }} />
-
-              {/* Top row: tag + stat */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                <span style={{
-                  fontSize: 9.5, fontWeight: 700, padding: "3px 11px", borderRadius: 100,
-                  background: bg, color, border: `1px solid ${border}`,
-                  textTransform: "uppercase", letterSpacing: "0.09em",
-                }}>
-                  {tag}
-                </span>
-                <div style={{ textAlign: "right" }}>
-                  <p style={{ fontSize: "1.5rem", fontWeight: 900, color, lineHeight: 1, letterSpacing: "-0.03em" }}>{stat}</p>
-                  <p style={{ fontSize: 9, fontWeight: 600, color: "var(--lab-text-muted)", letterSpacing: "0.06em", textTransform: "uppercase", marginTop: 2 }}>{statLabel}</p>
-                </div>
-              </div>
-
-              {/* Icon */}
-              <div style={{
-                width: 52, height: 52, borderRadius: 16,
-                background: bg, border: `1px solid ${border}`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                marginBottom: 20, flexShrink: 0,
-                boxShadow: `0 4px 18px ${glow}`,
-                color,
+              <AnimatedStat target={value} suffix={suffix} color={color} />
+              <p style={{
+                fontSize:      10.5,
+                fontWeight:    600,
+                color:         "var(--lab-text-muted)",
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                marginTop:     10,
               }}>
-                {icon}
-              </div>
-
-              {/* Accent rule */}
-              <div style={{
-                width: 32, height: 3, borderRadius: 2,
-                background: `linear-gradient(90deg, ${color}, ${color}44)`,
-                marginBottom: 16,
-              }} />
-
-              <h3 style={{ fontSize: 16.5, fontWeight: 800, color: "var(--lab-text-primary)", marginBottom: 10, lineHeight: 1.28, letterSpacing: "-0.015em" }}>
-                {title}
-              </h3>
-              <p style={{ fontSize: 13, lineHeight: 1.78, color: "var(--lab-text-muted)", flex: 1 }}>
-                {desc}
+                {label}
               </p>
-
-              {/* Bottom divider */}
-              <div style={{ marginTop: 24, height: 1, background: `linear-gradient(90deg, transparent, ${color}28, transparent)` }} />
             </motion.div>
           ))}
         </motion.div>
 
-        {/* ── Trust strip ── */}
+        {/* ── Experiment showcase images ── */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 26 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.52, delay: 0.28, ease: "easeOut" }}
-          viewport={{ once: true }}
+          viewport={{ once: true, margin: "-60px" }}
+          transition={{ duration: 0.65, delay: 0.15 }}
+          className="showcase-card-grid"
           style={{
-            marginTop:      "3.5rem",
-            padding:        "22px 32px",
-            borderRadius:   "20px",
-            background:     "linear-gradient(135deg, rgba(37,99,235,0.05) 0%, rgba(6,182,212,0.04) 50%, rgba(124,58,237,0.04) 100%)",
-            border:         "1px solid rgba(37,99,235,0.11)",
-            display:        "flex",
-            alignItems:     "center",
-            justifyContent: "space-between",
-            flexWrap:       "wrap",
-            gap:            16,
+            display:               "grid",
+            gridTemplateColumns:   "repeat(3, 1fr)",
+            gap:                   "clamp(8px, 1.4vw, 14px)",
+            marginBottom:          "2.5rem",
           }}
         >
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "28px" }}>
-            {[
-              "No equipment needed",
-              "Free, no signup",
-              "Real-time feedback",
-              "Class 6–12 aligned",
-            ].map((text) => (
-              <span key={text} style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12.5, fontWeight: 600, color: "var(--lab-text-secondary)" }}>
-                <span style={{ color: "#059669", fontWeight: 800, fontSize: 14 }}>✓</span>
-                {text}
-              </span>
-            ))}
-          </div>
+          {SHOWCASE.map(({ slug, title, photo, accent }, i) => (
+            <motion.div
+              key={slug}
+              initial={reduced ? false : { opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.28 + i * 0.12, ease: [0.22, 1, 0.36, 1] }}
+              className="showcase-card"
+              style={{ position: "relative", borderRadius: "14px", overflow: "hidden", aspectRatio: "16/10" }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={photo}
+                alt={title}
+                loading="lazy"
+                decoding="async"
+                className="showcase-card-img"
+                style={{
+                  width:      "100%",
+                  height:     "100%",
+                  objectFit:  "cover",
+                  transition: "transform 0.65s cubic-bezier(0.22,1,0.36,1)",
+                  display:    "block",
+                }}
+              />
+
+              {/* Gradient overlay */}
+              <div
+                aria-hidden="true"
+                style={{
+                  position:   "absolute",
+                  inset:      0,
+                  background: "linear-gradient(180deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.72) 100%)",
+                  transition: "opacity 0.3s ease",
+                }}
+              />
+
+              {/* Accent line */}
+              <div
+                aria-hidden="true"
+                style={{
+                  position:   "absolute",
+                  top:        0,
+                  left:       0,
+                  right:      0,
+                  height:     "2.5px",
+                  background: `linear-gradient(90deg, ${accent}, ${accent}60)`,
+                  opacity:    0.9,
+                }}
+              />
+
+              {/* Title */}
+              <div style={{
+                position:      "absolute",
+                bottom:        12,
+                left:          13,
+                fontSize:      "clamp(11px, 1.1vw, 13px)",
+                fontWeight:    700,
+                color:         "rgba(255,255,255,0.90)",
+                letterSpacing: "-0.01em",
+                lineHeight:    1.3,
+                pointerEvents: "none",
+              }}>
+                {title}
+              </div>
+
+              {/* Invisible full-card link */}
+              <Link
+                href={`/experiments/${slug}`}
+                aria-label={`Open ${title}`}
+                style={{ position: "absolute", inset: 0 }}
+              />
+            </motion.div>
+          ))}
+        </motion.div>
+
+        {/* ── CTA ── */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.4, delay: 0.35 }}
+          style={{ textAlign: "center" }}
+        >
           <Link
             href="/experiments"
             style={{
               display:        "inline-flex",
               alignItems:     "center",
-              gap:            7,
-              padding:        "10px 22px",
-              borderRadius:   100,
-              background:     "linear-gradient(135deg, #1d4ed8 0%, #0ea5e9 100%)",
-              color:          "white",
+              gap:            8,
+              padding:        "11px 28px",
+              borderRadius:   12,
+              background:     "rgba(37,99,235,0.08)",
+              border:         "1px solid rgba(37,99,235,0.22)",
+              color:          "#1d4ed8",
               fontSize:       13,
               fontWeight:     700,
               textDecoration: "none",
-              boxShadow:      "0 4px 18px rgba(37,99,235,0.30)",
-              whiteSpace:     "nowrap",
-              letterSpacing:  "-0.01em",
+              transition:     "background 0.2s ease, border-color 0.2s ease, transform 0.18s ease, box-shadow 0.18s ease",
+            }}
+            onMouseEnter={(e) => {
+              const el = e.currentTarget as HTMLElement;
+              el.style.background    = "rgba(37,99,235,0.14)";
+              el.style.borderColor   = "rgba(37,99,235,0.36)";
+              el.style.transform     = "translateY(-2px)";
+              el.style.boxShadow     = "0 8px 28px rgba(37,99,235,0.15)";
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget as HTMLElement;
+              el.style.background    = "rgba(37,99,235,0.08)";
+              el.style.borderColor   = "rgba(37,99,235,0.22)";
+              el.style.transform     = "";
+              el.style.boxShadow     = "";
             }}
           >
-            Explore All Labs
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-              <path d="M2.5 6h7M7 3.5l2.5 2.5L7 8.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            Browse All 20 Labs →
+            <svg width="0" height="0" aria-hidden="true">
             </svg>
           </Link>
         </motion.div>
+
       </div>
     </section>
-  );
-}
-
-function PhysicsIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
-      <path d="M2 15 C4 12 6 8 8 7 C10 6 11 10 13 9 C15 8 16 5 18 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" fill="none" />
-      <line x1="2" y1="17" x2="18" y2="17" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity="0.4" />
-      <line x1="2" y1="17" x2="2" y2="3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" opacity="0.4" />
-    </svg>
-  );
-}
-
-function GuidedIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
-      <circle cx="4" cy="5"  r="1.6" fill="currentColor" />
-      <line x1="7.5" y1="5"  x2="18" y2="5"  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      <circle cx="4" cy="10" r="1.6" fill="currentColor" opacity="0.7" />
-      <line x1="7.5" y1="10" x2="15" y2="10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.7" />
-      <circle cx="4" cy="15" r="1.6" fill="currentColor" opacity="0.4" />
-      <line x1="7.5" y1="15" x2="12" y2="15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.4" />
-    </svg>
-  );
-}
-
-function AssessIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
-      <rect x="2" y="2" width="16" height="16" rx="3.5" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M6.5 10 L9 12.5 L13.5 7.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
   );
 }

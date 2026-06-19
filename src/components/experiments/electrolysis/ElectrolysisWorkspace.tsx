@@ -10,8 +10,9 @@ import { ELECTROLYTES, GAS_TUBE_CAPACITY_ML } from "@/lib/engine/electrolysis-en
 const W = 480;
 const H = 500;
 
-const LTUBE  = { x: 44,  y: 28,  w: 96,  h: 290, rx: 12 };
-const RTUBE  = { x: 340, y: 28,  w: 96,  h: 290, rx: 12 };
+// Tubes brought closer together (68px gap)
+const LTUBE  = { x: 110, y: 28,  w: 96,  h: 290, rx: 12 };
+const RTUBE  = { x: 274, y: 28,  w: 96,  h: 290, rx: 12 };
 const LI     = { x: LTUBE.x + 11, y: LTUBE.y + 15, w: LTUBE.w - 22, h: LTUBE.h - 26 };
 const RI     = { x: RTUBE.x + 11, y: RTUBE.y + 15, w: RTUBE.w - 22, h: RTUBE.h - 26 };
 const BRIDGE = {
@@ -28,8 +29,9 @@ const LCENTER = LTUBE.x + LTUBE.w / 2;
 const RCENTER = RTUBE.x + RTUBE.w / 2;
 const BATT    = { x: W / 2 - 70, y: H - 78, w: 140, h: 54 };
 
-const LCENTER_PCT = (LCENTER / W) * 100;
-const RCENTER_PCT = (RCENTER / W) * 100;
+// Percentages recalculated relative to the cropped viewBox width (320px, starting at x = 80)
+const LCENTER_PCT = ((LCENTER - 80) / 320) * 100;
+const RCENTER_PCT = ((RCENTER - 80) / 320) * 100;
 
 const ANODE_TUBE_CAPACITY_ML = GAS_TUBE_CAPACITY_ML * 0.6;
 const MIN_LIQ_FRAC = 0.22;
@@ -51,25 +53,44 @@ interface Props {
   isRunning:       boolean;
   anodeGasMl:      number;
   cathodeGasMl:    number;
+  anodeMassLossG?:  number;
+  cathodeMassGainG?: number;
 }
 
 export default function ElectrolysisWorkspace({
   electrolyte, anode, cathode, circuitComplete, current, voltage,
-  isRunning, anodeGasMl, cathodeGasMl,
+  isRunning, anodeGasMl, cathodeGasMl, anodeMassLossG, cathodeMassGainG,
 }: Props) {
   const profile  = electrolyte ? ELECTROLYTES[electrolyte] : null;
   const liqColor = profile?.liquidColor ?? "#0c2040";
 
   const cathodeColor = useMemo(() => {
-    if (electrolyte === "copper-sulfate" && cathode.gasMoles > 0.0001) {
-      const depositPct = Math.min(1, cathode.gasMoles / 0.001);
-      const r = Math.round(55 + depositPct * 145);
-      const g = Math.round(71 + depositPct * 46);
-      const b = Math.round(79 - depositPct * 49);
-      return `rgb(${r},${g},${b})`;
+    if (electrolyte === "copper-sulfate" && (cathodeMassGainG ?? 0) > 0.001) {
+      return "#b45309"; // copper reddish-orange
     }
     return cathode.material === "carbon" ? "#1a2535" : "#c0c8d8";
-  }, [electrolyte, cathode.gasMoles, cathode.material]);
+  }, [electrolyte, cathodeMassGainG, cathode.material]);
+
+  const anodeColor = useMemo(() => {
+    if (anode.material === "copper") {
+      return "#b45309"; // copper color
+    }
+    return anode.material === "carbon" ? "#1a2535" : "#c0c8d8";
+  }, [anode.material]);
+
+  const anodeThinning = useMemo(() => {
+    if (anode.material === "copper" && (anodeMassLossG ?? 0) > 0) {
+      return Math.max(0.3, 1 - (anodeMassLossG ?? 0) / 0.5);
+    }
+    return 1.0;
+  }, [anode.material, anodeMassLossG]);
+
+  const cathodeThickening = useMemo(() => {
+    if (electrolyte === "copper-sulfate" && (cathodeMassGainG ?? 0) > 0) {
+      return 1.0 + Math.min(0.5, (cathodeMassGainG ?? 0) * 0.8);
+    }
+    return 1.0;
+  }, [electrolyte, cathodeMassGainG]);
 
   const cathFrac  = Math.min(1, cathodeGasMl / GAS_TUBE_CAPACITY_ML);
   const anodeFrac = Math.min(1, anodeGasMl   / ANODE_TUBE_CAPACITY_ML);
@@ -91,15 +112,15 @@ export default function ElectrolysisWorkspace({
   const flowStyle     = isRunning ? { strokeDasharray: "8 5", animation: "flow-dashes 0.55s linear infinite"         } : { strokeDasharray: "8 5" };
   const cathFlowStyle = isRunning ? { strokeDasharray: "8 5", animation: "flow-dashes 0.55s linear infinite reverse" } : { strokeDasharray: "8 5" };
 
-  const copperDepositH = electrolyte === "copper-sulfate" && cathode.gasMoles > 0.0001
-    ? Math.min(LE.h * 0.7, Math.max(2, (cathode.gasMoles / 0.0015) * LE.h * 0.7))
+  const copperDepositH = electrolyte === "copper-sulfate" && (cathodeMassGainG ?? 0) > 0.001
+    ? Math.min(LE.h * 0.7, Math.max(2, ((cathodeMassGainG ?? 0) / 0.15) * LE.h * 0.7))
     : 0;
 
   return (
     <div
       className="relative select-none rounded-3xl overflow-hidden"
       style={{
-        aspectRatio: `${W}/${H + 30}`,
+        aspectRatio: "320/530",
         width:       "100%",
         height:      "auto",
         maxHeight:   "100%",
@@ -133,7 +154,7 @@ export default function ElectrolysisWorkspace({
         }}
       />
 
-      <svg viewBox={`0 -30 ${W} ${H + 30}`} className="w-full h-full relative z-10">
+      <svg viewBox="80 -30 320 530" className="w-full h-full relative z-10">
         <defs>
           <clipPath id="e-ltube-clip">
             <rect x={LI.x} y={LI.y} width={LI.w} height={LI.h} />
@@ -175,10 +196,16 @@ export default function ElectrolysisWorkspace({
           </filter>
         </defs>
 
+        {/* Retort Stand Pole in middle */}
+        <rect x="237" y="100" width="6" height="350" fill="url(#sa-metal-grad)" />
+        {/* Clamp holding the bridge */}
+        <rect x="232" y="278" width="16" height="10" rx="2" fill="url(#sa-metal-grad)" />
+
         {/* ══ LEFT TUBE (Cathode −) ══ */}
         <rect x={LTUBE.x} y={LTUBE.y} width={LTUBE.w} height={LTUBE.h} rx={LTUBE.rx}
-          fill="rgba(255,255,255,0.45)" stroke="rgba(71,85,105,0.45)" strokeWidth="1.5"
-          filter="url(#e-drop-shadow)" />
+          fill="none" stroke="rgba(148,163,184,0.7)" strokeWidth="2.2" filter="url(#e-drop-shadow)" />
+        <rect x={LTUBE.x + 2} y={LTUBE.y + 2} width={LTUBE.w - 4} height={LTUBE.h - 4} rx={LTUBE.rx - 2}
+          fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.45)" strokeWidth="0.8" />
 
         {electrolyte && lLiqH > 0 && (
           <motion.rect x={LI.x} width={LI.w} clipPath="url(#e-ltube-clip)"
@@ -351,7 +378,12 @@ export default function ElectrolysisWorkspace({
         )}
 
         {/* ══ CATHODE ELECTRODE (−) ══ */}
-        <rect x={LE.x} y={LE.y} width={LE.w} height={LE.h} rx={4}
+        <rect
+          x={LE.x - (LE.w * (cathodeThickening - 1)) / 2}
+          y={LE.y}
+          width={LE.w * cathodeThickening}
+          height={LE.h}
+          rx={4}
           fill={cathodeColor}
           stroke={cathode.connected ? "rgba(99,179,237,0.50)" : "rgba(99,179,237,0.15)"}
           strokeWidth="1.4"
@@ -360,14 +392,24 @@ export default function ElectrolysisWorkspace({
           style={isRunning ? { animation: "electrode-glow 2s ease-in-out infinite" } as React.CSSProperties : undefined}
         />
         {cathode.connected && (
-          <rect x={LE.x + 2} y={LE.y + 8} width={4} height={LE.h - 20} rx={2}
-            fill="url(#e-electrode-grad)" />
+          <rect
+            x={LE.x - (LE.w * (cathodeThickening - 1)) / 2 + 2 * cathodeThickening}
+            y={LE.y + 8}
+            width={4 * cathodeThickening}
+            height={LE.h - 20}
+            rx={2}
+            fill="url(#e-electrode-grad)"
+          />
         )}
         {copperDepositH > 0 && (
           <AnimatePresence>
-            <motion.rect key="cu-deposit" x={LE.x} width={LE.w}
+            <motion.rect
+              key="cu-deposit"
+              x={LE.x - (LE.w * (cathodeThickening - 1)) / 2}
+              width={LE.w * cathodeThickening}
               y={LE.y + LE.h - copperDepositH}
-              fill="url(#e-copper-grad)" rx={2}
+              fill="url(#e-copper-grad)"
+              rx={2}
               initial={{ height: 0, y: LE.y + LE.h }}
               animate={{ height: copperDepositH, y: LE.y + LE.h - copperDepositH }}
               transition={{ type: "spring", stiffness: 18, damping: 10 }}
@@ -376,8 +418,13 @@ export default function ElectrolysisWorkspace({
         )}
 
         {/* ══ ANODE ELECTRODE (+) ══ */}
-        <rect x={RE.x} y={RE.y} width={RE.w} height={RE.h} rx={4}
-          fill={anode.material === "carbon" ? "#1a2535" : "#c0c8d8"}
+        <rect
+          x={RE.x + (RE.w * (1 - anodeThinning)) / 2}
+          y={RE.y}
+          width={RE.w * anodeThinning}
+          height={RE.h}
+          rx={4 * anodeThinning}
+          fill={anodeColor}
           stroke={anode.connected ? "rgba(99,179,237,0.50)" : "rgba(99,179,237,0.15)"}
           strokeWidth="1.4"
           opacity={anode.connected ? 1 : 0.32}
@@ -385,8 +432,14 @@ export default function ElectrolysisWorkspace({
           style={isRunning ? { animation: "electrode-glow 2s ease-in-out infinite 0.5s" } as React.CSSProperties : undefined}
         />
         {anode.connected && (
-          <rect x={RE.x + 2} y={RE.y + 8} width={4} height={RE.h - 20} rx={2}
-            fill="url(#e-electrode-grad)" />
+          <rect
+            x={RE.x + (RE.w * (1 - anodeThinning)) / 2 + 2 * anodeThinning}
+            y={RE.y + 8}
+            width={4 * anodeThinning}
+            height={RE.h - 20}
+            rx={2}
+            fill="url(#e-electrode-grad)"
+          />
         )}
 
         {/* Polarity labels */}

@@ -41,7 +41,7 @@ function pairKey(a: SolutionId, b: SolutionId): PrecipKey {
   return [a, b].sort().join("+");
 }
 
-const PRECIPITATE_TABLE: Record<PrecipKey, PrecipitateInfo> = {
+export const PRECIPITATE_TABLE: Record<PrecipKey, PrecipitateInfo> = {
   [pairKey("silver-nitrate", "sodium-chloride-sol")]: {
     formula: "AgCl",
     color: "#ffffff",
@@ -67,8 +67,7 @@ const PRECIPITATE_TABLE: Record<PrecipKey, PrecipitateInfo> = {
     netIonic: "Ba²⁺(aq) + SO₄²⁻(aq) → BaSO₄(s)",
     explanation:
       "BaSO₄ is highly insoluble (Ksp = 1.1 × 10⁻¹⁰). " +
-      "This reaction is used in gravimetric analysis to determine sulfate concentrations. " +
-      "Barium meals in medicine use insoluble BaSO₄ as an X-ray contrast agent.",
+      "This reaction is used in gravimetric analysis to determine sulfate concentrations.",
   },
   [pairKey("lead-nitrate", "potassium-iodide")]: {
     formula: "PbI₂",
@@ -76,9 +75,9 @@ const PRECIPITATE_TABLE: Record<PrecipKey, PrecipitateInfo> = {
     colorName: "Bright Yellow ('Golden Rain')",
     netIonic: "Pb²⁺(aq) + 2I⁻(aq) → PbI₂(s)",
     explanation:
-      "PbI₂ forms spectacular golden-yellow crystals. The 'Golden Rain' demonstration " +
-      "involves hot dissolution then cooling to watch crystals slowly form. " +
-      "Ksp = 9.8 × 10⁻⁹.",
+      "PbI₂ forms spectacular golden-yellow crystals. Its solubility increases rapidly with " +
+      "temperature (Ksp = 9.8 × 10⁻⁹ at 25°C). Mixing in hot water prevents precipitation, " +
+      "which then forms beautiful crystals as it cools.",
   },
   [pairKey("calcium-chloride-sol", "sodium-sulfate")]: {
     formula: "CaSO₄",
@@ -86,8 +85,8 @@ const PRECIPITATE_TABLE: Record<PrecipKey, PrecipitateInfo> = {
     colorName: "White (fine)",
     netIonic: "Ca²⁺(aq) + SO₄²⁻(aq) → CaSO₄(s)",
     explanation:
-      "CaSO₄ is slightly soluble (Ksp = 4.9 × 10⁻⁵) — the precipitate may be faint. " +
-      "It forms gypsum (CaSO₄·2H₂O) when hydrated. Used in plaster of Paris and cement.",
+      "CaSO₄ is slightly soluble (Ksp = 4.9 × 10⁻⁵) — the precipitate may be faint and " +
+      "sensitive to dilution or temperature changes. Forms plaster of Paris when dry.",
   },
   [pairKey("iron-nitrate", "sodium-hydroxide-sol")]: {
     formula: "Fe(OH)₃",
@@ -95,9 +94,8 @@ const PRECIPITATE_TABLE: Record<PrecipKey, PrecipitateInfo> = {
     colorName: "Rust Brown",
     netIonic: "Fe³⁺(aq) + 3OH⁻(aq) → Fe(OH)₃(s)",
     explanation:
-      "Fe(OH)₃ forms a gelatinous rust-brown precipitate. Metal hydroxides (except group 1 " +
-      "and some group 2) are insoluble. Ksp = 2.8 × 10⁻³⁹. " +
-      "The brown colour is characteristic of Fe³⁺ compounds.",
+      "Fe(OH)₃ forms a gelatinous rust-brown precipitate. Metal hydroxides (except group 1) " +
+      "are highly insoluble. Ksp = 2.8 × 10⁻³⁹.",
   },
   [pairKey("lead-nitrate", "sodium-sulfate")]: {
     formula: "PbSO₄",
@@ -105,8 +103,8 @@ const PRECIPITATE_TABLE: Record<PrecipKey, PrecipitateInfo> = {
     colorName: "White",
     netIonic: "Pb²⁺(aq) + SO₄²⁻(aq) → PbSO₄(s)",
     explanation:
-      "PbSO₄ is insoluble (Ksp = 2.5 × 10⁻⁸). White precipitate forms. " +
-      "Lead sulfate is used in lead-acid batteries as a discharge product.",
+      "PbSO₄ is insoluble (Ksp = 2.5 × 10⁻⁸). Lead sulfate is the active discharge product " +
+      "in car batteries.",
   },
   [pairKey("silver-nitrate", "sodium-sulfate")]: {
     formula: "Ag₂SO₄",
@@ -114,10 +112,112 @@ const PRECIPITATE_TABLE: Record<PrecipKey, PrecipitateInfo> = {
     colorName: "White (slight)",
     netIonic: "2Ag⁺(aq) + SO₄²⁻(aq) → Ag₂SO₄(s)",
     explanation:
-      "Ag₂SO₄ is slightly soluble (Ksp = 1.2 × 10⁻⁵), giving a faint white cloudiness. " +
-      "Silver sulfates are less insoluble than silver halides.",
+      "Ag₂SO₄ is slightly soluble (Ksp = 1.2 × 10⁻⁵ at 25°C). Forms only at higher concentrations.",
   },
 };
+
+interface PrecipDetails {
+  formula: string;
+  Mw: number;
+  Ksp25: number;
+  deltaH: number; // J/mol
+  cationStoich: number;
+  anionStoich: number;
+}
+
+const PRECIP_DATA: Record<string, PrecipDetails> = {
+  "silver-nitrate+sodium-chloride-sol": { formula: "AgCl", Mw: 143.32, Ksp25: 1.8e-10, deltaH: 65000, cationStoich: 1, anionStoich: 1 },
+  "silver-nitrate+potassium-iodide": { formula: "AgI", Mw: 234.77, Ksp25: 8.5e-17, deltaH: 84000, cationStoich: 1, anionStoich: 1 },
+  "barium-chloride-sol+sodium-sulfate": { formula: "BaSO₄", Mw: 233.38, Ksp25: 1.1e-10, deltaH: 26000, cationStoich: 1, anionStoich: 1 },
+  "lead-nitrate+potassium-iodide": { formula: "PbI₂", Mw: 461.01, Ksp25: 9.8e-9, deltaH: 46500, cationStoich: 1, anionStoich: 2 },
+  "calcium-chloride-sol+sodium-sulfate": { formula: "CaSO₄", Mw: 136.14, Ksp25: 4.9e-5, deltaH: -18000, cationStoich: 1, anionStoich: 1 },
+  "iron-nitrate+sodium-hydroxide-sol": { formula: "Fe(OH)₃", Mw: 106.87, Ksp25: 2.8e-39, deltaH: 95000, cationStoich: 1, anionStoich: 3 },
+  "lead-nitrate+sodium-sulfate": { formula: "PbSO₄", Mw: 303.26, Ksp25: 2.5e-8, deltaH: 12000, cationStoich: 1, anionStoich: 1 },
+  "silver-nitrate+sodium-sulfate": { formula: "Ag₂SO₄", Mw: 311.80, Ksp25: 1.2e-5, deltaH: 17000, cationStoich: 2, anionStoich: 1 },
+};
+
+function getCationName(a: SolutionId, b: SolutionId): string {
+  const pair = [a, b];
+  if (pair.includes("silver-nitrate")) return "Ag⁺";
+  if (pair.includes("barium-chloride-sol")) return "Ba²⁺";
+  if (pair.includes("lead-nitrate")) return "Pb²⁺";
+  if (pair.includes("calcium-chloride-sol")) return "Ca²⁺";
+  if (pair.includes("iron-nitrate")) return "Fe³⁺";
+  return "Mᶻ⁺";
+}
+
+function getAnionName(a: SolutionId, b: SolutionId): string {
+  const pair = [a, b];
+  if (pair.includes("sodium-chloride-sol")) return "Cl⁻";
+  if (pair.includes("potassium-iodide")) return "I⁻";
+  if (pair.includes("sodium-sulfate")) return "SO₄²⁻";
+  if (pair.includes("sodium-hydroxide-sol")) return "OH⁻";
+  return "Xʸ⁻";
+}
+
+export function calculatePrecipitation(
+  solA: SolutionId,
+  solB: SolutionId,
+  tempC: number,
+  volA: number,
+  volB: number,
+  concA: number,
+  concB: number
+) {
+  const key1 = `${solA}+${solB}`;
+  const key2 = `${solB}+${solA}`;
+  const data = PRECIP_DATA[key1] ?? PRECIP_DATA[key2] ?? null;
+  if (!data) return { hasPrecipitate: false, precipitateMass: 0, turbidity: 0, Qsp: 0, Ksp: 1, netIonic: "" };
+
+  const T_kelvin = tempC + 273.15;
+  const T_ref = 298.15; // 25°C
+  const R = 8.314;
+
+  // Van 't Hoff: ln(Ksp_T / Ksp_ref) = -dH/R * (1/T - 1/T_ref)
+  const lnKspRatio = -(data.deltaH / R) * (1 / T_kelvin - 1 / T_ref);
+  const Ksp = data.Ksp25 * Math.exp(lnKspRatio);
+
+  const V_total = volA + volB;
+  
+  // Mixed concentrations:
+  const concCation = concA * (volA / V_total) * data.cationStoich;
+  const concAnion = concB * (volB / V_total) * data.anionStoich;
+
+  const p = data.cationStoich;
+  const q = data.anionStoich;
+
+  // Qsp = [Cation]^p * [Anion]^q
+  const Qsp = Math.pow(concCation, p) * Math.pow(concAnion, q);
+
+  if (Qsp <= Ksp) {
+    return {
+      hasPrecipitate: false,
+      precipitateMass: 0,
+      turbidity: 0,
+      Qsp,
+      Ksp,
+      netIonic: `${p > 1 ? p : ""}${getCationName(solA, solB)}(aq) + ${q > 1 ? q : ""}${getAnionName(solA, solB)}(aq) → ${data.formula}(s)`
+    };
+  }
+
+  // Precipitated moles per liter
+  const maxPrecipMolesPerL = Math.min(concCation / p, concAnion / q);
+  const solubilityLimitMolesPerL = Math.pow(Ksp / (Math.pow(p, p) * Math.pow(q, q)), 1 / (p + q));
+  const precipMolesPerL = Math.max(0, maxPrecipMolesPerL - solubilityLimitMolesPerL);
+  
+  const precipitateMass = precipMolesPerL * (V_total / 1000) * data.Mw;
+  // Turbidity: fully turbid (1.0) at 20mg or more precipitate
+  const turbidity = Math.min(1.0, precipitateMass / 0.02);
+
+  return {
+    hasPrecipitate: true,
+    precipitateMass,
+    turbidity,
+    Qsp,
+    Ksp,
+    netIonic: `${p > 1 ? p : ""}${getCationName(solA, solB)}(aq) + ${q > 1 ? q : ""}${getAnionName(solA, solB)}(aq) → ${data.formula}(s)`
+  };
+}
 
 const INITIAL_STEPS: StepDef[] = [
   { id: "select-a",  instruction: "Select aqueous solution A from the rack.",           completed: false },
@@ -143,12 +243,32 @@ export function initialSolubilityState(mode: SolubilityState["mode"]): Solubilit
     steps:      INITIAL_STEPS.map((s) => ({ ...s })),
     objectives: INITIAL_OBJECTIVES.map((o) => ({ ...o })),
     observations: [], result: null, startedAt: null,
+    temperature: 25,
+    volumeA: 10,
+    volumeB: 10,
+    concA: 0.1,
+    concB: 0.1,
+    precipitateMass: 0,
+    turbidity: 0,
+  };
+}
+
+export function updateSolubilityParameters(
+  state: SolubilityState,
+  changes: Partial<Pick<SolubilityState, "temperature" | "volumeA" | "volumeB" | "concA" | "concB">>,
+): SolubilityState {
+  return {
+    ...state,
+    temperature: changes.temperature !== undefined ? changes.temperature : state.temperature,
+    volumeA: changes.volumeA !== undefined ? changes.volumeA : state.volumeA,
+    volumeB: changes.volumeB !== undefined ? changes.volumeB : state.volumeB,
+    concA: changes.concA !== undefined ? changes.concA : state.concA,
+    concB: changes.concB !== undefined ? changes.concB : state.concB,
   };
 }
 
 export function selectSolutionA(state: SolubilityState, id: SolutionId): SolubilityState {
   if (state.status === "running" || state.status === "completed" || state.status === "failed") return state;
-  // Prevent selecting same as B
   if (id === state.solutionB) return {
     ...state,
     observations: [mkObs("no-reaction", "Choose a different solution — A and B must be different compounds.", "warning"), ...state.observations],
@@ -179,21 +299,44 @@ export function combineSolutions(state: SolubilityState): SolubilityState {
   if (!state.solutionA || !state.solutionB) return state;
   if (state.status !== "ready") return state;
 
-  const key = pairKey(state.solutionA, state.solutionB);
-  const precipInfo = PRECIPITATE_TABLE[key] ?? null;
-  const hasPrecip  = precipInfo !== null;
   const a = SOLUTIONS[state.solutionA];
   const b = SOLUTIONS[state.solutionB];
 
+  // Perform dynamic thermodynamic calculation
+  const calc = calculatePrecipitation(
+    state.solutionA,
+    state.solutionB,
+    state.temperature,
+    state.volumeA,
+    state.volumeB,
+    state.concA,
+    state.concB
+  );
+
+  let precipInfo: PrecipitateInfo | null = null;
+  if (calc.hasPrecipitate) {
+    const key = pairKey(state.solutionA, state.solutionB);
+    const baseInfo = PRECIPITATE_TABLE[key];
+    precipInfo = {
+      formula: baseInfo?.formula ?? "Precipitate",
+      color: baseInfo?.color ?? "#ffffff",
+      colorName: baseInfo?.colorName ?? "White",
+      netIonic: calc.netIonic,
+      explanation: baseInfo?.explanation ?? `Precipitate formed. Qsp = ${calc.Qsp.toExponential(2)} > Ksp = ${calc.Ksp.toExponential(2)}.`,
+    };
+  }
+
   const newObs: ObservationEvent[] = [
-    mkObs("reaction-start", `Combining ${a.name} and ${b.name}…`, "info"),
+    mkObs("reaction-start", `Combining ${state.volumeA}mL of ${a.name} (${state.concA}M) and ${state.volumeB}mL of ${b.name} (${state.concB}M) at ${state.temperature}°C…`, "info"),
   ];
 
   return {
     ...state,
     status: "running",
     precipitate: precipInfo,
-    hasPrecipitate: hasPrecip,
+    hasPrecipitate: calc.hasPrecipitate,
+    precipitateMass: calc.precipitateMass,
+    turbidity: calc.turbidity,
     mixProgress: 0,
     steps: state.steps.map((s) => s.id === "combine" ? { ...s, completed: true } : s),
     startedAt: state.startedAt ?? Date.now(),
@@ -206,7 +349,6 @@ export function tickMixing(state: SolubilityState, deltaFraction: number): Solub
   const newProgress = Math.min(1, state.mixProgress + deltaFraction);
   if (newProgress < 1) return { ...state, mixProgress: newProgress };
 
-  // Mixing complete → record result
   const a = SOLUTIONS[state.solutionA!];
   const b = SOLUTIONS[state.solutionB!];
 
@@ -236,17 +378,22 @@ export function tickMixing(state: SolubilityState, deltaFraction: number): Solub
     return s;
   });
 
+  const calc = calculatePrecipitation(state.solutionA!, state.solutionB!, state.temperature, state.volumeA, state.volumeB, state.concA, state.concB);
+  
+  // Add small experimental uncertainty to final reported mass
+  const obsMass = Math.max(0, state.precipitateMass + (Math.random() - 0.5) * 0.0015); // ±0.75mg noise
+
   const resultObs: ObservationEvent = state.hasPrecipitate
     ? mkObs(
         "precipitation",
-        `${state.precipitate!.formula} precipitate formed — ${state.precipitate!.colorName}. ` +
-        `Net ionic: ${state.precipitate!.netIonic}`,
+        `${state.precipitate!.formula} precipitate formed — ${state.precipitate!.colorName} (mass ≈ ${(obsMass * 1000).toFixed(1)} mg). ` +
+        `Net ionic: ${state.precipitate!.netIonic}. Qsp = ${calc.Qsp.toExponential(2)} > Ksp = ${calc.Ksp.toExponential(2)}.`,
         "success",
       )
     : mkObs(
         "no-reaction",
         `No precipitate — ${a.name} + ${b.name} remain fully dissolved. ` +
-        "All product ions are soluble under these conditions.",
+        `Product ions did not exceed solubility limit (Qsp = ${calc.Qsp.toExponential(2)} < Ksp = ${calc.Ksp.toExponential(2)}).`,
         "info",
       );
 
@@ -262,13 +409,14 @@ export function tickMixing(state: SolubilityState, deltaFraction: number): Solub
 }
 
 export function resetSolubilityMix(state: SolubilityState): SolubilityState {
-  // Keep history, reset current mix
   return {
     ...state,
     solutionA: null,
     solutionB: null,
     precipitate: null,
     hasPrecipitate: false,
+    precipitateMass: 0,
+    turbidity: 0,
     mixProgress: 0,
     status: state.testHistory.length > 0 ? "setup" : "idle",
     steps: state.steps.map((s) =>
@@ -326,7 +474,6 @@ export function resetSolubility(mode: SolubilityState["mode"]): SolubilityState 
   return initialSolubilityState(mode);
 }
 
-/** Exposed for components that need to look up precipitate info without running state machine */
 export function lookupPrecipitate(a: SolutionId, b: SolutionId): PrecipitateInfo | null {
   return PRECIPITATE_TABLE[pairKey(a, b)] ?? null;
 }

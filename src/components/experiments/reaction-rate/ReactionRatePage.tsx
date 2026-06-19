@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState, startTransition } from "react";
 import { useReactionRateStore }                          from "@/lib/store/reaction-rate-store";
@@ -162,6 +162,7 @@ export default function ReactionRatePage() {
           rateMultiplier={store.rateMultiplier}
           progress={store.progress}
           isRunning={store.status === "running"}
+          catalystAdded={store.catalystAdded}
         />
       }
       education={EXPERIMENT_EDUCATION["reaction-rate"]}

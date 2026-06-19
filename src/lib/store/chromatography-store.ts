@@ -5,6 +5,7 @@ import {
   selectInk, applyInkSpot, placePaperInChamber, addSolvent,
   updateSolventFront, calculateRfValues,
   completeChromatography, resetChromatography,
+  updateChromatographyParameters,
 } from "@/lib/engine/chromatography-engine";
 import { saveSession, loadSession } from "@/lib/persistence";
 
@@ -22,6 +23,7 @@ interface ChromatographyStore extends ChromatographyState {
   resetAction:               () => void;
   setMode:                   (mode: ChromatographyState["mode"]) => void;
   hydrate:                   () => void;
+  updateParametersAction:    (changes: Partial<Pick<ChromatographyState, "solventType" | "temperature" | "chamberSealed">>) => void;
 }
 
 export const useChromatographyStore = create<ChromatographyStore>((set, get) => ({
@@ -78,6 +80,13 @@ export const useChromatographyStore = create<ChromatographyStore>((set, get) => 
   setMode: (mode) => {
     set({ mode });
     saveSession(STORAGE_KEY, { ...get(), mode });
+  },
+
+  updateParametersAction: (changes) => {
+    const s = get();
+    const next = updateChromatographyParameters(s as ChromatographyState, changes);
+    set({ ...next, lastError: null });
+    saveSession(STORAGE_KEY, next);
   },
 
   hydrate: () => {

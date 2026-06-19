@@ -28,7 +28,17 @@ export type ExperimentKey =
   | "salt-analysis"
   | "water-hardness"
   | "functional-groups"
-  | "chromatography";
+  | "chromatography"
+  | "crystallization"
+  | "natural-indicators"
+  | "acid-metal"
+  | "acid-carbonate"
+  | "states-of-matter"
+  | "diffusion-liquids"
+  | "separation-mixtures"
+  | "double-displacement"
+  | "decomposition"
+  | "physical-chemical";
 
 export const MCQ_DATA: Record<ExperimentKey, MCQQuestion[]> = {
 
@@ -866,4 +876,14 @@ export const MCQ_DATA: Record<ExperimentKey, MCQQuestion[]> = {
   "water-hardness":  [],
   "functional-groups": [],
   chromatography:    [],
+  crystallization:   [],
+  "natural-indicators": [],
+  "acid-metal":      [],
+  "acid-carbonate":  [],
+  "states-of-matter": [],
+  "diffusion-liquids": [],
+  "separation-mixtures": [],
+  "double-displacement": [],
+  decomposition: [],
+  "physical-chemical": [],
 };

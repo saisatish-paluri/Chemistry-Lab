@@ -4,6 +4,7 @@ import type { GasLaw, ExperimentStatus, GasDataPoint } from "@/lib/engine/types"
 import {
   BOYLE_V_MIN, BOYLE_V_MAX,
   CHARLES_T_MIN, CHARLES_T_MAX,
+  GAYL_T_MIN, GAYL_T_MAX,
 } from "@/lib/engine/gas-laws-engine";
 
 interface Props {
@@ -13,10 +14,14 @@ interface Props {
   volume:        number;
   pressure:      number;
   dataPoints:    GasDataPoint[];
+  gasType?:      "he" | "n2" | "co2";
+  sealQuality?:  number;
   onSelectLaw:   (law: GasLaw) => void;
   onStartExp:    () => void;
   onSetVolume:   (v: number) => void;
   onSetTemp:     (t: number) => void;
+  onSetGasType?: (gasType: "he" | "n2" | "co2") => void;
+  onSetSealQuality?: (quality: number) => void;
   onRecordPoint: () => void;
   onComplete:    () => void;
   onReset:       () => void;
@@ -53,6 +58,15 @@ const LAW_CARDS: Array<{
     fixed:   "Pressure stays constant",
     color:   "#ea580c",
   },
+  {
+    id:      "gay-lussac",
+    title:   "Gay-Lussac's Law",
+    emoji:   "🟢",
+    what:    "Heat fixed volume — pressure rises",
+    changes: "Drag the Temperature slider up/down",
+    fixed:   "Volume stays constant",
+    color:   "#10b981",
+  },
 ];
 
 // Step indicator shown when experiment is running
@@ -79,7 +93,9 @@ function StepBadge({ step, total, label }: { step: number; total: number; label:
 
 export default function GasLawsControls({
   status, law, temperature, volume, pressure, dataPoints,
+  gasType = "co2", sealQuality = 1.0,
   onSelectLaw, onStartExp, onSetVolume, onSetTemp,
+  onSetGasType, onSetSealQuality,
   onRecordPoint, onComplete, onReset,
 }: Props) {
   const isDone    = status === "completed" || status === "failed";
@@ -171,6 +187,60 @@ export default function GasLawsControls({
                 <p style={{ fontSize: 9.5, color: "#94a3b8", margin: "2px 0 0", lineHeight: 1.3 }}>Fixed: {card.fixed}</p>
               </button>
             ))}
+          {/* Gas Type Selector */}
+          {!isDone && (
+            <div className="flex flex-col gap-1.5 mt-2 pt-2" style={{ borderTop: "1.5px solid var(--lab-glass-border)" }}>
+              <span className="text-[10px] font-bold text-[#64748b] uppercase tracking-wider">Select Gas Type</span>
+              <div className="flex gap-2">
+                {(["he", "n2", "co2"] as const).map((g) => (
+                  <button
+                    key={g}
+                    onClick={() => onSetGasType?.(g)}
+                    disabled={isRunning || isDone}
+                    className="flex-1 py-1.5 rounded-lg text-xs font-bold border transition-all duration-150"
+                    style={{
+                      borderColor: gasType === g ? "var(--lab-blue-500)" : "rgba(148,163,184,0.25)",
+                      background: gasType === g ? "rgba(37,99,235,0.08)" : "rgba(255,255,255,0.6)",
+                      color: gasType === g ? "var(--lab-blue-600)" : "#475569",
+                      cursor: isRunning || isDone ? "not-allowed" : "pointer",
+                      opacity: isRunning ? 0.6 : 1,
+                    }}
+                  >
+                    {g === "he" ? "Helium (He)" : g === "n2" ? "Nitrogen (N₂)" : "CO₂"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Seal Quality Slider */}
+          {!isDone && (
+            <div className="flex flex-col gap-1 mt-2.5 pt-2" style={{ borderTop: "1.5px solid var(--lab-glass-border)" }}>
+              <div className="flex justify-between items-center text-[10px] font-bold text-[#64748b] uppercase tracking-wider">
+                <span>Seal Quality</span>
+                <span style={{ color: sealQuality < 1.0 ? "#ef4444" : "#059669" }}>
+                  {Math.round(sealQuality * 100)}% {sealQuality < 1.0 && " (💨 LEAKING)"}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={0.3} max={1.0} step={0.05}
+                value={sealQuality}
+                onChange={(e) => onSetSealQuality?.(Number(e.target.value))}
+                disabled={isDone}
+                className="lab-ctrl-slider w-full font-bold"
+                style={{
+                  "--slider-accent": sealQuality < 1.0 ? "#ef4444" : "#059669",
+                  "--slider-pct": `${((sealQuality - 0.3) / 0.7) * 100}%`,
+                } as React.CSSProperties}
+                aria-label="Seal quality slider"
+              />
+              <div className="flex justify-between text-[8.5px] text-slate-400">
+                <span>30% (Leak)</span>
+                <span>100% (Hermetic)</span>
+              </div>
+            </div>
+          )}
           </div>
 
           {law && !isRunning && !isDone && (
@@ -233,8 +303,8 @@ export default function GasLawsControls({
         </div>
       )}
 
-      {/* ── PARAMETERS section (Charles's: Temperature) ── */}
-      {law === "charles" && isRunning && (
+      {/* ── PARAMETERS section (Charles's / Gay-Lussac's: Temperature) ── */}
+      {(law === "charles" || law === "gay-lussac") && isRunning && (
         <div className="lab-ctrl-section">
           <div className="lab-ctrl-section-hdr">
             <span className="lab-ctrl-section-hdr-icon">🌡️</span>
@@ -243,39 +313,42 @@ export default function GasLawsControls({
           <div className="lab-ctrl-param">
             <div className="lab-ctrl-param-top">
               <span className="lab-ctrl-param-label">Temperature (T)</span>
-              <span style={{ fontWeight: 700, color: "#f59e0b", fontSize: 13 }}>
+              <span style={{ fontWeight: 700, color: law === "charles" ? "#ea580c" : "#10b981", fontSize: 13 }}>
                 {temperature}
               </span>
               <span className="lab-ctrl-param-unit">K</span>
             </div>
             <input
               type="range"
-              min={CHARLES_T_MIN} max={CHARLES_T_MAX} step={10}
+              min={law === "charles" ? CHARLES_T_MIN : GAYL_T_MIN}
+              max={law === "charles" ? CHARLES_T_MAX : GAYL_T_MAX}
+              step={10}
               value={temperature}
               onChange={(e) => onSetTemp(Number(e.target.value))}
               disabled={isDone}
               className="lab-ctrl-slider"
               style={{
-                "--slider-accent": "#f59e0b",
-                "--slider-pct":    sliderPct(temperature, CHARLES_T_MIN, CHARLES_T_MAX),
+                "--slider-accent": law === "charles" ? "#ea580c" : "#10b981",
+                "--slider-pct":    sliderPct(temperature, law === "charles" ? CHARLES_T_MIN : GAYL_T_MIN, law === "charles" ? CHARLES_T_MAX : GAYL_T_MAX),
               } as React.CSSProperties}
               aria-label="Temperature slider"
             />
             <div className="lab-ctrl-range-row">
-              <span>{CHARLES_T_MIN} K (cold)</span>
-              <span>{CHARLES_T_MAX} K (hot)</span>
+              <span>{law === "charles" ? CHARLES_T_MIN : GAYL_T_MIN} K (cold)</span>
+              <span>{law === "charles" ? CHARLES_T_MAX : GAYL_T_MAX} K (hot)</span>
             </div>
             <p style={{ fontSize: 9.5, color: "#94a3b8", marginTop: 2 }}>
-              {(temperature - 273).toFixed(0)} °C — hotter gas expands
+              {(temperature - 273).toFixed(0)} °C — {law === "charles" ? "hotter gas expands" : `volume fixed at ${volume.toFixed(2)} L`}
             </p>
             <div style={{
               display: "flex", justifyContent: "space-between",
               padding: "4px 8px", borderRadius: 7, marginTop: 4,
-              background: "rgba(37,99,235,0.07)", border: "1px solid rgba(37,99,235,0.18)",
+              background: law === "charles" ? "rgba(37,99,235,0.07)" : "rgba(239,68,68,0.07)",
+              border: law === "charles" ? "1px solid rgba(37,99,235,0.18)" : "1px solid rgba(239,68,68,0.18)",
             }}>
-              <span style={{ fontSize: 10, color: "#64748b" }}>Resulting Volume</span>
-              <span style={{ fontSize: 11, fontWeight: 800, color: "#2563eb", fontFamily: "monospace" }}>
-                {volume.toFixed(3)} L
+              <span style={{ fontSize: 10, color: "#64748b" }}>{law === "charles" ? "Resulting Volume" : "Resulting Pressure"}</span>
+              <span style={{ fontSize: 11, fontWeight: 800, color: law === "charles" ? "#2563eb" : "#ef4444", fontFamily: "monospace" }}>
+                {law === "charles" ? `${volume.toFixed(3)} L` : `${pressure.toFixed(3)} atm`}
               </span>
             </div>
           </div>

@@ -4,7 +4,7 @@ import {
   initialFiltrationState,
   addWater, tickMixProgress, setupFilter,
   startPouring, tickFilterProgress,
-  completeFiltration, resetFiltration,
+  completeFiltration, resetFiltration, updateFiltrationParameters,
 } from "@/lib/engine/filtration-basics-engine";
 import { saveSession, loadSession } from "@/lib/persistence";
 
@@ -21,11 +21,17 @@ interface FiltrationStore extends FiltrationState {
   resetAction:       () => void;
   setMode:           (mode: FiltrationState["mode"]) => void;
   hydrate:           () => void;
+  updateCompositionAction: (changes: Partial<Pick<FiltrationState, "sandGrams" | "saltGrams" | "waterMl" | "temperature">>) => void;
 }
 
 export const useFiltrationStore = create<FiltrationStore>((set, get) => ({
   ...initialFiltrationState("guided"),
   lastError: null,
+
+  updateCompositionAction: (changes) => {
+    const next = updateFiltrationParameters(get() as FiltrationState, changes);
+    set({ ...next, lastError: null });
+  },
 
   addWaterAction: () => {
     const next = addWater(get() as FiltrationState);

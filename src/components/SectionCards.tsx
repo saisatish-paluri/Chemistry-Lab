@@ -1,278 +1,285 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { motion } from "framer-motion";
+import Interactive3DCard from "@/components/Interactive3DCard";
 
-const SAFETY_RULES = [
-  { icon: "🥽", rule: "Always wear appropriate personal protective equipment (PPE) — safety goggles and lab coat." },
-  { icon: "🚫", rule: "Never eat, drink, or apply cosmetics in the laboratory." },
-  { icon: "🔥", rule: "Keep flammable materials away from open flames and heat sources." },
-  { icon: "🧪", rule: "Read reagent labels carefully before use — check concentration and hazard symbols." },
-  { icon: "💧", rule: "Clean up spills immediately using appropriate materials and methods." },
-  { icon: "⚗️", rule: "Dispose of chemicals according to lab protocols — never pour acids down the drain without neutralising." },
-  { icon: "⚡", rule: "Disconnect electrical equipment before adjusting connections in electrolysis setups." },
-  { icon: "🧼", rule: "Wash hands thoroughly before leaving the lab, even if gloves were worn." },
-  { icon: "📋", rule: "Report all accidents, spills, or injuries to the supervising teacher immediately." },
-  { icon: "🚪", rule: "Know the location of fire exits, eye wash stations, and first aid kits before starting." },
+const PANELS = [
+  {
+    href:      "/experiments",
+    label:     "Virtual Labs",
+    sub:       "20 experiments · Class 6–12",
+    cta:       "Explore All Labs",
+    color:     "#1d4ed8",
+    accent:    "#2563eb",
+    photo:     "/images/experiments/titration.png",
+    bg:        "var(--panel-labs-bg)",
+    textColor: "var(--lab-text-primary)",
+    subColor:  "var(--lab-text-muted)",
+    photoBlend: "var(--panel-labs-blend)" as any,
+  },
+  {
+    href:      "/apparatus",
+    label:     "Apparatus",
+    sub:       "Interactive equipment reference",
+    cta:       "Browse Equipment",
+    color:     "#b45309",
+    accent:    "#d97706",
+    photo:     "/images/apparatus/beaker.png",
+    bg:        "var(--panel-apparatus-bg)",
+    textColor: "var(--lab-text-primary)",
+    subColor:  "var(--lab-text-muted)",
+    photoBlend: "var(--panel-apparatus-blend)" as any,
+  },
 ];
 
 const stagger = {
   hidden:  {},
-  visible: { transition: { staggerChildren: 0.08 } },
+  visible: { transition: { staggerChildren: 0.10 } },
 };
-const cardAnim = {
+const item = {
   hidden:  { opacity: 0, y: 22 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.48, ease: [0.22, 1, 0.36, 1] as [number,number,number,number] } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.50, ease: [0.22, 1, 0.36, 1] as [number,number,number,number] } },
 };
 
 export default function SectionCards() {
-  const [safetyOpen, setSafetyOpen] = useState(false);
-
   return (
     <section
       style={{
-        background: "var(--lab-off-white)",
+        background: "transparent",
         borderTop:  "1px solid var(--lab-glass-border)",
-        padding:    "clamp(4rem, 8vw, 7rem) clamp(16px, 4vw, 48px)",
+        padding:    "clamp(2.5rem, 5vw, 4.5rem) clamp(16px, 4vw, 48px)",
         position:   "relative",
         overflow:   "hidden",
       }}
     >
-      {/* Background texture */}
-      <div aria-hidden="true" style={{
-        position:        "absolute",
-        inset:           0,
-        backgroundImage: "radial-gradient(circle, rgba(37,99,235,0.04) 1px, transparent 1px)",
-        backgroundSize:  "32px 32px",
-        pointerEvents:   "none",
-      }} />
+      {/* Subtle dot texture */}
+      <div
+        aria-hidden="true"
+        style={{
+          position:        "absolute",
+          inset:           0,
+          backgroundImage: "radial-gradient(circle, rgba(37,99,235,0.036) 1px, transparent 1px)",
+          backgroundSize:  "30px 30px",
+          pointerEvents:   "none",
+        }}
+      />
 
-      <div style={{ maxWidth: "1200px", margin: "0 auto", position: "relative", zIndex: 10 }}>
-        {/* Heading */}
+      <div style={{ maxWidth: "1200px", margin: "0 auto", position: "relative", zIndex: 2 }}>
+
+        {/* Eyebrow */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 14 }}
           whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.52, ease: "easeOut" }}
-          viewport={{ once: true, margin: "-50px" }}
-          style={{ textAlign: "center", marginBottom: "3.5rem" }}
+          viewport={{ once: true, margin: "-40px" }}
+          transition={{ duration: 0.44, ease: "easeOut" }}
+          style={{ textAlign: "center", marginBottom: "clamp(1.8rem, 4vw, 3rem)" }}
         >
-          <span className="section-tag section-tag-blue" style={{ marginBottom: 14, display: "inline-flex" }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#2563eb", flexShrink: 0 }} />
-            Explore ChemLab
-          </span>
-          <h2 className="section-heading" style={{ marginTop: "0.75rem" }}>
-            Everything in One{" "}
-            <span className="gradient-text">Place</span>
+          <h2
+            style={{
+              fontSize:      "clamp(1.5rem, 4vw, 2.2rem)",
+              fontWeight:    900,
+              color:         "var(--lab-text-primary)",
+              letterSpacing: "-0.03em",
+              margin:        0,
+              lineHeight:    1.1,
+            }}
+          >
+            Start Exploring
           </h2>
-          <p className="section-subheading" style={{ maxWidth: "440px", margin: "0.85rem auto 0" }}>
-            Labs, apparatus reference, and safety rules — all under one roof.
+          <p style={{
+            fontSize:   "clamp(12px, 1.5vw, 14px)",
+            color:      "var(--lab-text-muted)",
+            marginTop:  "0.6rem",
+            fontWeight: 500,
+          }}>
+            Everything you need, zero barriers.
           </p>
         </motion.div>
 
-        {/* Cards grid */}
+        {/* ── Two visual panels ── */}
         <motion.div
           variants={stagger}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-40px" }}
-          className="grid gap-5 mb-5"
-          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}
+          style={{
+            display:               "grid",
+            gridTemplateColumns:   "repeat(auto-fit, minmax(280px, 1fr))",
+            gap:                   "clamp(10px, 1.8vw, 16px)",
+            marginBottom:          "clamp(12px, 2vw, 18px)",
+          }}
         >
-          {/* Virtual Labs */}
-          <motion.div variants={cardAnim}>
-            <Link
-              href="/experiments"
-              className="nav-card-apple flex flex-col gap-4"
-              style={{ "--nav-card-glow": "radial-gradient(circle at 0% 0%, rgba(37,99,235,0.07) 0%, transparent 60%)" } as React.CSSProperties}
-            >
-              <div style={{
-                width: 52, height: 52, borderRadius: 16,
-                background: "rgba(37,99,235,0.09)", border: "1px solid rgba(37,99,235,0.18)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                color: "#2563eb",
-                boxShadow: "0 4px 16px rgba(37,99,235,0.12)",
-              }}>
-                <LabsIcon />
-              </div>
-              <div>
-                <p style={{ fontSize: 15, fontWeight: 800, color: "var(--lab-text-primary)", marginBottom: 5, letterSpacing: "-0.01em" }}>Virtual Labs</p>
-                <p style={{ fontSize: 12.5, lineHeight: 1.65, color: "var(--lab-text-muted)" }}>Enter the full lab environment and conduct experiments</p>
-              </div>
-              <div style={{ marginTop: "auto" }}>
-                <span style={{
-                  display: "inline-flex", alignItems: "center", gap: 5,
-                  fontSize: 12, fontWeight: 700, color: "#2563eb",
-                  padding: "5px 14px", borderRadius: 100,
-                  background: "rgba(37,99,235,0.08)", border: "1px solid rgba(37,99,235,0.20)",
-                }}>
-                  Choose Experiment →
-                </span>
-              </div>
-            </Link>
-          </motion.div>
+          {PANELS.map(({ href, label, sub, cta, color, accent, photo, bg, textColor, subColor, photoBlend }) => (
+            <motion.div key={href} variants={item}>
+              <Interactive3DCard>
+                <Link
+                  href={href}
+                  className="section-nav-panel"
+                  style={{
+                    display:        "flex",
+                    flexDirection:  "column",
+                    justifyContent: "space-between",
+                    minHeight:      "clamp(180px, 22vw, 220px)",
+                    borderRadius:   "20px",
+                    overflow:       "hidden",
+                    position:       "relative",
+                    textDecoration: "none",
+                    background:     bg,
+                    border:         `1px solid ${accent}30`,
+                    boxShadow:      "var(--lab-shadow-sm)",
+                  } as React.CSSProperties}
+                >
+                {/* Left accent gradient */}
+                <div
+                  aria-hidden="true"
+                  style={{
+                    position:   "absolute",
+                    inset:      0,
+                    background: `radial-gradient(ellipse at 0% 50%, ${accent}18 0%, transparent 55%)`,
+                    pointerEvents: "none",
+                  }}
+                />
 
-          {/* Apparatus */}
-          <motion.div variants={cardAnim}>
-            <Link
-              href="/apparatus"
-              className="nav-card-apple flex flex-col gap-4"
-              style={{ "--nav-card-glow": "radial-gradient(circle at 0% 0%, rgba(217,119,6,0.07) 0%, transparent 60%)" } as React.CSSProperties}
-            >
-              <div style={{
-                width: 52, height: 52, borderRadius: 16,
-                background: "rgba(217,119,6,0.09)", border: "1px solid rgba(217,119,6,0.18)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                color: "#d97706",
-                boxShadow: "0 4px 16px rgba(217,119,6,0.12)",
-              }}>
-                <FlaskIcon />
-              </div>
-              <div>
-                <p style={{ fontSize: 15, fontWeight: 800, color: "var(--lab-text-primary)", marginBottom: 5, letterSpacing: "-0.01em" }}>Apparatus</p>
-                <p style={{ fontSize: 12.5, lineHeight: 1.65, color: "var(--lab-text-muted)" }}>Explore instruments you will encounter in the virtual lab</p>
-              </div>
-              <div style={{ marginTop: "auto" }}>
-                <span style={{
-                  display: "inline-flex", alignItems: "center", gap: 5,
-                  fontSize: 12, fontWeight: 700, color: "#d97706",
-                  padding: "5px 14px", borderRadius: 100,
-                  background: "rgba(217,119,6,0.08)", border: "1px solid rgba(217,119,6,0.20)",
-                }}>
-                  Explore →
-                </span>
-              </div>
-            </Link>
-          </motion.div>
+                {/* Content */}
+                <div style={{ position: "relative", zIndex: 2, padding: "clamp(22px, 2.5vw, 34px)", display: "flex", flexDirection: "column", height: "100%" }}>
+                  <div style={{ flex: 1 }}>
+                    <p style={{
+                      fontSize:      "clamp(1.15rem, 2.5vw, 1.45rem)",
+                      fontWeight:    900,
+                      color:         textColor,
+                      letterSpacing: "-0.025em",
+                      margin:        "0 0 6px",
+                      lineHeight:    1.2,
+                    }}>
+                      {label}
+                    </p>
+                    <p style={{
+                      fontSize:   "clamp(11px, 1.2vw, 12.5px)",
+                      color:      subColor,
+                      fontWeight: 500,
+                      margin:     0,
+                    }}>
+                      {sub}
+                    </p>
+                  </div>
 
-          {/* Lab Safety */}
-          <motion.div variants={cardAnim}>
-            <button
-              onClick={() => setSafetyOpen((o) => !o)}
-              className="nav-card-apple flex flex-col gap-4 w-full text-left"
-              style={{
-                background: safetyOpen ? "rgba(220,38,38,0.05)" : "rgba(255,255,255,0.90)",
-                borderColor: safetyOpen ? "rgba(220,38,38,0.35)" : "rgba(148,163,184,0.18)",
-                boxShadow: safetyOpen ? "0 4px 28px rgba(220,38,38,0.10), 0 0 0 1px rgba(255,255,255,0.7) inset" : undefined,
-                cursor: "pointer",
-              } as React.CSSProperties}
-            >
-              <div style={{
-                width: 52, height: 52, borderRadius: 16,
-                background: "rgba(220,38,38,0.09)", border: "1px solid rgba(220,38,38,0.20)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                color: "#dc2626",
-                boxShadow: "0 4px 16px rgba(220,38,38,0.12)",
-              }}>
-                <ShieldIcon />
-              </div>
-              <div>
-                <p style={{ fontSize: 15, fontWeight: 800, color: "var(--lab-text-primary)", marginBottom: 5, letterSpacing: "-0.01em" }}>Lab Safety</p>
-                <p style={{ fontSize: 12.5, lineHeight: 1.65, color: "var(--lab-text-muted)" }}>Essential safety rules and regulations for every session</p>
-              </div>
-              <div style={{ marginTop: "auto" }}>
-                <span style={{
-                  display: "inline-flex", alignItems: "center", gap: 5,
-                  fontSize: 12, fontWeight: 700, color: "#dc2626",
-                  padding: "5px 14px", borderRadius: 100,
-                  background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.20)",
-                }}>
-                  {safetyOpen ? "▲ Hide Rules" : "▼ Safety Rules"}
-                </span>
-              </div>
-            </button>
-          </motion.div>
+                  <div style={{ marginTop: "auto", paddingTop: 20 }}>
+                    <span
+                      style={{
+                        display:        "inline-flex",
+                        alignItems:     "center",
+                        gap:            6,
+                        fontSize:       "clamp(11px, 1.2vw, 12.5px)",
+                        fontWeight:     700,
+                        color,
+                        padding:        "7px 15px",
+                        borderRadius:   10,
+                        background:     `${accent}1c`,
+                        border:         `1px solid ${accent}38`,
+                        transition:     "background 0.2s ease",
+                      }}
+                    >
+                      {cta}
+                      <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden="true">
+                        <path d="M2 5.5h7M6.5 3.5l2 2-2 2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Top accent line */}
+                <div
+                  aria-hidden="true"
+                  style={{
+                    position:   "absolute",
+                    top:        0,
+                    left:       0,
+                    right:      0,
+                    height:     "2px",
+                    background: `linear-gradient(90deg, ${accent}, ${accent}40, transparent)`,
+                  }}
+                />
+              </Link>
+              </Interactive3DCard>
+            </motion.div>
+          ))}
         </motion.div>
 
-        {/* Safety panel */}
-        <AnimatePresence mode="wait">
-          {safetyOpen && (
-            <motion.div
-              key="safety"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}
-              style={{ overflow: "hidden" }}
+        {/* 3D Interactive Simulators Panel */}
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="mt-6 p-6 rounded-3xl border bg-white/70 border-slate-200 backdrop-blur-md flex flex-col md:flex-row items-center justify-between gap-6"
+        >
+          <div className="flex-1">
+            <h3 className="text-lg font-black tracking-tight text-slate-900 flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse" />
+              3D Interactive Simulators
+            </h3>
+            <p className="text-xs text-slate-500 mt-1 font-medium">
+              Explore molecular structures, electron orbitals probability clouds, and crystal unit cells in real-time.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2.5">
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("open-3d-builder", { detail: { tab: "molecules" } }))}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-cyan-600 bg-cyan-500/10 border border-cyan-500/20 hover:bg-cyan-500/20 transition-all flex items-center gap-1.5 cursor-pointer"
             >
-              <SafetyPanel />
-            </motion.div>
-          )}
-        </AnimatePresence>
+              🧬 Molecular Builder
+            </button>
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("open-3d-builder", { detail: { tab: "orbitals" } }))}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-cyan-600 bg-cyan-500/10 border border-cyan-500/20 hover:bg-cyan-500/20 transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              ⚛️ Atomic Orbitals
+            </button>
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("open-3d-builder", { detail: { tab: "lattices" } }))}
+              className="px-4 py-2.5 rounded-xl text-xs font-bold text-cyan-600 bg-cyan-500/10 border border-cyan-500/20 hover:bg-cyan-500/20 transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              🧊 Crystal Lattices
+            </button>
+          </div>
+        </motion.div>
+
+        {/* ── Safety footnote ── */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.4, delay: 0.25 }}
+          style={{ textAlign: "center" }}
+        >
+          <Link
+            href="/safety"
+            style={{
+              fontSize:       "11.5px",
+              fontWeight:     600,
+              color:          "var(--lab-text-muted)",
+              textDecoration: "none",
+              display:        "inline-flex",
+              alignItems:     "center",
+              gap:            5,
+              padding:        "5px 10px",
+              borderRadius:   8,
+              transition:     "color 0.15s ease, background 0.15s ease",
+            }}
+            onMouseEnter={(e) => { const el = e.currentTarget as HTMLElement; el.style.color = "var(--lab-text-primary)"; el.style.background = "rgba(37,99,235,0.06)"; }}
+            onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.color = "var(--lab-text-muted)"; el.style.background = "none"; }}
+          >
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <path d="M6 1L2 3v4c0 2.8 1.6 4.6 4 5.4C10 11.6 10 9.8 10 7V3L6 1Z"
+                stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" fill="none"/>
+              <path d="M4.5 6 L5.5 7 L7.5 5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Lab Safety Guidelines
+          </Link>
+        </motion.div>
+
       </div>
     </section>
-  );
-}
-
-function SafetyPanel() {
-  return (
-    <div style={{
-      background:   "rgba(255,255,255,0.92)",
-      border:       "1px solid rgba(220,38,38,0.22)",
-      borderRadius: 20,
-      padding:      "24px",
-      boxShadow:    "var(--lab-shadow-md), 0 0 0 1px rgba(255,255,255,0.8) inset",
-      marginTop:    4,
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
-        <span style={{ fontSize: 16 }}>🛡️</span>
-        <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.12em", color: "#dc2626" }}>
-          Laboratory Safety Rules
-        </p>
-        <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 100, background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca", marginLeft: 4 }}>
-          Mandatory
-        </span>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-        {SAFETY_RULES.map(({ icon, rule }, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, x: -8 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.25, delay: i * 0.04, ease: "easeOut" }}
-            style={{
-              display: "flex", alignItems: "flex-start", gap: 10,
-              padding: "10px 12px", borderRadius: 14,
-              background: "#fef2f2", border: "1px solid #fecaca",
-              fontSize: 12, color: "#7f1d1d", lineHeight: 1.65,
-            }}
-          >
-            <span style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }}>{icon}</span>
-            <span>{rule}</span>
-          </motion.div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ── Icons ─────────────────────────────────────────────────────────────────────
-function LabsIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path d="M9 3h6M9 3v8L5 19h14L15 11V3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M8 16 Q12 14 16 16" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" opacity="0.5" />
-      <circle cx="10" cy="16" r="1.2" fill="currentColor" opacity="0.4" />
-    </svg>
-  );
-}
-
-function FlaskIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path d="M10 2h4M10 2v8L6 19h12L14 10V2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M8 17 Q12 15 16 17" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" opacity="0.5" />
-    </svg>
-  );
-}
-
-function ShieldIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path d="M12 2 L4 6 L4 12 C4 16.8 7.5 21 12 22 C16.5 21 20 16.8 20 12 L20 6 Z"
-        stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M9 12 L11 14 L15 10" stroke="currentColor" strokeWidth="1.7"
-        strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
   );
 }

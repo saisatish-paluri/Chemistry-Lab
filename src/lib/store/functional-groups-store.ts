@@ -20,6 +20,7 @@ interface FunctionalGroupsStore extends FunctionalGroupsState {
   resetAction:            () => void;
   setMode:                (mode: FunctionalGroupsState["mode"]) => void;
   hydrate:                () => void;
+  updateParamsAction:     (changes: Partial<Pick<FunctionalGroupsState, "temperature" | "reagentConc">>) => void;
 }
 
 export const useFunctionalGroupsStore = create<FunctionalGroupsStore>((set, get) => ({
@@ -63,6 +64,12 @@ export const useFunctionalGroupsStore = create<FunctionalGroupsStore>((set, get)
   setMode: (mode) => {
     set({ mode });
     saveSession(STORAGE_KEY, { ...get(), mode });
+  },
+
+  updateParamsAction: (changes) => {
+    const next = { ...get() as FunctionalGroupsState, ...changes };
+    set({ ...next, lastError: null });
+    saveSession(STORAGE_KEY, next);
   },
 
   hydrate: () => {

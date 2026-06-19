@@ -1,10 +1,12 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState, startTransition } from "react";
 import { useTitrationStore }                             from "@/lib/store/titration-store";
 import TitrationWorkspace                                from "./TitrationWorkspace";
 import TitrationControls                                 from "./TitrationControls";
 import PHCurve                                           from "./PHCurve";
+import MacroMicroViewToggle                              from "@/components/lab/MacroMicroViewToggle";
+import MicroscopicViewer                                 from "@/components/lab/MicroscopicViewer";
 import StepGuide                                         from "@/components/lab/StepGuide";
 import ObservationPanel                                  from "@/components/lab/ObservationPanel";
 import StatusBar                                         from "@/components/lab/StatusBar";
@@ -17,6 +19,7 @@ import LabContextPanel                                   from "@/components/lab/
 import { INDICATORS }                                    from "@/lib/engine/chemistry";
 import type { IndicatorName }                            from "@/lib/engine/types";
 import { EXPERIMENT_EDUCATION }                          from "@/lib/experiment-education";
+import { InstrumentPanel }                               from "@/components/instruments";
 
 
 // ── Indicator popup events ────────────────────────────────────────────────────
@@ -73,6 +76,7 @@ export default function TitrationPage() {
   const [chemEvent, setChemEvent]         = useState<ChemicalAddEvent | null>(null);
   const [showChemPopup, setShowChemPopup] = useState(false);
   const [setupDone, setSetupDone]         = useState(false);
+  const [viewMode, setViewMode]           = useState<"macro" | "micro">("macro");
 
   const titrationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const obsPopupTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -127,9 +131,26 @@ export default function TitrationPage() {
   const lastObs = store.observations[0];
   const popup   = lastObs ? obsToPopup(lastObs.type, lastObs.message) : null;
 
+  // ── Instrument readings (from measurement framework) ─────────────────────
+  const instrumentReadings = store.measurements
+    ? [store.measurements.buretteVolume, store.measurements.flaskPH]
+    : [];
+
   // ── Info cards (shown in Info tab) ────────────────────────────────────────
   const infoCards = (
     <>
+      {/* Live instrument panel — always visible once store hydrates */}
+      {instrumentReadings.length > 0 && (
+        <InstrumentPanel
+          title="Active Instruments"
+          readings={instrumentReadings}
+          errors={store.activeErrors}
+          showUncertainty
+          showBudget
+          showErrors
+        />
+      )}
+
       {setupDone && (
         <FlaskContentsCard
           flask={store.flask}
@@ -216,13 +237,33 @@ export default function TitrationPage() {
       }
 
       workspace={
-        <TitrationWorkspace
-          flask={store.flask}
-          burette={store.burette}
-          volumeAdded={store.volumeAdded}
-          isTitrating={isTitrating}
-          endpointReached={store.endpointReached}
-        />
+        <div className="flex flex-col gap-3 w-full h-full">
+          <div className="flex justify-end pr-4">
+            <MacroMicroViewToggle view={viewMode} onChange={setViewMode} />
+          </div>
+          {viewMode === "macro" ? (
+            <TitrationWorkspace
+              flask={store.flask}
+              burette={store.burette}
+              volumeAdded={store.volumeAdded}
+              isTitrating={isTitrating}
+              endpointReached={store.endpointReached}
+              measurements={store.measurements}
+              swirlCount={store.swirlCount}
+              onSwirl={store.swirlFlaskAction}
+              showIons
+              onAddTitrant={handleAddTitrant}
+            />
+          ) : (
+            <MicroscopicViewer
+              experimentType="titration"
+              temperatureK={298.15}
+              pH={store.flask.pH}
+              concentration={store.trueAcidConc}
+              isTriggered={isTitrating}
+            />
+          )}
+        </div>
       }
       education={EXPERIMENT_EDUCATION.titration}
       reactionNote={
@@ -290,10 +331,12 @@ export default function TitrationPage() {
           isRunning={store.status === "running"}
           volumeAdded={store.volumeAdded}
           pH={store.flask.pH}
+          trialCount={store.trialCount}
           onAddIndicator={handleAddIndicator}
           onAddTitrant={handleAddTitrant}
           onSetFlowRate={store.setFlowRateAction}
           onReset={store.resetAction}
+          onReplicate={store.replicateTrialAction}
         />
       }
 

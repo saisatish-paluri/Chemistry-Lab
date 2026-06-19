@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-
 // ── Types ─────────────────────────────────────────────────────────────────────
 export interface ContextStep {
   number: number;
@@ -16,12 +14,12 @@ export interface ContextFact {
 }
 
 export interface LabContextPanelProps {
-  title:      string;
-  accent:     string;
-  summary:    string;
-  steps?:     ContextStep[];
-  facts?:     ContextFact[];
-  formula?:   string;
+  title:         string;
+  accent:        string;
+  summary:       string;
+  steps?:        ContextStep[];
+  facts?:        ContextFact[];
+  formula?:      string;
   formulaLabel?: string;
 }
 
@@ -30,12 +28,13 @@ export default function LabContextPanel({
   title,
   accent,
   summary,
-  steps,
   facts,
   formula,
   formulaLabel,
 }: LabContextPanelProps) {
-  const [expanded, setExpanded] = useState(true);
+  // Extract first sentence as a short subtitle
+  const subtitle = summary.split(/\.\s/)[0].replace(/\.$/, "").trim();
+  const shortSub = subtitle.length > 90 ? subtitle.slice(0, 88) + "…" : subtitle;
 
   return (
     <div
@@ -47,30 +46,30 @@ export default function LabContextPanel({
         padding:       "0 0 12px",
       }}
     >
-      {/* Header */}
+      {/* ── Header ── */}
       <div
         style={{
           padding:      "10px 14px 9px",
           borderBottom: "1px solid var(--lab-glass-border)",
           flexShrink:   0,
-          background:   `linear-gradient(90deg, ${accent}06 0%, transparent 100%)`,
+          background:   `linear-gradient(90deg, ${accent}07 0%, transparent 100%)`,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
           <div
             style={{
-              width:        24,
-              height:       24,
-              borderRadius: 7,
-              background:   `${accent}16`,
-              border:       `1px solid ${accent}28`,
-              display:      "flex",
-              alignItems:   "center",
+              width:          24,
+              height:         24,
+              borderRadius:   7,
+              background:     `${accent}16`,
+              border:         `1px solid ${accent}28`,
+              display:        "flex",
+              alignItems:     "center",
               justifyContent: "center",
-              flexShrink:   0,
+              flexShrink:     0,
             }}
           >
-            <BookIcon accent={accent} />
+            <FlaskMiniIcon accent={accent} />
           </div>
           <span
             style={{
@@ -79,34 +78,12 @@ export default function LabContextPanel({
               textTransform: "uppercase",
               letterSpacing: "0.11em",
               color:         "var(--lab-text-muted)",
-              flex:          1,
             }}
           >
             Lab Context
           </span>
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            aria-label={expanded ? "Collapse context panel" : "Expand context panel"}
-            style={{
-              width:        22,
-              height:       22,
-              borderRadius: 6,
-              border:       "1px solid var(--lab-glass-border)",
-              background:   "rgba(255,255,255,0.7)",
-              cursor:       "pointer",
-              display:      "flex",
-              alignItems:   "center",
-              justifyContent: "center",
-              fontSize:     10,
-              color:        "var(--lab-text-muted)",
-              flexShrink:   0,
-            }}
-          >
-            {expanded ? "▲" : "▼"}
-          </button>
         </div>
 
-        {/* Experiment title */}
         <p
           style={{
             fontSize:      12,
@@ -119,183 +96,134 @@ export default function LabContextPanel({
         >
           {title}
         </p>
+
+        {/* One-line subtitle — replaces the full summary paragraph */}
+        <p
+          style={{
+            fontSize:   10.5,
+            lineHeight: 1.5,
+            color:      "var(--lab-text-muted)",
+            marginTop:  4,
+          }}
+        >
+          {shortSub}.
+        </p>
       </div>
 
-      {expanded && (
-        <>
-          {/* Summary */}
-          <div
-            style={{
-              padding:   "10px 14px 0",
-              flexShrink: 0,
-            }}
-          >
+      {/* ── Formula hero ── */}
+      {formula && (
+        <div
+          style={{
+            margin:       "10px 14px 0",
+            borderRadius: 12,
+            background:   `linear-gradient(135deg, ${accent}10, ${accent}05)`,
+            border:       `1px solid ${accent}22`,
+            padding:      "10px 14px",
+            flexShrink:   0,
+          }}
+        >
+          {formulaLabel && (
             <p
               style={{
-                fontSize:   11.5,
-                lineHeight: 1.70,
-                color:      "var(--lab-text-secondary)",
+                fontSize:      9,
+                fontWeight:    700,
+                textTransform: "uppercase",
+                letterSpacing: "0.10em",
+                color:         `${accent}99`,
+                marginBottom:  5,
               }}
             >
-              {summary}
+              {formulaLabel}
             </p>
-          </div>
-
-          {/* Key facts */}
-          {facts && facts.length > 0 && (
-            <div
-              style={{
-                margin:       "10px 14px 0",
-                borderRadius: 9,
-                border:       `1px solid ${accent}18`,
-                background:   `${accent}05`,
-                overflow:     "hidden",
-                flexShrink:   0,
-              }}
-            >
-              {facts.map((fact, i) => (
-                <div
-                  key={fact.label}
-                  style={{
-                    display:    "flex",
-                    alignItems: "center",
-                    gap:        8,
-                    padding:    "7px 11px",
-                    borderTop:  i > 0 ? `1px solid ${accent}12` : "none",
-                    fontSize:   11,
-                  }}
-                >
-                  <span style={{ fontSize: 13, flexShrink: 0 }}>{fact.icon}</span>
-                  <span style={{ color: "var(--lab-text-muted)", flex: 1 }}>{fact.label}</span>
-                  <span style={{ fontWeight: 700, color: accent, flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
-                    {fact.value}
-                  </span>
-                </div>
-              ))}
-            </div>
           )}
+          <p
+            style={{
+              fontFamily: "var(--font-mono, monospace)",
+              fontSize:   14,
+              fontWeight: 800,
+              color:      accent,
+              lineHeight: 1.5,
+              wordBreak:  "break-all",
+              letterSpacing: "0.01em",
+            }}
+          >
+            {formula}
+          </p>
+        </div>
+      )}
 
-          {/* Formula / equation */}
-          {formula && (
+      {/* ── Key facts — visual badges ── */}
+      {facts && facts.length > 0 && (
+        <div
+          style={{
+            margin:       "10px 14px 0",
+            display:      "flex",
+            flexDirection: "column",
+            gap:          4,
+            flexShrink:   0,
+          }}
+        >
+          <p
+            style={{
+              fontSize:      9,
+              fontWeight:    700,
+              textTransform: "uppercase",
+              letterSpacing: "0.10em",
+              color:         "var(--lab-text-muted)",
+              marginBottom:  2,
+            }}
+          >
+            Key Values
+          </p>
+          {facts.map((fact) => (
             <div
+              key={fact.label}
               style={{
-                margin:       "10px 14px 0",
-                borderRadius: 9,
-                background:   `${accent}07`,
-                border:       `1px solid ${accent}1c`,
-                padding:      "9px 12px",
-                flexShrink:   0,
+                display:        "flex",
+                alignItems:     "center",
+                gap:            8,
+                padding:        "6px 10px",
+                borderRadius:   9,
+                background:     `${accent}07`,
+                border:         `1px solid ${accent}14`,
               }}
             >
-              {formulaLabel && (
-                <p
-                  style={{
-                    fontSize:      9.5,
-                    fontWeight:    700,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.09em",
-                    color:         `${accent}bb`,
-                    marginBottom:  5,
-                  }}
-                >
-                  {formulaLabel}
-                </p>
-              )}
-              <p
+              <span style={{ fontSize: 13, flexShrink: 0 }}>{fact.icon}</span>
+              <span
                 style={{
-                  fontFamily:  "var(--font-mono, monospace)",
-                  fontSize:    13,
-                  fontWeight:  700,
-                  color:       accent,
-                  lineHeight:  1.5,
-                  wordBreak:   "break-all",
+                  flex:       1,
+                  fontSize:   10.5,
+                  color:      "var(--lab-text-muted)",
+                  lineHeight: 1.3,
                 }}
               >
-                {formula}
-              </p>
-            </div>
-          )}
-
-          {/* Procedure steps */}
-          {steps && steps.length > 0 && (
-            <div
-              style={{
-                padding:   "10px 14px 0",
-                flexShrink: 0,
-              }}
-            >
-              <p
+                {fact.label}
+              </span>
+              <span
                 style={{
-                  fontSize:      9.5,
-                  fontWeight:    700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.09em",
-                  color:         "var(--lab-text-muted)",
-                  marginBottom:  8,
+                  fontWeight:         700,
+                  color:              accent,
+                  flexShrink:         0,
+                  fontSize:           11,
+                  fontVariantNumeric: "tabular-nums",
                 }}
               >
-                Procedure
-              </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                {steps.map((step) => (
-                  <div key={step.number} style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
-                    <div
-                      style={{
-                        width:        20,
-                        height:       20,
-                        borderRadius: "50%",
-                        background:   `${accent}14`,
-                        border:       `1px solid ${accent}28`,
-                        display:      "flex",
-                        alignItems:   "center",
-                        justifyContent: "center",
-                        fontSize:     9.5,
-                        fontWeight:   800,
-                        color:        accent,
-                        flexShrink:   0,
-                      }}
-                    >
-                      {step.number}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p
-                        style={{
-                          fontSize:   11,
-                          fontWeight: 700,
-                          color:      "var(--lab-text-secondary)",
-                          lineHeight: 1.3,
-                          marginBottom: 2,
-                        }}
-                      >
-                        {step.title}
-                      </p>
-                      <p
-                        style={{
-                          fontSize:   10.5,
-                          color:      "var(--lab-text-muted)",
-                          lineHeight: 1.6,
-                        }}
-                      >
-                        {step.body}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                {fact.value}
+              </span>
             </div>
-          )}
-        </>
+          ))}
+        </div>
       )}
     </div>
   );
 }
 
-function BookIcon({ accent }: { accent: string }) {
+function FlaskMiniIcon({ accent }: { accent: string }) {
   return (
     <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
-      <path d="M2 2.5C2 2.5 4 2 6.5 2C9 2 11 2.5 11 2.5V11C11 11 9 10.5 6.5 10.5C4 10.5 2 11 2 11V2.5Z"
-        stroke={accent} strokeWidth="1.2" strokeLinejoin="round"/>
-      <line x1="6.5" y1="2" x2="6.5" y2="10.5" stroke={accent} strokeWidth="1" opacity="0.5"/>
+      <path d="M5 2v3.5L2.5 10h8L8 5.5V2" stroke={accent} strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+      <line x1="5" y1="2" x2="8" y2="2" stroke={accent} strokeWidth="1.2" strokeLinecap="round"/>
+      <path d="M3.5 8.5 Q6.5 7.5 9.5 8.5" stroke={accent} strokeWidth="0.9" strokeLinecap="round" opacity="0.5"/>
     </svg>
   );
 }

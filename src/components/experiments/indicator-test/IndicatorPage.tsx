@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState, startTransition } from "react";
 import { useIndicatorStore }           from "@/lib/store/indicator-test-store";
@@ -257,6 +257,7 @@ export default function IndicatorPage() {
           selectedSubstance={store.selectedSubstance}
           isTesting={store.isTesting}
           currentResult={store.currentResult}
+          onTest={store.testAction}
         />
       }
       education={EXPERIMENT_EDUCATION["indicator-test"]}

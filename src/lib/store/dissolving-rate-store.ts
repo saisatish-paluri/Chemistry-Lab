@@ -2,11 +2,10 @@ import { create } from "zustand";
 import type { DissolvingRateState, DissolveTemp, DissolveGranularity } from "@/lib/engine/types";
 import {
   initialDissolvingState,
-  setTemperature, setGranularity, setStirring,
+  setGranularity, setStirring,
   startDissolving, tickDissolveProgress,
   completeDissolvingRate, resetDissolving,
-  calcDissolveTimeFromCelsius,
-  celsiusToDissolveTemp,
+  updateDissolvingParameters,
 } from "@/lib/engine/dissolving-rate-engine";
 import { saveSession, loadSession } from "@/lib/persistence";
 
@@ -14,7 +13,6 @@ const STORAGE_KEY = "dissolving-rate";
 
 interface DissolvingStore extends DissolvingRateState {
   lastError:                  string | null;
-  /** Continuous temperature chosen by the slider (5–100 °C) */
   customTempCelsius:          number;
   setTempAction:              (t: DissolveTemp) => void;
   setCustomTempCelsiusAction: (celsius: number) => void;
@@ -26,6 +24,7 @@ interface DissolvingStore extends DissolvingRateState {
   resetAction:                () => void;
   setMode:                    (mode: DissolvingRateState["mode"]) => void;
   hydrate:                    () => void;
+  updateSugarMassAction:      (mass: number) => void;
 }
 
 export const useDissolvingStore = create<DissolvingStore>((set, get) => ({
@@ -34,14 +33,13 @@ export const useDissolvingStore = create<DissolvingStore>((set, get) => ({
   customTempCelsius: 40,          // default: warm (40 °C)
 
   setTempAction: (t) => {
-    const next = setTemperature(get() as DissolvingRateState, t);
-    const celsius = t === "cold" ? 10 : t === "warm" ? 40 : 80;
+    const celsius = t === "cold" ? 5 : t === "warm" ? 40 : 80;
+    const next = updateDissolvingParameters(get() as DissolvingRateState, { celsius });
     set({ ...next, customTempCelsius: celsius, lastError: null });
   },
 
   setCustomTempCelsiusAction: (celsius) => {
-    const mapped: DissolveTemp = celsiusToDissolveTemp(celsius);
-    const next = setTemperature(get() as DissolvingRateState, mapped);
+    const next = updateDissolvingParameters(get() as DissolvingRateState, { celsius });
     set({ ...next, customTempCelsius: celsius, lastError: null });
   },
 
@@ -55,6 +53,11 @@ export const useDissolvingStore = create<DissolvingStore>((set, get) => ({
     set({ ...next, lastError: null });
   },
 
+  updateSugarMassAction: (mass) => {
+    const next = updateDissolvingParameters(get() as DissolvingRateState, { massAdded: mass });
+    set({ ...next, lastError: null });
+  },
+
   startAction: () => {
     const next = startDissolving(get() as DissolvingRateState);
     set({ ...next, lastError: null });
@@ -64,21 +67,8 @@ export const useDissolvingStore = create<DissolvingStore>((set, get) => ({
   tickAction: (delta) => {
     const state = get();
     if (!state.isDissolving) return;
-    // Use continuous celsius for accurate dissolving-time calculation
-    const totalTime = calcDissolveTimeFromCelsius(
-      state.customTempCelsius,
-      state.granularity,
-      state.stirring,
-    );
-    const increment  = (delta / totalTime) * 100;
-    const newProgress = Math.min(100, state.dissolveProgress + increment);
-    if (newProgress >= 100) {
-      // finish dissolving
-      const next = tickDissolveProgress({ ...state, dissolveProgress: 100 - increment } as DissolvingRateState, delta);
-      set({ ...next });
-    } else {
-      set({ dissolveProgress: newProgress });
-    }
+    const next = tickDissolveProgress(state as DissolvingRateState, delta);
+    set({ ...next });
   },
 
   completeAction: () => {
@@ -101,12 +91,7 @@ export const useDissolvingStore = create<DissolvingStore>((set, get) => ({
   hydrate: () => {
     const saved = loadSession<DissolvingRateState>(STORAGE_KEY);
     if (saved && saved.status !== "completed") {
-      // Derive celsius from saved DissolveTemp if not otherwise stored
-      const celsius =
-        saved.temperature === "cold" ? 10
-        : saved.temperature === "hot"  ? 80
-        : 40;
-      set({ ...saved, lastError: null, customTempCelsius: celsius });
+      set({ ...saved, lastError: null, customTempCelsius: saved.celsius ?? 40 });
     }
   },
 }));

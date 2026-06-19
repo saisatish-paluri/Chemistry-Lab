@@ -330,9 +330,10 @@ export default function SafetyClient() {
         {SAFETY_SECTIONS.map((section, i) => (
           <motion.div
             key={section.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45, delay: i * 0.07 }}
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-40px" }}
+            transition={{ duration: 0.52, delay: i * 0.08, ease: "easeOut" }}
           >
             <SectionPanel section={section} />
           </motion.div>
@@ -341,7 +342,11 @@ export default function SafetyClient() {
 
       {/* ── CTA band ── */}
       <section className="px-6 sm:px-8 max-w-4xl mx-auto pb-20">
-        <div
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-40px" }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
           className="rounded-3xl p-8 text-center"
           style={{
             background: "linear-gradient(135deg,rgba(239,68,68,0.07) 0%,rgba(245,158,11,0.07) 100%)",
@@ -376,7 +381,7 @@ export default function SafetyClient() {
               View Dashboard
             </Link>
           </div>
-        </div>
+        </motion.div>
       </section>
     </div>
   );

@@ -71,8 +71,8 @@ export default function WaterHardnessWorkspace({ state }: Props) {
   const edtaPct     = Math.min(edtaAddedMl / ENDPOINT_ML, 1);
 
   return (
-    <div className="lab-ws-area" style={{ width: "100%", height: "auto", maxHeight: "100%", aspectRatio: `${W}/${H}` }}>
-      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "100%" }}>
+    <div style={{ width: "100%", height: "auto", maxHeight: "100%", aspectRatio: "516/620" }}>
+      <svg viewBox="12 40 516 620" style={{ width: "100%", height: "100%" }}>
         <defs>
           <pattern id="wh-dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
             <circle cx="10" cy="10" r="0.75" fill="rgba(148,163,184,0.22)" />
@@ -82,8 +82,23 @@ export default function WaterHardnessWorkspace({ state }: Props) {
             <stop offset="100%" stopColor="#f8fafc" />
           </linearGradient>
           <linearGradient id="wh-bench" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#e2e8f0" />
+            <stop offset="0%" stopColor="#cbd5e1" />
+            <stop offset="20%" stopColor="#f1f5f9" />
             <stop offset="100%" stopColor="#cbd5e1" />
+          </linearGradient>
+          <linearGradient id="metal-grad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#475569" />
+            <stop offset="25%" stopColor="#94a3b8" />
+            <stop offset="50%" stopColor="#f1f5f9" />
+            <stop offset="75%" stopColor="#94a3b8" />
+            <stop offset="100%" stopColor="#334155" />
+          </linearGradient>
+          <linearGradient id="glass-specular" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.7)" />
+            <stop offset="25%" stopColor="rgba(255,255,255,0.15)" />
+            <stop offset="75%" stopColor="rgba(255,255,255,0.05)" />
+            <stop offset="85%" stopColor="rgba(255,255,255,0.25)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0.55)" />
           </linearGradient>
           <linearGradient id="wh-sheen" x1="0" y1="0" x2="1" y2="0">
             <stop offset="0%"  stopColor="rgba(255,255,255,0.6)" />
@@ -95,7 +110,7 @@ export default function WaterHardnessWorkspace({ state }: Props) {
             <stop offset="100%" stopColor="rgba(134,239,172,0.7)" />
           </linearGradient>
           <filter id="wh-shadow">
-            <feDropShadow dx="0" dy="3" stdDeviation="5" floodColor="rgba(0,0,0,0.11)" />
+            <feDropShadow dx="0" dy="5" stdDeviation="5" floodColor="rgba(9,13,22,0.35)" />
           </filter>
           <filter id="wh-endpoint">
             <feGaussianBlur stdDeviation="8" result="blur" />
@@ -125,18 +140,21 @@ export default function WaterHardnessWorkspace({ state }: Props) {
 
         {/* Bench */}
         <rect x="0" y={H-120} width={W} height="120" fill="url(#wh-bench)" />
-        <rect x="0" y={H-122} width={W} height="4" fill="#94a3b8" opacity="0.38" />
+        <rect x="0" y={H-120} width={W} height="6" fill="rgba(255,255,255,0.06)" />
+        <line x1="0" y1={H-120} x2={W} y2={H-120} stroke="#475569" strokeWidth="1.5" />
+        <rect x="0" y={H-122} width={W} height="2" fill="#64748b" opacity="0.8" />
 
         {/* ─── RETORT STAND ─── */}
         {/* Base plate */}
-        <rect x="232" y={H-130} width="76" height="12" rx="4" fill="#64748b" opacity="0.55" />
+        <rect x="232" y={H-130} width="76" height="12" rx="4" fill="url(#metal-grad)" filter="url(#wh-shadow)" />
         {/* Upright rod */}
-        <rect x="257" y="56" width="14" height={H-180} rx="5" fill="#94a3b8" opacity="0.55" />
+        <rect x="257" y="56" width="14" height={H-180} rx="5" fill="url(#metal-grad)" />
+        <rect x="258.5" y="56" width="3" height={H-180} rx="1" fill="rgba(255,255,255,0.22)" />
         {/* Upper boss/clamp */}
-        <rect x="238" y="62" width="64" height="12" rx="4" fill="#64748b" opacity="0.6" />
-        <rect x="235" y="66" width="70" height="6"  rx="3" fill="#475569" opacity="0.5" />
+        <rect x="238" y="62" width="64" height="12" rx="4" fill="url(#metal-grad)" />
+        <rect x="235" y="66" width="70" height="6"  rx="3" fill="url(#metal-grad)" />
         {/* Lower boss */}
-        <rect x="235" y="316" width="70" height="10" rx="4" fill="#64748b" opacity="0.5" />
+        <rect x="235" y="316" width="70" height="10" rx="4" fill="url(#metal-grad)" />
 
         {/* ─── BURETTE ─── */}
         <g filter="url(#wh-shadow)">
@@ -208,10 +226,16 @@ export default function WaterHardnessWorkspace({ state }: Props) {
         <g filter="url(#wh-shadow)">
           {/* Neck */}
           <rect x="247" y="320" width="56" height="70" rx="4"
-            fill="rgba(241,245,249,0.52)" stroke="#64748b" strokeWidth="1.9" />
+            fill="none" stroke="#64748b" strokeWidth="2.0" />
+          <rect x="249" y="322" width="52" height="66" rx="2"
+            fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="0.8" />
           {/* Body */}
           <path d={`M196 ${flaskBaseY-148} L176 ${flaskBaseY} Q174 ${flaskBaseY+14} 192 ${flaskBaseY+14} L348 ${flaskBaseY+14} Q364 ${flaskBaseY+14} 362 ${flaskBaseY} L342 ${flaskBaseY-148} Z`}
-            fill="rgba(241,245,249,0.50)" stroke="#64748b" strokeWidth="2.1" />
+            fill="none" stroke="#64748b" strokeWidth="2.2" />
+          <path d={`M197.5 ${flaskBaseY-147} L178 ${flaskBaseY} Q176.5 ${flaskBaseY+12.5} 193.5 ${flaskBaseY+12.5} L346.5 ${flaskBaseY+12.5} Q362 ${flaskBaseY+12.5} 360 ${flaskBaseY} L340.5 ${flaskBaseY-147}`}
+            fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="0.8" />
+          <path d={`M196 ${flaskBaseY-148} L176 ${flaskBaseY} Q174 ${flaskBaseY+14} 192 ${flaskBaseY+14} L348 ${flaskBaseY+14} Q364 ${flaskBaseY+14} 362 ${flaskBaseY} L342 ${flaskBaseY-148} Z`}
+            fill="url(#glass-specular)" pointerEvents="none" opacity="0.45" />
           {/* Solution */}
           <motion.path
             d={`M${198+4*flaskFill} ${flaskBaseY-flaskLiqH} L${340-4*flaskFill} ${flaskBaseY-flaskLiqH} L352 ${flaskBaseY} Q358 ${flaskBaseY+14} 344 ${flaskBaseY+14} L196 ${flaskBaseY+14} Q180 ${flaskBaseY+14} 188 ${flaskBaseY} Z`}
@@ -297,17 +321,17 @@ export default function WaterHardnessWorkspace({ state }: Props) {
               style={{ transformOrigin:"96px 440px" }}
             >
               <rect x="14" y="400" width="175" height="124" rx="13"
-                fill="rgba(255,255,255,0.96)"
-                stroke={CAT_COLOR[hardnessCategory]+"55"} strokeWidth="2" />
-              <text x="101" y="424" textAnchor="middle" fontSize="10" fontWeight="700" fill="#475569">
+                fill="rgba(15, 23, 42, 0.85)"
+                stroke={CAT_COLOR[hardnessCategory]} strokeWidth="1.6" />
+              <text x="101" y="423" textAnchor="middle" fontSize="11" fontWeight="800" fill="#94a3b8">
                 Water Hardness
               </text>
-              <text x="101" y="452" textAnchor="middle" fontSize="26" fontWeight="900" fill={CAT_COLOR[hardnessCategory]}>
+              <text x="101" y="452" textAnchor="middle" fontSize="28" fontWeight="900" fill="#22d3ee">
                 {hardnessMgL.toFixed(0)}
               </text>
-              <text x="101" y="468" textAnchor="middle" fontSize="9" fill="#64748b">mg/L as CaCO₃</text>
+              <text x="101" y="468" textAnchor="middle" fontSize="10.5" fill="#e2e8f0" fontWeight="700">mg/L as CaCO₃</text>
               <rect x="24" y="478" width="155" height="30" rx="8"
-                fill={CAT_COLOR[hardnessCategory]+"18"} />
+                fill={CAT_COLOR[hardnessCategory]+"25"} />
               <text x="101" y="498" textAnchor="middle" fontSize="13" fontWeight="800" fill={CAT_COLOR[hardnessCategory]}>
                 {CAT_LABEL[hardnessCategory]}
               </text>
@@ -320,15 +344,15 @@ export default function WaterHardnessWorkspace({ state }: Props) {
           {endpointReached && hardnessMgL !== null && (
             <motion.g initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.5 }}>
               <rect x="14" y="58" width="222" height="96" rx="11"
-                fill="rgba(239,246,255,0.97)" stroke="rgba(37,99,235,0.22)" strokeWidth="1.3" />
-              <text x="28" y="76" fontSize="9.5" fontWeight="800" fill="#1d4ed8">CALCULATION</text>
-              <text x="28" y="90" fontSize="8" fill="#475569">H = V(EDTA) × M(EDTA) × M(CaCO₃) × 1000</text>
-              <text x="28" y="103" fontSize="8" fill="#475569">        V(sample) / 1000</text>
-              <line x1="28" y1="108" x2="228" y2="108" stroke="rgba(148,163,184,0.3)" strokeWidth="0.7" />
-              <text x="28" y="121" fontSize="8" fill="#475569">
+                fill="rgba(15, 23, 42, 0.85)" stroke="rgba(34, 211, 238, 0.25)" strokeWidth="1.3" />
+              <text x="28" y="76" fontSize="11" fontWeight="900" fill="#38bdf8">CALCULATION</text>
+              <text x="28" y="90" fontSize="9.5" fill="#cbd5e1" fontWeight="700">H = V(EDTA) × M(EDTA) × M(CaCO₃) × 1000</text>
+              <text x="28" y="103" fontSize="9.5" fill="#cbd5e1" fontWeight="700">        V(sample) / 1000</text>
+              <line x1="28" y1="108" x2="228" y2="108" stroke="rgba(255,255,255,0.15)" strokeWidth="0.7" />
+              <text x="28" y="121" fontSize="9.5" fill="#94a3b8" fontWeight="600">
                 = {edtaAddedMl.toFixed(1)}×0.01×100.09×1000 / 100
               </text>
-              <text x="28" y="136" fontSize="9.5" fontWeight="800" fill="#1d4ed8">
+              <text x="28" y="138" fontSize="11.5" fontWeight="900" fill="#38bdf8">
                 = {hardnessMgL.toFixed(1)} mg/L as CaCO₃
               </text>
             </motion.g>

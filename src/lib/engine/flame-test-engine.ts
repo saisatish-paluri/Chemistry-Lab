@@ -106,7 +106,10 @@ const INITIAL_OBJECTIVES: ExperimentObjective[] = [
   { id: "three-samples",  description: "Test at least 3 different metal compounds",  completed: false },
 ];
 
-export function initialFlameTestState(mode: FlameTestState["mode"]): FlameTestState {
+export function initialFlameTestState(
+  mode: FlameTestState["mode"],
+  simParams?: import("./sim-bridge").FlameTestSimParams,
+): FlameTestState {
   return {
     mode, status: "idle",
     flameLit: false,
@@ -116,10 +119,20 @@ export function initialFlameTestState(mode: FlameTestState["mode"]): FlameTestSt
     contaminated: false,
     lastTestedSample: null,
     currentFlameColor: null,
+    flameIntensity: 1.0,
     testHistory: [],
     steps:      INITIAL_STEPS.map((s) => ({ ...s })),
     objectives: INITIAL_OBJECTIVES.map((o) => ({ ...o })),
     observations: [], result: null, startedAt: null,
+    contaminationProbability: simParams?.contaminationProbability ?? 0.08,
+    unknownSampleId:          simParams?.unknownSampleId          ?? null,
+
+    // Overhaul variables
+    concentration:     1.0,
+    airCollarOpen:     true,
+    contaminationLevel: 0,
+    cobaltGlass:       false,
+    experimentalError: (Math.random() - 0.5) * 2,
   };
 }
 
@@ -166,18 +179,30 @@ export function dipLoop(state: FlameTestState): FlameTestState {
   const newObs: ObservationEvent[] = [];
   let contaminated = state.contaminated;
 
-  // Contamination: loop used before without cleaning
+  // Dirty loop → guaranteed contamination when a different sample was last tested.
+  // Probabilistic contamination only applies to environmental/baseline sources.
   if (!state.loopClean && state.lastTestedSample && state.lastTestedSample !== state.selectedSample) {
     contaminated = true;
     newObs.push(mkObs(
       "contamination",
-      `Loop not cleaned! Residue from ${FLAME_SAMPLES[state.lastTestedSample].name} may contaminate this test. ` +
-      "Clean in dilute HCl and re-dip for a valid result.",
+      `Contamination: residue from ${FLAME_SAMPLES[state.lastTestedSample].name} still on loop. ` +
+      "Clean in dilute HCl before the next test for a valid result.",
       "warning",
     ));
+  } else if (state.loopClean) {
+    // Cleaned loop: small random baseline Na⁺ contamination chance from lab environment
+    const envContaminates = Math.random() < state.contaminationProbability;
+    if (envContaminates) {
+      contaminated = true;
+      newObs.push(mkObs(
+        "contamination",
+        "Trace Na⁺ contamination from lab environment — may give faint yellow tinge.",
+        "warning",
+      ));
+    }
   }
 
-  newObs.push(mkObs("reaction-start", `Loop dipped in ${sample.name} (${sample.formula}) — ions coating the wire.`, "info"));
+  newObs.push(mkObs("reaction-start", `Loop dipped in ${sample.name} (${sample.formula}) — ions coating the wire surface.`, "info"));
 
   return {
     ...state,
@@ -189,24 +214,135 @@ export function dipLoop(state: FlameTestState): FlameTestState {
   };
 }
 
+function hexToRgb(hex: string) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return { r, g, b };
+}
+
+function rgbToHex(r: number, g: number, b: number) {
+  const toHex = (c: number) => {
+    const s = Math.max(0, Math.min(255, Math.round(c))).toString(16);
+    return s.length === 1 ? "0" + s : s;
+  };
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
+}
+
+export function recalculateFlameTest(state: FlameTestState): FlameTestState {
+  if (state.status !== "running" || !state.selectedSample) {
+    return {
+      ...state,
+      currentFlameColor: null,
+      flameIntensity: 1.0,
+    };
+  }
+
+  const sample = FLAME_SAMPLES[state.selectedSample];
+  const F_temp = state.airCollarOpen ? 1.0 : 0.15;
+  const C_sample = state.concentration ?? 1.0;
+  
+  // Base intensity of sample
+  let I_sample = C_sample * F_temp;
+  
+  // Sodium contamination
+  const finalContam = (state.contaminationLevel ?? 0) + (state.contaminated && state.selectedSample !== "sodium-chloride" ? 15 : 0);
+  let I_Na = 1.8 * (finalContam / 50.0) * F_temp;
+
+  // Apply Cobalt glass transmission
+  if (state.cobaltGlass) {
+    I_Na = 0.0; // sodium yellow is fully blocked
+    if (state.selectedSample !== "potassium-chloride") {
+      I_sample *= 0.40; // attenuate others by 60%
+    }
+  }
+
+  // Soot emission if air collar closed
+  const I_soot = state.airCollarOpen ? 0.0 : 0.85;
+
+  const I_total = I_sample + I_Na + I_soot + 1e-5;
+  const w_sample = I_sample / I_total;
+  const w_Na = I_Na / I_total;
+  const w_soot = I_soot / I_total;
+
+  const sampleColor = hexToRgb(sample.flameColor);
+  const naColor = { r: 255, g: 165, b: 0 };
+  const sootColor = { r: 249, g: 115, b: 22 };
+
+  let r = w_sample * sampleColor.r + w_Na * naColor.r + w_soot * sootColor.r;
+  let g = w_sample * sampleColor.g + w_Na * naColor.g + w_soot * sootColor.g;
+  let b = w_sample * sampleColor.b + w_Na * naColor.b + w_soot * sootColor.b;
+
+  if (state.cobaltGlass) {
+    // Cobalt transmission: filters green/yellow, lets blue/violet & far-red pass
+    const isKOrLi = state.selectedSample === "potassium-chloride" || state.selectedSample === "lithium-chloride";
+    r = r * (isKOrLi ? 0.70 : 0.15);
+    g = g * 0.05;
+    b = b * 0.90 + 35; // base blue tint
+  }
+
+  // Final intensity incorporates random experimental noise
+  const experimentalNoise = 1.0 + 0.05 * (state.experimentalError ?? 0);
+  const finalIntensity = Math.min(1.0, Math.max(0.15, (I_total / 2.0) * experimentalNoise));
+
+  return {
+    ...state,
+    currentFlameColor: rgbToHex(r, g, b),
+    flameIntensity: finalIntensity,
+  };
+}
+
+export function updateFlameTestParameters(
+  state: FlameTestState,
+  changes: Partial<Pick<FlameTestState, "concentration" | "airCollarOpen" | "contaminationLevel" | "cobaltGlass">>,
+): FlameTestState {
+  if (state.status === "completed" || state.status === "failed") return state;
+  const next = {
+    ...state,
+    concentration: changes.concentration !== undefined ? changes.concentration : (state.concentration ?? 1.0),
+    airCollarOpen: changes.airCollarOpen !== undefined ? changes.airCollarOpen : (state.airCollarOpen ?? true),
+    contaminationLevel: changes.contaminationLevel !== undefined ? changes.contaminationLevel : (state.contaminationLevel ?? 0),
+    cobaltGlass: changes.cobaltGlass !== undefined ? changes.cobaltGlass : (state.cobaltGlass ?? false),
+  };
+  return recalculateFlameTest(next);
+}
+
 export function performTest(state: FlameTestState): FlameTestState {
   if (!state.loopDipped || !state.selectedSample) return state;
   if (!state.flameLit) return state;
   if (state.status === "running" || state.status === "completed" || state.status === "failed") return state;
 
-  const sample = FLAME_SAMPLES[state.selectedSample];
-  return {
+  const preState = {
     ...state,
-    status: "running",
-    currentFlameColor: sample.flameColor,
-    steps: state.steps.map((s) => s.id === "perform-test" ? { ...s, completed: true } : s),
+    status: "running" as const,
+  };
+
+  const next = recalculateFlameTest(preState);
+  const flameIntensity = next.flameIntensity;
+  const sample = FLAME_SAMPLES[state.selectedSample];
+  const finalContam = (next.contaminationLevel ?? 0) + (next.contaminated && next.selectedSample !== "sodium-chloride" ? 15 : 0);
+
+  const intensityDesc = flameIntensity > 0.85 ? "bright and sustained"
+    : flameIntensity > 0.65 ? "clear"
+    : flameIntensity > 0.45 ? "faint"
+    : "very faint — dip loop again for better result";
+
+  const isContaminated = finalContam > 5;
+  const obsMessage = `Flame turns color — ${intensityDesc}. ${sample.ion} characteristic emission.` +
+    (isContaminated ? ` ⚠ Na⁺ contamination (${finalContam.toFixed(0)}%) overlays yellow/orange emission.` : "") +
+    (!next.airCollarOpen ? " ⚠ Air collar closed: soot emission masks color." : "") +
+    (next.cobaltGlass ? " [Cobalt blue glass filter applied]" : "");
+
+  return {
+    ...next,
+    steps: next.steps.map((s) => s.id === "perform-test" ? { ...s, completed: true } : s),
     observations: [
       mkObs(
         "color-change",
-        `Flame turns ${sample.colorName} (${sample.wavelength}) — ${sample.ion} characteristic emission. ${state.contaminated ? "⚠ Result may be contaminated." : ""}`,
-        state.contaminated ? "warning" : "success",
+        obsMessage,
+        isContaminated || !next.airCollarOpen ? "warning" : "success",
       ),
-      ...state.observations,
+      ...next.observations,
     ],
   };
 }
@@ -324,6 +460,9 @@ export function completeFlameTest(state: FlameTestState): FlameTestState {
   };
 }
 
-export function resetFlameTest(mode: FlameTestState["mode"]): FlameTestState {
-  return initialFlameTestState(mode);
+export function resetFlameTest(
+  mode: FlameTestState["mode"],
+  simParams?: import("./sim-bridge").FlameTestSimParams,
+): FlameTestState {
+  return initialFlameTestState(mode, simParams);
 }

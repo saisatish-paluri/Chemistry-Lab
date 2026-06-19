@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState, startTransition } from "react";
 import { useGasLawsStore }                               from "@/lib/store/gas-laws-store";
@@ -13,16 +13,31 @@ import LabPageShell                                      from "@/components/lab/
 import LabContextPanel                                   from "@/components/lab/LabContextPanel";
 import { GAS_N_MOLES, GAS_R }                            from "@/lib/engine/gas-laws-engine";
 import { EXPERIMENT_EDUCATION }                          from "@/lib/experiment-education";
+import { InstrumentPanel }                               from "@/components/instruments";
+import MacroMicroViewToggle                                 from "@/components/lab/MacroMicroViewToggle";
+import MicroscopicViewer                                    from "@/components/lab/MicroscopicViewer";
 
 export default function GasLawsPage() {
   const [showPopup, setShowPopup] = useState(false);
+  const [viewMode, setViewMode]   = useState<"macro" | "micro">("macro");
   const store      = useGasLawsStore();
   const popupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tickRef    = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     store.hydrate();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Simulation tick — 1 Hz when running
+  useEffect(() => {
+    if (store.status === "running") {
+      tickRef.current = setInterval(() => store.tickAction(1), 1000);
+    } else {
+      if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
+    }
+    return () => { if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; } };
+  }, [store.status]);
 
   useEffect(() => () => { if (popupTimer.current) clearTimeout(popupTimer.current); }, []);
 
@@ -160,14 +175,32 @@ export default function GasLawsPage() {
       }
 
       workspace={
-        <GasLawsWorkspace
-          law={store.law}
-          temperature={store.temperature}
-          volume={store.volume}
-          pressure={store.pressure}
-          dataPoints={store.dataPoints}
-          isRunning={store.status === "running"}
-        />
+        <div className="flex flex-col gap-3 w-full h-full">
+          <div className="flex justify-end pr-4">
+            <MacroMicroViewToggle view={viewMode} onChange={setViewMode} />
+          </div>
+          {viewMode === "macro" ? (
+            <GasLawsWorkspace
+              law={store.law}
+              temperature={store.temperature}
+              volume={store.volume}
+              pressure={store.pressure}
+              dataPoints={store.dataPoints}
+              isRunning={store.status === "running"}
+              gasType={store.gasType}
+              sealQuality={store.sealQuality}
+            />
+          ) : (
+            <MicroscopicViewer
+              experimentType="gas-laws"
+              temperatureK={store.temperature}
+              volume={store.volume}
+              pressure={store.pressure}
+              isTriggered={store.status === "running"}
+              gasType={store.gasType}
+            />
+          )}
+        </div>
       }
 
       education={EXPERIMENT_EDUCATION["gas-laws"]}
@@ -190,10 +223,14 @@ export default function GasLawsPage() {
           volume={store.volume}
           pressure={store.pressure}
           dataPoints={store.dataPoints}
+          gasType={store.gasType}
+          sealQuality={store.sealQuality}
           onSelectLaw={store.selectLawAction}
           onStartExp={store.startExplorationAction}
           onSetVolume={store.setVolumeAction}
           onSetTemp={store.setTemperatureAction}
+          onSetGasType={store.setGasTypeAction}
+          onSetSealQuality={store.setSealQualityAction}
           onRecordPoint={store.recordDataPointAction}
           onComplete={store.completeExperimentAction}
           onReset={store.resetAction}
@@ -205,6 +242,23 @@ export default function GasLawsPage() {
       onSetMode={store.setMode}
 
       observations={<ObservationPanel observations={store.observations} />}
+
+      infoCards={
+        store.measurements ? (
+          <InstrumentPanel
+            title="Active Instruments"
+            readings={[
+              store.measurements.thermometer,
+              store.measurements.gasSyringe,
+              store.measurements.manometer,
+            ]}
+            errors={store.activeErrors}
+            showUncertainty
+            showBudget
+            showErrors
+          />
+        ) : null
+      }
 
       obsNotif={
         popup ? (

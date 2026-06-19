@@ -6,7 +6,7 @@ import { COMPOUNDS, TESTS } from "@/lib/engine/functional-groups-engine";
 
 interface Props {
   state: Pick<FunctionalGroupsState,
-    "selectedCompound" | "selectedTest" | "testResults" | "isTesting" | "identified"
+    "selectedCompound" | "selectedTest" | "testResults" | "isTesting" | "identified" | "temperature"
   >;
 }
 
@@ -66,7 +66,7 @@ function ReagentBottle({ x, y, color, topLabel, label, active }: {
 }
 
 export default function FunctionalGroupsWorkspace({ state }: Props) {
-  const { selectedCompound, selectedTest, testResults, isTesting, identified } = state;
+  const { selectedCompound, selectedTest, testResults, isTesting, identified, temperature } = state;
 
   const compound   = selectedCompound ? COMPOUNDS[selectedCompound] : null;
   const test       = selectedTest ? TESTS[selectedTest] : null;
@@ -78,22 +78,24 @@ export default function FunctionalGroupsWorkspace({ state }: Props) {
   const showBubbles   = lastResult?.testId === "nahco3-test"    && lastResult.positive;
   const showCloudy    = lastResult?.testId === "lucas-test"     && lastResult.positive;
   const showPurple    = lastResult?.testId === "hinsberg-test"  && lastResult.positive;
+  const showHinsbergOil = lastResult?.testId === "hinsberg-test" && !lastResult.positive;
 
   const groupInfo = identified ? GROUP_STRUCTURES[identified] : null;
 
   return (
-    <div className="lab-ws-area" style={{ width: "100%", height: "auto", maxHeight: "100%", aspectRatio: `${W}/${H}` }}>
+    <div style={{ width: "100%", height: "auto", maxHeight: "100%", aspectRatio: `${W}/${H}` }}>
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "100%" }}>
         <defs>
           <pattern id="fg-dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
             <circle cx="10" cy="10" r="0.75" fill="rgba(148,163,184,0.22)" />
           </pattern>
           <linearGradient id="fg-wall" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#fffbeb" />
-            <stop offset="100%" stopColor="#f8fafc" />
+            <stop offset="0%" stopColor="#f8fafc" />
+            <stop offset="100%" stopColor="#f1f5f9" />
           </linearGradient>
           <linearGradient id="fg-bench" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#e2e8f0" />
+            <stop offset="0%" stopColor="#cbd5e1" />
+            <stop offset="20%" stopColor="#f1f5f9" />
             <stop offset="100%" stopColor="#cbd5e1" />
           </linearGradient>
           <linearGradient id="fg-sheen" x1="0" y1="0" x2="1" y2="0">
@@ -101,18 +103,48 @@ export default function FunctionalGroupsWorkspace({ state }: Props) {
             <stop offset="50%" stopColor="rgba(255,255,255,0.06)" />
             <stop offset="100%" stopColor="rgba(255,255,255,0.2)" />
           </linearGradient>
+          <linearGradient id="metal-grad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#475569" />
+            <stop offset="30%" stopColor="#94a3b8" />
+            <stop offset="50%" stopColor="#f1f5f9" />
+            <stop offset="70%" stopColor="#94a3b8" />
+            <stop offset="100%" stopColor="#334155" />
+          </linearGradient>
+          <linearGradient id="glass-specular" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="rgba(255,255,255,0.7)" />
+            <stop offset="25%" stopColor="rgba(255,255,255,0.15)" />
+            <stop offset="75%" stopColor="rgba(255,255,255,0.05)" />
+            <stop offset="85%" stopColor="rgba(255,255,255,0.25)" />
+            <stop offset="100%" stopColor="rgba(255,255,255,0.55)" />
+          </linearGradient>
           <filter id="fg-shadow">
-            <feDropShadow dx="0" dy="3" stdDeviation="4.5" floodColor="rgba(0,0,0,0.11)" />
+            <feDropShadow dx="0" dy="3" stdDeviation="4.5" floodColor="rgba(0,0,0,0.15)" />
+          </filter>
+          <filter id="bench-shadow" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="10" stdDeviation="6" floodColor="#090d16" floodOpacity="0.45" />
           </filter>
           <filter id="fg-glow">
             <feGaussianBlur stdDeviation="5" result="b" />
             <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
-          <filter id="fg-silver">
-            <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" result="noise" />
-            <feColorMatrix type="saturate" values="0" in="noise" result="grey" />
-            <feBlend in="SourceGraphic" in2="grey" mode="multiply" />
-          </filter>
+          
+          {/* Reflective Tollens Silver Mirror Gradient */}
+          <linearGradient id="tollens-silver" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#cbd5e1" />
+            <stop offset="20%" stopColor="#ffffff" />
+            <stop offset="45%" stopColor="#94a3b8" />
+            <stop offset="70%" stopColor="#f8fafc" />
+            <stop offset="85%" stopColor="#cbd5e1" />
+            <stop offset="100%" stopColor="#475569" />
+          </linearGradient>
+
+          {/* Silver Mirror Shine Overlay */}
+          <linearGradient id="silver-shine" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="white" stopOpacity="0" />
+            <stop offset="50%" stopColor="white" stopOpacity="0.5" />
+            <stop offset="100%" stopColor="white" stopOpacity="0" />
+          </linearGradient>
+
           <clipPath id="fg-tube-c">
             <path d="M230 210 L230 418 Q230 435 248 435 Q266 435 266 418 L266 210 Z" />
           </clipPath>
@@ -134,9 +166,11 @@ export default function FunctionalGroupsWorkspace({ state }: Props) {
 
         {/* Bench */}
         <rect x="0" y={H-120} width={W} height="120" fill="url(#fg-bench)" />
-        <rect x="0" y={H-122} width={W} height="4" fill="#94a3b8" opacity="0.38" />
+        <rect x="0" y={H-120} width={W} height="6" fill="rgba(255,255,255,0.08)" />
+        <line x1="0" y1={H-120} x2={W} y2={H-120} stroke="#475569" strokeWidth="1.5" />
+        <rect x="0" y={H-122} width={W} height="2" fill="#64748b" opacity="0.8" />
 
-        {/* ─── REAGENT BOTTLE ROW ─── */}
+        {/* Reagent Bottle Row */}
         <text x={W/2} y="70" textAnchor="middle" fontSize="9" fontWeight="600" fill="#94a3b8">Reagent Bottles</text>
         {[
           { id:"lucas-test",    topLabel:"Lucas",   label:"ZnCl₂/HCl",  color:"#22c55e" },
@@ -154,7 +188,7 @@ export default function FunctionalGroupsWorkspace({ state }: Props) {
           />
         ))}
 
-        {/* ─── POUR ANIMATION (bottle to tube) ─── */}
+        {/* Pour animation (pour stream from bottle to tube) */}
         <AnimatePresence>
           {isTesting && test && (
             <motion.g initial={{ opacity:0 }} animate={{ opacity:0.85 }} exit={{ opacity:0 }}>
@@ -169,8 +203,8 @@ export default function FunctionalGroupsWorkspace({ state }: Props) {
           )}
         </AnimatePresence>
 
-        {/* ─── COMPOUND VIAL (right side) ─── */}
-        <g filter="url(#fg-shadow)">
+        {/* Compound Vial (right side) */}
+        <g transform="translate(432.5, 245) scale(1.4) translate(-432.5, -245)" filter="url(#fg-shadow)">
           <rect x="400" y="195" width="65" height="100" rx="7"
             fill="rgba(241,245,249,0.55)" stroke="#94a3b8" strokeWidth="1.5" />
           <rect x="414" y="180" width="38" height="18" rx="4"
@@ -189,33 +223,33 @@ export default function FunctionalGroupsWorkspace({ state }: Props) {
           <rect x="402" y="265" width="61" height="28" rx="0 0 5 5" fill="rgba(199,210,254,0.45)" />
           <rect x="404" y="196" width="9" height="96" fill="rgba(255,255,255,0.35)" rx="3" />
         </g>
-        <text x="432" y="310" textAnchor="middle" fontSize="9" fontWeight="600" fill="#64748b">
+        <text x="432" y="340" textAnchor="middle" fontSize="9" fontWeight="600" fill="#64748b">
           Unknown compound
         </text>
 
-        {/* ─── MAIN TEST TUBE ─── */}
-        <g filter="url(#fg-shadow)">
-          {/* Test tube holder (metal ring stand) */}
-          <rect x="210" y="207" width="80" height="8" rx="3" fill="#64748b" opacity="0.45" />
-          <rect x="210" y="205" width="6" height="215" rx="3" fill="#94a3b8" opacity="0.45" />
-          <rect x="284" y="205" width="6" height="215" rx="3" fill="#94a3b8" opacity="0.45" />
-          {/* Glass tube */}
-          <path d="M230 210 L230 418 Q230 436 248 436 Q266 436 266 418 L266 210 Z"
-            fill="rgba(241,245,249,0.52)" stroke="#64748b" strokeWidth="2.1" />
+        {/* MAIN TEST TUBE */}
+        <g transform="translate(248, 210) scale(1.6) translate(-248, -210)" filter="url(#bench-shadow)">
+          {/* Test tube holder (metal stand) */}
+          <rect x="195" y="415" width="106" height="10" rx="4" fill="url(#metal-grad)" />
+          <rect x="210" y="207" width="80" height="8" rx="3" fill="url(#metal-grad)" />
+          <rect x="210" y="205" width="6" height="215" rx="3" fill="url(#metal-grad)" />
+          <rect x="284" y="205" width="6" height="215" rx="3" fill="url(#metal-grad)" />
+
           {/* Base liquid */}
           <motion.rect x="232" y="255" width="32" height="173"
             fill="rgba(219,234,254,0.5)"
             clipPath="url(#fg-tube-c)"
             initial={{ height:0, y:428 }}
             animate={{ height: selectedTest ? 173 : 0, y: selectedTest ? 255 : 428 }}
-            transition={{ duration:1.1, ease:"easeOut" }}
+            transition={{ duration: 1.1, ease: "easeOut" }}
           />
-          {/* Reaction product */}
+
+          {/* Reaction product solution color */}
           <AnimatePresence>
             {lastResult && (
               <motion.rect key={lastResult.testId}
                 x="232" y="255" width="32" height="173"
-                fill={tubeColor} opacity="0.85"
+                fill={tubeColor} opacity="0.80"
                 clipPath="url(#fg-tube-c)"
                 initial={{ height:0, y:428 }}
                 animate={{ height:173, y:255 }}
@@ -224,79 +258,227 @@ export default function FunctionalGroupsWorkspace({ state }: Props) {
             )}
           </AnimatePresence>
 
-          {/* Silver mirror */}
+          {/* Animated liquid meniscus */}
+          <motion.path
+            initial={false}
+            d="M232 0 Q248 4 264 0"
+            fill="none"
+            stroke="rgba(255,255,255,0.6)"
+            strokeWidth="1.5"
+            animate={{ y: selectedTest ? 255 : 428 }}
+            transition={{ duration: 1.1, ease: "easeOut" }}
+          />
+
+          {/* Glass tube outer outline (double glass thickness effect) */}
+          <path d="M229 210 L229 418 Q229 437 248 437 Q267 437 267 418 L267 210 Z"
+            fill="none" stroke="#64748b" strokeWidth="2.0" opacity="0.85" />
+          <path d="M231 210 L231 417 Q231 434 248 434 Q265 434 265 417 L265 210"
+            fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="1.0" />
+          <path d="M230 210 L230 418 Q230 435 248 435 Q266 435 266 418 L266 210 Z"
+            fill="url(#glass-specular)" pointerEvents="none" opacity="0.9" />
+
+          {/* Tollens Metallic Silver Mirror Formation */}
           <AnimatePresence>
             {showSilver && (
-              <motion.g initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}>
-                <rect x="232" y="310" width="32" height="118"
-                  fill="rgba(200,215,228,0.88)" filter="url(#fg-silver)" />
-                <rect x="232" y="310" width="32" height="10" fill="rgba(248,250,252,0.96)" />
-                <rect x="232" y="318" width="32" height="4"  fill="rgba(226,232,240,0.7)" />
-                <text x="248" y="450" textAnchor="middle" fontSize="8" fontWeight="600" fill="#475569">Ag° mirror</text>
+              <motion.g
+                initial={{ opacity: 0, scaleY: 0 }}
+                animate={{ opacity: 0.95, scaleY: 1 }}
+                exit={{ opacity: 0, scaleY: 0 }}
+                style={{ transformOrigin: "248px 428px" }}
+                transition={{ duration: 2.2, ease: "easeInOut" }}
+              >
+                {/* Metallic silver fill on tube wall */}
+                <rect x="231" y="300" width="34" height="128"
+                  fill="url(#tollens-silver)" clipPath="url(#fg-tube-c)" />
+                {/* Shiny highlights */}
+                <rect x="233" y="300" width="5" height="128" fill="rgba(255,255,255,0.4)" clipPath="url(#fg-tube-c)" />
+                {/* Moving reflection sheen */}
+                <motion.rect
+                  x="231" y="300" width="34" height="40"
+                  fill="url(#silver-shine)"
+                  clipPath="url(#fg-tube-c)"
+                  animate={{ y: [260, 428] }}
+                  transition={{ duration: 2.0, repeat: Infinity, ease: "linear" }}
+                />
+                <text x="248" y="452" textAnchor="middle" fontSize="8" fontWeight="600" fill="#475569">Silver Mirror (Ag°)</text>
               </motion.g>
             )}
           </AnimatePresence>
 
-          {/* Orange DNP precipitate */}
+          {/* Orange DNP Precipitate (crystals growing and settling) */}
           <AnimatePresence>
             {showOrangePpt && (
               <motion.g initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}>
+                {/* Settled precipitate bed at the bottom */}
+                <motion.path
+                  d="M 232 428 Q 248 408 264 428 Z"
+                  fill="#ea580c"
+                  clipPath="url(#fg-tube-c)"
+                  initial={{ scaleY: 0 }}
+                  animate={{ scaleY: 1 }}
+                  transition={{ duration: 1.5, delay: 0.8 }}
+                  style={{ transformOrigin: "248px 428px" }}
+                />
                 <motion.rect x="232" y="385" width="32" height="43"
-                  fill="#f97316" opacity="0.88"
+                  fill="#f97316" opacity="0.80"
                   clipPath="url(#fg-tube-c)"
                   initial={{ height:0, y:428 }}
                   animate={{ height:43, y:385 }}
-                  transition={{ duration:1.1, delay:0.5 }}
+                  transition={{ duration:1.2, delay:0.4 }}
                 />
-                <text x="248" y="450" textAnchor="middle" fontSize="8" fontWeight="600" fill="#ea580c">Orange ppt</text>
+                {/* Orange crystal flakes falling down */}
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <motion.polygon
+                    key={i}
+                    points="0,0 -2,3 0,6 2,3"
+                    fill="#c2410c"
+                    clipPath="url(#fg-tube-c)"
+                    animate={{
+                      y: [260, 410 + (i % 3) * 6],
+                      x: [248 + (i % 3 - 1) * 8, 248 + (i % 2 - 0.5) * 6],
+                      rotate: [0, 360],
+                    }}
+                    transition={{
+                      duration: 1.8 + i * 0.2,
+                      repeat: Infinity,
+                      delay: i * 0.15,
+                    }}
+                  />
+                ))}
+                <text x="248" y="452" textAnchor="middle" fontSize="8" fontWeight="600" fill="#ea580c">2,4-DNPH ppt</text>
               </motion.g>
             )}
           </AnimatePresence>
 
-          {/* Purple Hinsberg precipitate */}
+          {/* Purple Hinsberg Precipitate (sulfonamide complex) */}
           <AnimatePresence>
             {showPurple && (
               <motion.g initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}>
                 <motion.rect x="232" y="380" width="32" height="48"
-                  fill="#8b5cf6" opacity="0.82"
+                  fill="#7c3aed" opacity="0.85"
                   clipPath="url(#fg-tube-c)"
                   initial={{ height:0, y:428 }}
                   animate={{ height:48, y:380 }}
                   transition={{ duration:1.1, delay:0.5 }}
                 />
-                <text x="248" y="450" textAnchor="middle" fontSize="8" fontWeight="600" fill="#7c3aed">Sulfonamide</text>
+                <text x="248" y="452" textAnchor="middle" fontSize="8" fontWeight="600" fill="#7c3aed">Sulfonamide</text>
               </motion.g>
             )}
           </AnimatePresence>
 
-          {/* CO₂ bubbles */}
+          {/* Hinsberg Negative: insoluble dense benzenesulfonyl chloride oil droplets settling */}
+          {showHinsbergOil && (
+            <g clipPath="url(#fg-tube-c)">
+              {/* Dense organic oil layer at the bottom (d = 1.38 g/mL, settles under water) */}
+              <motion.path
+                d="M 232 428 Q 248 420 264 428 Z"
+                fill="rgba(148, 163, 184, 0.75)"
+                initial={{ scaleY: 0 }}
+                animate={{ scaleY: 1 }}
+                transition={{ duration: 1.0 }}
+                style={{ transformOrigin: "248px 428px" }}
+              />
+              {/* Droplets sliding down the walls and pool at the bottom */}
+              {Array.from({ length: 8 }).map((_, i) => (
+                <motion.circle
+                  key={i}
+                  r={2.5 + (i % 2) * 1.5}
+                  fill="rgba(100, 116, 139, 0.70)"
+                  animate={{
+                    y: [265, 422 - (i % 3) * 3],
+                    x: [236 + i * 3.5, 238 + i * 3.2],
+                    scale: [1, 1.2, 0.95]
+                  }}
+                  transition={{
+                    duration: 2.2 + i * 0.3,
+                    repeat: Infinity,
+                    delay: i * 0.1,
+                  }}
+                />
+              ))}
+            </g>
+          )}
+
+          {/* NaHCO3 CO2 gas bubbles rising */}
           <AnimatePresence>
             {showBubbles && (
               <motion.g initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}>
-                {[235,242,250,257,263].map((bx, i) => (
-                  <motion.circle key={i} cx={bx} cy={412} r="3"
-                    fill="rgba(255,255,255,0.78)" stroke="rgba(148,163,184,0.4)" strokeWidth="0.7"
-                    animate={{ cy:[412,258], opacity:[0.9,0] }}
-                    transition={{ duration:1.6, repeat:Infinity, delay:i*0.38, ease:"easeOut" }}
-                  />
-                ))}
+                {Array.from({ length: 12 }).map((_, i) => {
+                  const seed = i * 29;
+                  const bx = 236 + (seed % 7) * 4;
+                  const size = 1.2 + (seed % 3) * 1.2;
+                  const speed = 1.1 + (seed % 3) * 0.45;
+                  return (
+                    <motion.circle key={i} cx={bx} cy={425} r={size}
+                      fill="rgba(255,255,255,0.8)" stroke="rgba(148,163,184,0.3)" strokeWidth="0.6"
+                      animate={{
+                        cy: [425, 258],
+                        x: [bx, bx + (seed % 5 - 2) * 1.5, bx],
+                        opacity: [0.95, 0.95, 0]
+                      }}
+                      transition={{
+                        duration: speed,
+                        repeat: Infinity,
+                        delay: i * 0.18,
+                        ease: "easeOut"
+                      }}
+                    />
+                  );
+                })}
                 <text x="248" y="245" textAnchor="middle" fontSize="9" fontWeight="700" fill="#059669">CO₂↑</text>
               </motion.g>
             )}
           </AnimatePresence>
 
-          {/* Cloudiness (Lucas – turbid) */}
+          {/* Lucas positive SN1: Emulsion droplets coalescing & Phase separation */}
           <AnimatePresence>
             {showCloudy && (
-              <motion.g initial={{ opacity:0 }} animate={{ opacity:0.75 }} exit={{ opacity:0 }}>
-                {[[235,310],[248,330],[258,355],[236,375],[248,395]].map(([cx,cy],i) => (
-                  <motion.circle key={i} cx={cx} cy={cy} r="8"
-                    fill="rgba(248,250,252,0.92)"
-                    animate={{ scale:[1,1.2,0.9,1], opacity:[0.7,1,0.6,0.7] }}
-                    transition={{ duration:2.1, repeat:Infinity, delay:i*0.48 }}
-                  />
-                ))}
-                <text x="248" y="450" textAnchor="middle" fontSize="8" fontWeight="600" fill="#64748b">Turbid / cloudy</text>
+              <motion.g initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}>
+                {/* Upper organic layer (alkyl chloride product, d ≈ 0.88, floats at top) */}
+                <motion.rect
+                  x="232" y="255" width="32" height="48"
+                  fill="rgba(240, 240, 240, 0.88)"
+                  clipPath="url(#fg-tube-c)"
+                  initial={{ height: 0 }}
+                  animate={{ height: 48 }}
+                  transition={{ duration: 2.0, ease: "easeOut" }}
+                />
+                
+                {/* Curved meniscus phase boundary between organic and aqueous */}
+                <motion.path
+                  d="M 232 303 Q 248 305 264 303"
+                  fill="none"
+                  stroke="#cbd5e1"
+                  strokeWidth="1.5"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.6 }}
+                />
+
+                {/* Cloudiness / emulsion droplets floating up to the boundary */}
+                {Array.from({ length: 15 }).map((_, i) => {
+                  const seed = i * 23;
+                  const dx = 235 + (seed % 5) * 6;
+                  const size = 1.2 + (seed % 3) * 1.5;
+                  const speed = 2.0 + (seed % 3) * 0.5;
+                  return (
+                    <motion.circle key={i} cx={dx} cy={420} r={size}
+                      fill="rgba(255, 255, 255, 0.85)"
+                      animate={{
+                        cy: [420, 303],
+                        opacity: [0.75, 0.75, 0.0],
+                        scale: [1.0, 0.8, 1.2]
+                      }}
+                      transition={{
+                        duration: speed,
+                        repeat: Infinity,
+                        delay: i * 0.25,
+                        ease: "easeInOut"
+                      }}
+                    />
+                  );
+                })}
+                <text x="248" y="452" textAnchor="middle" fontSize="8" fontWeight="600" fill="#64748b">2-Phase Emulsion</text>
               </motion.g>
             )}
           </AnimatePresence>
@@ -304,27 +486,27 @@ export default function FunctionalGroupsWorkspace({ state }: Props) {
           {/* Sheen */}
           <rect x="232" y="212" width="7" height="205" fill="rgba(255,255,255,0.42)" rx="3" />
         </g>
-        <text x="248" y="460" textAnchor="middle" fontSize="10" fontWeight="600" fill="#64748b">Test Tube</text>
+        <text x="248" y="595" textAnchor="middle" fontSize="10" fontWeight="600" fill="#64748b">Test Tube</text>
 
-        {/* ─── TEST SPINNER ─── */}
+        {/* Test Spinner */}
         <AnimatePresence>
           {isTesting && (
             <motion.g initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}>
-              <motion.circle cx="248" cy="326" r="22"
+              <motion.circle cx="248" cy="396" r="35"
                 stroke={REAGENT_COLORS[selectedTest ?? ""] ?? "#d97706"} strokeWidth="3.5" fill="none"
                 strokeDasharray="52 24"
                 animate={{ rotate:360 }}
                 transition={{ duration:0.85, repeat:Infinity, ease:"linear" }}
-                style={{ transformOrigin:"248px 326px" }}
+                style={{ transformOrigin:"248px 396px" }}
               />
-              <text x="248" y="330" textAnchor="middle" fontSize="8.5" fontWeight="700" fill={REAGENT_COLORS[selectedTest ?? ""] ?? "#d97706"}>
+              <text x="248" y="400" textAnchor="middle" fontSize="8.5" fontWeight="700" fill={REAGENT_COLORS[selectedTest ?? ""] ?? "#d97706"}>
                 Testing
               </text>
             </motion.g>
           )}
         </AnimatePresence>
 
-        {/* ─── RESULT CARD ─── */}
+        {/* Result Card */}
         <AnimatePresence>
           {lastResult && !isTesting && (
             <motion.g
@@ -346,7 +528,7 @@ export default function FunctionalGroupsWorkspace({ state }: Props) {
                 {lastResult.testName}
               </text>
               {/* Test details */}
-              <text x="306" y="266" fontSize="10" fontWeight="700" fill="#1d4ed8">
+              <text x="306" y="266" fontSize="10" fontWeight="700" fill="#7c3aed">
                 Compound: {compound?.label}
               </text>
               <text x="306" y="282" fontSize="9" fill="#475569">
@@ -373,7 +555,7 @@ export default function FunctionalGroupsWorkspace({ state }: Props) {
           )}
         </AnimatePresence>
 
-        {/* ─── IDENTIFIED GROUP CARD ─── */}
+        {/* Identified Group Card */}
         <AnimatePresence>
           {identified && groupInfo && (
             <motion.g
@@ -397,7 +579,7 @@ export default function FunctionalGroupsWorkspace({ state }: Props) {
           )}
         </AnimatePresence>
 
-        {/* ─── TEST HISTORY DOTS ─── */}
+        {/* Test History Dots */}
         {testResults.slice(0, 5).map((r, i) => (
           <g key={r.testId + i}>
             <circle cx={26 + i*26} cy={H-30} r="10" fill={r.positive ? "#22c55e" : "#f87171"} />
@@ -410,7 +592,7 @@ export default function FunctionalGroupsWorkspace({ state }: Props) {
           </g>
         ))}
 
-        {/* ─── STEP HINT ─── */}
+        {/* Step Hint */}
         <rect x="14" y="62" width="205" height="22" rx="7"
           fill="rgba(255,255,255,0.9)" stroke="rgba(148,163,184,0.28)" strokeWidth="0.9" />
         <text x="24" y="77" fontSize="9.5" fontWeight="600" fill="#475569">

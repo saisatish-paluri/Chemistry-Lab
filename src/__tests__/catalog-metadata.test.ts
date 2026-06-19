@@ -15,8 +15,8 @@ import { EXPERIMENT_META } from "@/lib/store/active-lab-store";
 // ── Catalog integrity ────────────────────────────────────────────────────────
 
 describe("CATALOG — basic integrity", () => {
-  it("has exactly 20 experiments", () => {
-    expect(CATALOG).toHaveLength(20);
+  it("has exactly 30 experiments", () => {
+    expect(CATALOG).toHaveLength(30);
   });
 
   it("every entry has a non-empty slug, href, title, subject, and accent", () => {

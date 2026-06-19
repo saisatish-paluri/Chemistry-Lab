@@ -1,22 +1,25 @@
 "use client";
 
-import type { ElectrolyteId } from "@/lib/engine/types";
+import type { ElectrolyteId, ElectrodeMaterial } from "@/lib/engine/types";
 import { ELECTROLYTES } from "@/lib/engine/electrolysis-engine";
 
 const ELECTROLYTE_IDS: ElectrolyteId[] = [
   "sodium-chloride", "sulfuric-acid", "copper-sulfate", "sodium-hydroxide", "distilled-water",
 ];
 
+const ELECTRODE_MATERIALS: ElectrodeMaterial[] = ["carbon", "platinum", "copper"];
+
 interface Props {
   electrolyte:     ElectrolyteId | null;
   electrodesIn:    boolean;
+  electrodeMaterial?: string;
   circuitComplete: boolean;
   current:         number;
   voltage:         number;
   status:          string;
   isRunning:       boolean;
   onSetElectrolyte:    (id: ElectrolyteId) => void;
-  onInsertElectrodes:  () => void;
+  onInsertElectrodes:  (material: import("@/lib/engine/types").ElectrodeMaterial) => void;
   onConnectCircuit:    () => void;
   onDisconnectCircuit: () => void;
   onStart:             () => void;
@@ -26,7 +29,7 @@ interface Props {
 }
 
 export default function ElectrolysisControls({
-  electrolyte, electrodesIn, circuitComplete, current, voltage, status, isRunning,
+  electrolyte, electrodesIn, electrodeMaterial, circuitComplete, current, voltage, status, isRunning,
   onSetElectrolyte, onInsertElectrodes, onConnectCircuit, onDisconnectCircuit,
   onStart, onStop, onSetVoltage, onReset,
 }: Props) {
@@ -73,15 +76,50 @@ export default function ElectrolysisControls({
         </div>
       </div>
 
+      {/* ── Electrode Material Selection ── */}
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wider mb-1.5"
+          style={{ color: "var(--lab-text-muted)" }}>
+          Electrode Material
+        </p>
+        <div className="grid grid-cols-3 gap-1.5">
+          {ELECTRODE_MATERIALS.map((mat) => {
+            const isActive = electrodeMaterial === mat;
+            return (
+              <button
+                key={mat}
+                disabled={electrodesIn || !electrolyte || done}
+                onClick={() => onInsertElectrodes(mat)}
+                className="py-2 text-[10px] font-bold rounded-xl border transition-all uppercase"
+                style={{
+                  borderColor: isActive ? "var(--lab-blue-600)" : "var(--lab-glass-border)",
+                  background:  isActive ? "rgba(37,99,235,0.08)" : "transparent",
+                  color:       isActive ? "var(--lab-blue-700)" : "var(--lab-text-secondary)",
+                  opacity:     (electrodesIn && !isActive) || !electrolyte || done ? 0.4 : 1,
+                }}
+              >
+                {mat}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* ── Setup steps ── */}
       <div className="flex flex-col gap-2">
-        <StepBtn
-          label="Insert Electrodes"
-          done={electrodesIn}
-          disabled={!electrolyte || done}
-          onClick={onInsertElectrodes}
-          icon="⚡"
-        />
+        <div className="flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-xl border"
+             style={{
+               borderColor: electrodesIn ? "#86efac" : "var(--lab-glass-border)",
+               background: electrodesIn ? "rgba(134,239,172,0.12)" : "transparent",
+               color: electrodesIn ? "#15803d" : "var(--lab-text-secondary)"
+             }}>
+          <span className="w-5 h-5 rounded-full flex items-center justify-center border text-[10px]"
+                style={{ background: electrodesIn ? "#22c55e" : "transparent", color: electrodesIn ? "white" : "inherit" }}>
+            {electrodesIn ? "✓" : "⚡"}
+          </span>
+          {electrodesIn ? `Electrodes Inserted (${electrodeMaterial?.toUpperCase()})` : "Select material to insert"}
+        </div>
+
         <StepBtn
           label={circuitComplete ? "Disconnect Circuit" : "Connect Circuit"}
           done={circuitComplete}

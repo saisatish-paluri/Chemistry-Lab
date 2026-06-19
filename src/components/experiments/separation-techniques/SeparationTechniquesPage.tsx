@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState, useRef, startTransition } from "react";
 import { motion, AnimatePresence }                       from "framer-motion";
@@ -349,15 +349,23 @@ function FiltrationDiagram({ state }: { state: FiltrationState }) {
   const filtrateH = state.filtrateCollected ? 40 : (state.filtrateClear ? (state.pourProgress / 100) * 40 : 0);
 
   return (
-    <svg viewBox="0 0 300 220" width="100%" aria-label="Filtration apparatus">
+    <svg viewBox="35 15 180 200" width="100%" aria-label="Filtration apparatus">
       <defs>
         <clipPath id="sep-funnel-clip">
           <path d="M100 30 L200 30 L170 80 L130 80 Z" />
         </clipPath>
+        <linearGradient id="sep-bench-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#e2e8f0" />
+          <stop offset="30%" stopColor="#f1f5f9" />
+          <stop offset="100%" stopColor="#cbd5e1" />
+        </linearGradient>
       </defs>
+      {/* Table benchtop */}
+      <rect x="35" y="210" width="180" height="5" fill="url(#sep-bench-grad)" />
+
       {/* Retort stand */}
-      <line x1="150" y1="20" x2="150" y2="180" stroke="rgba(99,179,237,0.35)" strokeWidth="3" />
-      <line x1="110" y1="180" x2="190" y2="180" stroke="rgba(99,179,237,0.35)" strokeWidth="3" />
+      <line x1="150" y1="20" x2="150" y2="210" stroke="#64748b" strokeWidth="3.2" strokeLinecap="round" />
+      <line x1="110" y1="210" x2="190" y2="210" stroke="#475569" strokeWidth="4" strokeLinecap="round" />
 
       {/* Funnel — dark glass */}
       <path d="M100 30 L200 30 L170 80 L130 80 Z"
@@ -428,12 +436,22 @@ function EvaporationDiagram({ state }: { state: EvaporationState }) {
   const solutionLevel = Math.max(0, 1 - state.evapProgress / 100);
 
   return (
-    <svg viewBox="0 0 300 220" width="100%" aria-label="Evaporation apparatus">
+    <svg viewBox="20 60 230 155" width="100%" aria-label="Evaporation apparatus">
+      <defs>
+        <linearGradient id="sep-bench-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#e2e8f0" />
+          <stop offset="30%" stopColor="#f1f5f9" />
+          <stop offset="100%" stopColor="#cbd5e1" />
+        </linearGradient>
+      </defs>
+      {/* Table benchtop */}
+      <rect x="20" y="180" width="230" height="5" fill="url(#sep-bench-grad)" />
+
       {/* Tripod stand */}
-      <line x1="90"  y1="180" x2="150" y2="130" stroke="rgba(99,179,237,0.35)" strokeWidth="2" />
-      <line x1="210" y1="180" x2="150" y2="130" stroke="rgba(99,179,237,0.35)" strokeWidth="2" />
-      <line x1="150" y1="185" x2="150" y2="130" stroke="rgba(99,179,237,0.35)" strokeWidth="2" />
-      <ellipse cx="150" cy="128" rx="40" ry="6" fill="none" stroke="rgba(99,179,237,0.35)" strokeWidth="1.5" strokeDasharray="4 2" />
+      <line x1="90"  y1="180" x2="150" y2="130" stroke="#64748b" strokeWidth="2.5" />
+      <line x1="210" y1="180" x2="150" y2="130" stroke="#64748b" strokeWidth="2.5" />
+      <line x1="150" y1="185" x2="150" y2="130" stroke="#475569" strokeWidth="2.5" />
+      <ellipse cx="150" cy="128" rx="40" ry="6" fill="none" stroke="#64748b" strokeWidth="1.5" strokeDasharray="4 2" />
 
       {/* Evaporating dish — dark glass */}
       <path d="M110 110 Q110 130 150 132 Q190 130 190 110 Z"
@@ -523,7 +541,17 @@ function DistillationDiagram({ state }: { state: DistillationState }) {
   const warmFrac = Math.max(0, (state.tempC - 20) / 90);
 
   return (
-    <svg viewBox="0 0 320 220" width="100%" aria-label="Distillation apparatus">
+    <svg viewBox="25 50 270 170" width="100%" aria-label="Distillation apparatus">
+      <defs>
+        <linearGradient id="sep-bench-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#e2e8f0" />
+          <stop offset="30%" stopColor="#f1f5f9" />
+          <stop offset="100%" stopColor="#cbd5e1" />
+        </linearGradient>
+      </defs>
+      {/* Table benchtop */}
+      <rect x="25" y="180" width="270" height="5" fill="url(#sep-bench-grad)" />
+
       {/* Distillation flask — dark glass */}
       <ellipse cx="80" cy="140" rx="40" ry="14" fill="rgba(255,255,255,0.48)" stroke="#60a5fa" strokeWidth="1.5" />
       <rect x="40" y="126" width="80" height="14" fill="rgba(255,255,255,0.48)" />
@@ -612,7 +640,17 @@ function ChromatographyDiagram({ state }: { state: ChromatographyState }) {
   const frontY = state.solventAdded ? Math.max(0, paperH - (state.solventFrontMm / 80) * paperH) : paperH;
 
   return (
-    <svg viewBox="0 0 300 230" width="100%" aria-label="Chromatography">
+    <svg viewBox="55 35 200 195" width="100%" aria-label="Chromatography">
+      <defs>
+        <linearGradient id="sep-bench-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#e2e8f0" />
+          <stop offset="30%" stopColor="#f1f5f9" />
+          <stop offset="100%" stopColor="#cbd5e1" />
+        </linearGradient>
+      </defs>
+      {/* Table benchtop */}
+      <rect x="55" y="215" width="200" height="5" fill="url(#sep-bench-grad)" />
+
       {/* Tank — dark glass */}
       <rect x="60" y="40" width="180" height="175" rx="4"
             fill="rgba(255,255,255,0.48)" stroke="rgba(71,85,105,0.50)" strokeWidth="1.5" />

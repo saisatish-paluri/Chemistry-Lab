@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import { useEffect, useState, startTransition } from "react";
+import { useEffect, useState, startTransition, useRef } from "react";
 import { motion }                                from "framer-motion";
 import { useCalorimetryStore }                   from "@/lib/store/calorimetry-store";
 import StepGuide                                 from "@/components/lab/StepGuide";
@@ -12,16 +12,34 @@ import LabPageShell                              from "@/components/lab/LabPageS
 import LabContextPanel                           from "@/components/lab/LabContextPanel";
 import { calcCalorimetryTemp }                   from "@/lib/engine/calorimetry-engine";
 import { EXPERIMENT_EDUCATION }                 from "@/lib/experiment-education";
+import { InstrumentPanel }                      from "@/components/instruments";
+import MacroMicroViewToggle                      from "@/components/lab/MacroMicroViewToggle";
+import MicroscopicViewer                         from "@/components/lab/MicroscopicViewer";
 
 
 export default function CalorimetryPage() {
   const [showPopup, setShowPopup] = useState(false);
-  const store = useCalorimetryStore();
+  const [viewMode, setViewMode]   = useState<"macro" | "micro">("macro");
+  const store    = useCalorimetryStore();
+  const tickRef  = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     store.hydrate();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Newton's Law of Cooling tick — runs at 2 Hz while experiment is active
+  useEffect(() => {
+    if (store.status === "running" && store.naohAddedMl > 0) {
+      tickRef.current = setInterval(() => {
+        store.tickAction(0.5); // 500 ms per tick
+      }, 500);
+    } else {
+      if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; }
+    }
+    return () => { if (tickRef.current) { clearInterval(tickRef.current); tickRef.current = null; } };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store.status, store.naohAddedMl]);
 
   const lastObsId = store.observations[0]?.id;
   useEffect(() => {
@@ -176,12 +194,27 @@ export default function CalorimetryPage() {
       }
 
       workspace={
-        <CalorimetryWorkspace
-          currentTempC={store.currentTempC}
-          initialTempC={store.initialTempC}
-          naohAddedMl={store.naohAddedMl}
-          hclVolumeMl={store.hclVolumeMl}
-        />
+        <div className="flex flex-col gap-3 w-full h-full">
+          <div className="flex justify-end pr-4">
+            <MacroMicroViewToggle view={viewMode} onChange={setViewMode} />
+          </div>
+          {viewMode === "macro" ? (
+            <CalorimetryWorkspace
+              currentTempC={store.currentTempC}
+              initialTempC={store.initialTempC}
+              naohAddedMl={store.naohAddedMl}
+              hclVolumeMl={store.hclVolumeMl}
+            />
+          ) : (
+            <MicroscopicViewer
+              experimentType="calorimetry"
+              temperatureK={store.currentTempC + 273.15}
+              concentration={(store.naohAddedMl / 1000) * store.naohConc}
+              pH={7}
+              isTriggered={store.naohAddedMl > 0}
+            />
+          )}
+        </div>
       }
       education={EXPERIMENT_EDUCATION.calorimetry}
       reactionNote={
@@ -199,6 +232,19 @@ export default function CalorimetryPage() {
       onSetMode={store.setMode}
 
       observations={<ObservationPanel observations={store.observations} />}
+
+      infoCards={
+        store.measurements ? (
+          <InstrumentPanel
+            title="Active Instruments"
+            readings={[store.measurements.thermometer, store.measurements.naohVolume]}
+            errors={store.activeErrors}
+            showUncertainty
+            showBudget
+            showErrors
+          />
+        ) : null
+      }
 
       obsNotif={
         popup ? (
@@ -243,7 +289,7 @@ function CalorimetryWorkspace({
     <div
       className="relative rounded-3xl overflow-hidden select-none"
       style={{
-        aspectRatio: "300/240",
+        aspectRatio: "200/215",
         width:       "100%",
         height:      "auto",
         maxHeight:   "100%",
@@ -291,7 +337,7 @@ function CalorimetryWorkspace({
       )}
 
       <svg
-        viewBox="0 0 300 240"
+        viewBox="50 10 200 215"
         width="100%"
         style={{ display: "block", position: "relative", zIndex: 10 }}
         aria-label="Calorimeter"
@@ -302,7 +348,7 @@ function CalorimetryWorkspace({
             <feDropShadow dx="0" dy="3" stdDeviation="4" floodColor="rgba(0,0,0,0.50)" />
           </filter>
           <clipPath id="cal-cup-clip">
-            <path d="M84 42 L74 194 Q74 208 94 208 L206 208 Q226 208 226 194 L216 42 Z" />
+            <path d="M84 52 L74 204 Q74 218 94 218 L206 218 Q226 218 226 204 L216 52 Z" />
           </clipPath>
         </defs>
 
@@ -316,19 +362,19 @@ function CalorimetryWorkspace({
         </text>
 
         {/* ── Outer polystyrene cup — light gray ── */}
-        <path d="M80 40 L70 195 Q70 210 90 210 L210 210 Q230 210 230 195 L220 40 Z"
+        <path d="M80 50 L70 205 Q70 220 90 220 L210 220 Q230 220 230 205 L220 50 Z"
               fill="rgba(255,255,255,0.52)" stroke="rgba(71,85,105,0.50)" strokeWidth="2"
               filter="url(#cal-shadow)" />
         {/* Inner cup wall — insulation layers */}
-        <path d="M84 42 L74 194 Q74 208 94 208 L206 208 Q226 208 226 194 L216 42 Z"
+        <path d="M84 52 L74 204 Q74 218 94 218 L206 218 Q226 218 226 204 L216 52 Z"
               fill="rgba(241,245,249,0.72)" stroke="rgba(148,163,184,0.35)" strokeWidth="1.2" />
-        <path d="M84 46 L84 194" stroke="rgba(255,255,255,0.45)" strokeWidth="4" strokeLinecap="round" />
+        <path d="M84 56 L84 204" stroke="rgba(255,255,255,0.45)" strokeWidth="4" strokeLinecap="round" />
 
         {/* Solution — rises from bottom, clipped to inner cup shape */}
         {totalMl > 0 && (() => {
           const maxVol = 125;
-          const cupBottom = 208;
-          const cupTop = 46;
+          const cupBottom = 218;
+          const cupTop = 56;
           const liqH = Math.min(1, totalMl / maxVol) * (cupBottom - cupTop);
           const liqY = cupBottom - liqH;
           return (
@@ -342,37 +388,39 @@ function CalorimetryWorkspace({
         })()}
 
         {/* ── Temperature badge ── */}
-        <rect x="105" y="108" width="90" height="42" rx="10"
-              fill="rgba(255,255,255,0.96)" stroke="rgba(148,163,184,0.28)" strokeWidth="1.2"
+        <rect x="105" y="118" width="90" height="42" rx="10"
+              fill="rgba(15, 23, 42, 0.85)" stroke="rgba(255, 255, 255, 0.12)" strokeWidth="1.2"
               filter="url(#cal-shadow)" />
-        <text x="150" y="130" textAnchor="middle" fontSize="19" fill={`rgb(${r},${g},${b})`} fontWeight="900" fontFamily="monospace">
+        <text x="150" y="141" textAnchor="middle" fontSize="20" fill={`rgb(${Math.max(r, 60)},${Math.max(g, 180)},${Math.max(b, 220)})`} fontWeight="950" fontFamily="monospace">
           {currentTempC.toFixed(1)}
         </text>
-        <text x="150" y="143" textAnchor="middle" fontSize="8.5" fill="#64748b" fontWeight="600">°C</text>
+        <text x="150" y="154" textAnchor="middle" fontSize="9.5" fill="#cbd5e1" fontWeight="700">°C</text>
 
         {/* ── Thermometer ── */}
-        <rect x="145" y="40" width="10" height="62" rx="5"
+        <rect x="145" y="50" width="10" height="62" rx="5"
               fill="rgba(255,255,255,0.60)" stroke="rgba(148,163,184,0.50)" strokeWidth="1.2" />
         <motion.rect
           x="147"
           width="6"
           rx="3"
           animate={{
-            y:      100 - warmFrac * 48,
+            y:      110 - warmFrac * 48,
             height: Math.max(4, 10 + warmFrac * 52),
             fill:   `rgb(${r},${g},${b})`,
           }}
           transition={{ duration: 0.6, ease: "easeOut" }}
         />
-        <circle cx="150" cy="106" r="8" fill={`rgb(${r},${g},${b})`} style={{ transition: "fill 0.6s ease" }} />
-        <circle cx="150" cy="106" r="4" fill="rgba(255,255,255,0.28)" />
+        <circle cx="150" cy="116" r="8" fill={`rgb(${r},${g},${b})`} style={{ transition: "fill 0.6s ease" }} />
+        <circle cx="150" cy="116" r="4" fill="rgba(255,255,255,0.28)" />
 
         {/* ── Stirrer ── */}
-        <line x1="192" y1="40" x2="186" y2="178" stroke="rgba(71,85,105,0.45)" strokeWidth="2.2" strokeLinecap="round" />
-        <line x1="192.5" y1="40" x2="186.5" y2="178" stroke="rgba(255,255,255,0.30)" strokeWidth="0.8" strokeLinecap="round" />
-        <ellipse cx="184" cy="178" rx="13" ry="3.5" fill="none" stroke="rgba(71,85,105,0.40)" strokeWidth="1.5" />
+        <line x1="192" y1="50" x2="186" y2="188" stroke="rgba(71,85,105,0.45)" strokeWidth="2.2" strokeLinecap="round" />
+        <line x1="192.5" y1="50" x2="186.5" y2="188" stroke="rgba(255,255,255,0.30)" strokeWidth="0.8" strokeLinecap="round" />
+        <ellipse cx="184" cy="188" rx="13" ry="3.5" fill="none" stroke="rgba(71,85,105,0.40)" strokeWidth="1.5" />
 
-        <text x="150" y="200" textAnchor="middle" fontSize="8.5" fill="#334155" fontWeight="700">
+        <rect x="100" y="198" width="100" height="18" rx="5"
+              fill="rgba(15, 23, 42, 0.80)" stroke="rgba(255,255,255,0.08)" strokeWidth="0.8" />
+        <text x="150" y="211" textAnchor="middle" fontSize="11" fill="#fca5a5" fontWeight="800">
           ΔT = +{deltaT.toFixed(2)} °C
         </text>
 

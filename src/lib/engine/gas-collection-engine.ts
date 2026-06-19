@@ -5,7 +5,6 @@
  * Gas is collected by upward displacement of air in an inverted cylinder.
  *
  * Molar masses: CaCO₃ = 100.09 g/mol, HCl = 36.46 g/mol
- * Molar volume of CO₂ at 25 °C, 1 atm ≈ 24,500 mL/mol
  */
 
 import type {
@@ -28,9 +27,7 @@ function mkObs(
 
 export const CACO3_MOLAR_MASS  = 100.09;   // g/mol
 export const HCL_CONC_DEFAULT  = 1.0;      // mol/L
-export const CO2_MOLAR_VOL_ML  = 24500;    // mL/mol at 25 °C
 export const COLLECTION_CAP_ML = 600;      // max collection volume
-export const RATE_CONSTANT     = 0.012;    // fraction of limiting moles reacted per second
 
 /** Stoichiometric moles of CO₂ for given reactant amounts. */
 export function theoreticalCO2Moles(caco3G: number, hclMol: number): number {
@@ -40,11 +37,19 @@ export function theoreticalCO2Moles(caco3G: number, hclMol: number): number {
   return limitingMol;
 }
 
-export function co2MolToMl(moles: number): number {
-  return moles * CO2_MOLAR_VOL_ML;
+/** Helper: Calculate vapor pressure of water, net CO2 pressure, and dry gas volume */
+export function calculateDynamicGasProps(moles: number, tempC: number, totalP: number) {
+  const T_K = tempC + 273.15;
+  // Antoine equation for water vapor pressure in atm (mmHg / 760)
+  const pWater = Math.exp(20.386 - 5132.0 / T_K) / 760;
+  const pCO2 = Math.max(0.01, totalP - pWater);
+  const R = 0.08206; // L*atm/(mol*K)
+  const volumeMl = (moles * R * T_K / pCO2) * 1000;
+  const purityPct = (pCO2 / totalP) * 100;
+  return { volumeMl, purityPct, pWater, pCO2 };
 }
 
-// ─── Initial state ────────────────────────────────────────────────────────────
+// ─── Steps & objectives ────────────────────────────────────────────────────────
 
 const INITIAL_STEPS: StepDef[] = [
   { id: "add-chips",      instruction: "Add marble chips (CaCO₃) to the conical flask.",    completed: false },
@@ -74,25 +79,61 @@ export function initialGasCollectionState(mode: GasCollectionState["mode"]): Gas
     steps:      INITIAL_STEPS.map((s) => ({ ...s })),
     objectives: INITIAL_OBJECTIVES.map((o) => ({ ...o })),
     observations: [], result: null, startedAt: null,
+
+    // Overhaul defaults
+    temperature:       25,
+    pressure:          1.0,
+    leakRate:          0,
+    gasPurity:         100,
+    collectionEfficiency: 100,
+    experimentalError: (Math.random() - 0.5) * 2, // rolled once per session
+    bubbleRate:        0,
   };
 }
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
 
+export function updateGasCollectionParameters(
+  state: GasCollectionState,
+  changes: Partial<Pick<GasCollectionState, "temperature" | "pressure" | "leakRate">>,
+): GasCollectionState {
+  if (state.status !== "idle" && state.status !== "setup") return state;
+  const next = {
+    ...state,
+    temperature: changes.temperature !== undefined ? changes.temperature : state.temperature,
+    pressure: changes.pressure !== undefined ? changes.pressure : state.pressure,
+    leakRate: changes.leakRate !== undefined ? changes.leakRate : state.leakRate,
+  };
+  return recalculateGasCollectionTheory(next);
+}
+
+function recalculateGasCollectionTheory(state: GasCollectionState): GasCollectionState {
+  const hclMol = (state.hclVolumeMl / 1000) * state.hclConc;
+  const theoryMoles = theoreticalCO2Moles(state.caco3Grams, hclMol);
+  const props = calculateDynamicGasProps(theoryMoles, state.temperature, state.pressure);
+  return {
+    ...state,
+    theoreticalCo2Ml: props.volumeMl,
+    gasPurity: props.purityPct,
+  };
+}
+
 export function addMarbleChips(state: GasCollectionState, grams: number): GasCollectionState {
   if (state.status === "completed" || state.status === "failed") return state;
   const addGrams = Math.max(0.5, Math.min(grams, 10));
   const newGrams = state.caco3Grams + addGrams;
-  const hclMol   = (state.hclVolumeMl / 1000) * state.hclConc;
-  const theoryMl = co2MolToMl(theoreticalCO2Moles(newGrams, hclMol));
   const steps    = state.steps.map((s) => s.id === "add-chips" ? { ...s, completed: true } : s);
 
-  return {
+  const preRecalc = {
     ...state,
     caco3Grams:  newGrams,
     caco3MolesLeft: newGrams / CACO3_MOLAR_MASS - ((state.caco3Grams / CACO3_MOLAR_MASS) - state.caco3MolesLeft),
-    theoreticalCo2Ml: theoryMl,
     steps,
+  };
+
+  const next = recalculateGasCollectionTheory(preRecalc);
+  return {
+    ...next,
     observations: [
       mkObs("reaction-start",
         `Added ${addGrams.toFixed(1)} g CaCO₃ (marble chips) — total ${newGrams.toFixed(1)} g (${(newGrams / CACO3_MOLAR_MASS).toFixed(4)} mol).`,
@@ -107,7 +148,6 @@ export function addHCl(state: GasCollectionState, volumeMl: number): GasCollecti
   const addMl  = Math.max(10, Math.min(volumeMl, 100));
   const newMl  = state.hclVolumeMl + addMl;
   const hclMol = (newMl / 1000) * state.hclConc;
-  const theoryMl = co2MolToMl(theoreticalCO2Moles(state.caco3Grams, hclMol));
 
   const newStatus = state.caco3Grams > 0 ? "running" : state.status;
   const steps     = state.steps.map((s) =>
@@ -117,19 +157,23 @@ export function addHCl(state: GasCollectionState, volumeMl: number): GasCollecti
     o.id === "add-reactants" && state.caco3Grams > 0 ? { ...o, completed: true } : o,
   );
 
-  return {
+  const preRecalc = {
     ...state,
     hclVolumeMl: newMl,
     hclMolesLeft: hclMol - (state.hclMolesLeft > 0 ? (state.hclVolumeMl / 1000 * state.hclConc) - state.hclMolesLeft : 0),
-    theoreticalCo2Ml: theoryMl,
     status: newStatus,
     startedAt: state.startedAt ?? (newStatus === "running" ? Date.now() : null),
     steps,
     objectives,
+  };
+
+  const next = recalculateGasCollectionTheory(preRecalc);
+  return {
+    ...next,
     observations: [
       mkObs("reaction-start",
         `Added ${addMl} mL of ${state.hclConc.toFixed(1)} M HCl — ` +
-        `effervescence begins! Theoretical CO₂ = ${theoryMl.toFixed(0)} mL.`,
+        `effervescence begins! Theoretical dry/wet CO₂ = ${next.theoreticalCo2Ml.toFixed(0)} mL.`,
         "success"),
       ...state.observations,
     ],
@@ -143,21 +187,28 @@ export function tickGasCollection(state: GasCollectionState, deltaSec: number): 
   const caco3Total = state.caco3Grams / CACO3_MOLAR_MASS;
   const hclTotal   = (state.hclVolumeMl / 1000) * state.hclConc;
 
-  // Moles already reacted (from CO₂ collected)
-  const co2Reacted = state.co2CollectedMl / CO2_MOLAR_VOL_ML;
-  const caco3Reacted = co2Reacted;
-  const hclReacted   = co2Reacted * 2;
+  // Track consumed moles from the starting state parameters
+  const caco3ReactedTotal = Math.max(0, caco3Total - state.caco3MolesLeft);
+  const hclReactedTotal   = Math.max(0, hclTotal - state.hclMolesLeft);
 
-  const caco3Left = Math.max(0, caco3Total - caco3Reacted);
-  const hclLeft   = Math.max(0, hclTotal   - hclReacted);
+  const caco3Left = state.caco3MolesLeft;
+  const hclLeft   = state.hclMolesLeft;
   const limiting  = Math.min(caco3Left, hclLeft / 2);
 
-  if (limiting <= 1e-9) {
+  const T_K = state.temperature + 273.15;
+  const R = 0.08206;
+
+  // Henry's Law Solubility of CO2 in water
+  const Kh = 0.034 * Math.exp(2400 * (1.0 / T_K - 1.0 / 298.15)); // mol/(L*atm)
+  const props = calculateDynamicGasProps(1.0, state.temperature, state.pressure); // get pCO2
+  const maxDissolvedMoles = Kh * props.pCO2 * 0.05; // 50 mL effective water volume saturated along bubble path
+
+  if (limiting <= 1e-6) {
     // Reaction complete
     const finalMl  = state.co2CollectedMl;
     const theorMl  = state.theoreticalCo2Ml;
     const pctYield = theorMl > 0 ? (finalMl / theorMl) * 100 : 0;
-    const within10 = Math.abs(finalMl - theorMl) / Math.max(theorMl, 1) < 0.10;
+    const within10 = Math.abs(finalMl - theorMl) / Math.max(theorMl, 1) < 0.15;
 
     const objectives = state.objectives.map((o) => {
       if (o.id === "collect-100ml" && finalMl >= 100) return { ...o, completed: true };
@@ -181,42 +232,69 @@ export function tickGasCollection(state: GasCollectionState, deltaSec: number): 
       status: "completed",
       reactionComplete: true,
       co2CollectedMl: finalMl,
-      caco3MolesLeft: caco3Left,
-      hclMolesLeft: hclLeft,
+      caco3MolesLeft: Math.max(0, caco3Left),
+      hclMolesLeft: Math.max(0, hclLeft),
       steps,
       objectives,
+      bubbleRate: 0,
       result: {
         completedAt: Date.now(),
         success: true,
         score: Math.min(100, score),
         summary:
-          `Collected ${finalMl.toFixed(0)} mL CO₂ out of theoretical ${theorMl.toFixed(0)} mL ` +
-          `(yield: ${pctYield.toFixed(1)}%).`,
+          `Collected ${finalMl.toFixed(0)} mL wet gas out of theoretical ${theorMl.toFixed(0)} mL ` +
+          `(observed yield: ${pctYield.toFixed(1)}%). Gas purity was ${state.gasPurity.toFixed(1)}%.`,
         explanation:
-          "CaCO₃ + 2HCl → CaCl₂ + H₂O + CO₂ — the limiting reagent determines the maximum gas yield.\n" +
-          "At 25 °C, 1 mole of CO₂ occupies 24.5 L (from PV = nRT).\n" +
-          "Yield < 100% is expected due to gas solubility in water and incomplete collection.",
+          "CaCO₃ + 2HCl → CaCl₂ + H₂O + CO₂ — the limiting reagent determines the gas yield.\n" +
+          `At ${state.temperature}°C and ${state.pressure} atm, water vapor pressure is ${(props.pWater * 100).toFixed(1)}% of total pressure.\n` +
+          `Henry's Law predicted ${(maxDissolvedMoles * 1000).toFixed(1)} mmol of CO₂ dissolved in the water trough, reducing collection.\n` +
+          `Apparatus leak rate of ${state.leakRate}% further reduced final yields.`,
       },
       observations: [
         mkObs("reaction-complete",
-          `Reaction complete — ${finalMl.toFixed(0)} mL CO₂ collected (${pctYield.toFixed(1)}% yield).`,
+          `Reaction complete — ${finalMl.toFixed(0)} mL gas collected. Collection efficiency: ${state.collectionEfficiency.toFixed(1)}%.`,
           "success"),
         ...state.observations,
       ],
     };
   }
 
-  // Rate: fraction of limiting reacted per second
-  const molesThisTick = RATE_CONSTANT * limiting * deltaSec;
-  const co2ThisMl     = co2MolToMl(molesThisTick);
-  const newMl         = Math.min(COLLECTION_CAP_ML, state.co2CollectedMl + co2ThisMl);
+  // Arrhenius-dependent rate constant: k(T) = A * exp(-Ea / RT)
+  const A_rate = 0.012 * Math.exp(35000 / (8.314 * 298.15));
+  const rateK = A_rate * Math.exp(-35000 / (8.314 * T_K)) * (1.0 + 0.05 * state.experimentalError);
+  const molesThisTick = rateK * limiting * deltaSec;
+
+  const nextCaco3Left = Math.max(0, caco3Left - molesThisTick);
+  const nextHclLeft   = Math.max(0, hclLeft - molesThisTick * 2);
+
+  // Moles of CO2 produced so far
+  const totalCaco3Reacted = caco3Total - nextCaco3Left;
+  
+  // Apply solubility losses
+  const netGasOutMoles = Math.max(0, totalCaco3Reacted - maxDissolvedMoles);
+
+  // Apply leak rate
+  const netCollectedMoles = netGasOutMoles * (1.0 - state.leakRate / 100);
+
+  // Calculate volume using ideal gas law
+  const gasProps = calculateDynamicGasProps(netCollectedMoles, state.temperature, state.pressure);
+
+  // Uncertainty noise in volume reading
+  const volumeNoise = (Math.random() - 0.5) * 0.4 * deltaSec;
+  const newMl = Math.min(COLLECTION_CAP_ML, Math.max(0, gasProps.volumeMl + volumeNoise));
+
+  // Visual bubble rate linked directly to instantaneous moles reacting
+  const bubbleRate = Math.max(0, Math.min(10, molesThisTick * 80000 * (1.0 - state.leakRate / 100)));
+
+  // Calculate dynamic parameters
+  const currentEfficiency = totalCaco3Reacted > 0 ? (netCollectedMoles / totalCaco3Reacted) * 100 : 100;
 
   const newObs: ObservationEvent[] = [];
   if (state.co2CollectedMl < 50 && newMl >= 50) {
-    newObs.push(mkObs("gas-evolution", "50 mL CO₂ collected — reaction progressing well.", "info"));
+    newObs.push(mkObs("gas-evolution", `50 mL gas collected. Current purity: ${gasProps.purityPct.toFixed(1)}% (vapor pressure: ${(gasProps.pWater * 760).toFixed(0)} mmHg).`, "info"));
   }
   if (state.co2CollectedMl < 100 && newMl >= 100) {
-    newObs.push(mkObs("gas-evolution", "100 mL collected! Measure and compare to theoretical.", "success"));
+    newObs.push(mkObs("gas-evolution", `100 mL collected! In trough, ${(maxDissolvedMoles * 1000).toFixed(1)} mmol CO₂ has dissolved.`, "success"));
   }
 
   const steps = state.steps.map((s) =>
@@ -226,9 +304,12 @@ export function tickGasCollection(state: GasCollectionState, deltaSec: number): 
   return {
     ...state,
     co2CollectedMl: newMl,
-    caco3MolesLeft: caco3Left - molesThisTick,
-    hclMolesLeft: hclLeft - molesThisTick * 2,
+    caco3MolesLeft: nextCaco3Left,
+    hclMolesLeft: nextHclLeft,
     steps,
+    gasPurity: gasProps.purityPct,
+    collectionEfficiency: currentEfficiency,
+    bubbleRate,
     observations: newObs.length ? [...newObs, ...state.observations] : state.observations,
   };
 }

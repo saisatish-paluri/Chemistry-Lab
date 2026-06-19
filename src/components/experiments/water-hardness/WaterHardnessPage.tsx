@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useRef, useState, startTransition } from "react";
 import { useWaterHardnessStore }  from "@/lib/store/water-hardness-store";
@@ -12,11 +12,14 @@ import LabPageShell               from "@/components/lab/LabPageShell";
 import LabContextPanel            from "@/components/lab/LabContextPanel";
 import { EXPERIMENT_EDUCATION }   from "@/lib/experiment-education";
 import { ENDPOINT_ML }            from "@/lib/engine/water-hardness-engine";
+import MacroMicroViewToggle        from "@/components/lab/MacroMicroViewToggle";
+import MicroscopicViewer           from "@/components/lab/MicroscopicViewer";
 
 const ACCENT = "#0284c7";
 
 export default function WaterHardnessPage() {
   const [showPopup, setShowPopup] = useState(false);
+  const [viewMode, setViewMode]   = useState<"macro" | "micro">("macro");
   const store      = useWaterHardnessStore();
   const titrTimer  = useRef<ReturnType<typeof setInterval> | null>(null);
   const popupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -236,7 +239,24 @@ export default function WaterHardnessPage() {
           ]}
         />
       }
-      workspace={<WaterHardnessWorkspace state={store} />}
+      workspace={
+        <div className="flex flex-col gap-3 w-full h-full">
+          <div className="flex justify-end pr-4">
+            <MacroMicroViewToggle view={viewMode} onChange={setViewMode} />
+          </div>
+          {viewMode === "macro" ? (
+            <WaterHardnessWorkspace state={store} />
+          ) : (
+            <MicroscopicViewer
+              experimentType="water-hardness"
+              temperatureK={298}
+              concentration={store.edtaConc}
+              pH={10}
+              isTriggered={store.indicatorAdded}
+            />
+          )}
+        </div>
+      }
       education={EXPERIMENT_EDUCATION["water-hardness"]}
       reactionNote={
         store.endpointReached

@@ -3,9 +3,89 @@
 import { motion } from "framer-motion";
 import { useActiveLabStore, DIFFICULTY_STYLE } from "@/lib/store/active-lab-store";
 
+const LAB_MOLECULES: Record<string, { label: string; key: string }[]> = {
+  "/experiments/neutralization": [
+    { label: "Water (H₂O)", key: "H2O" },
+    { label: "Hydrogen Chloride (HCl)", key: "HCl" },
+    { label: "Sodium Chloride (NaCl)", key: "NaCl" },
+    { label: "Carbon Dioxide (CO₂)", key: "CO2" }
+  ],
+  "/experiments/gas-collection": [
+    { label: "Carbon Dioxide (CO₂)", key: "CO2" },
+    { label: "Water (H₂O)", key: "H2O" },
+    { label: "Ammonia (NH₃)", key: "NH3" },
+    { label: "Oxygen Gas (O₂)", key: "O2" },
+    { label: "Nitrogen Gas (N₂)", key: "N2" }
+  ],
+  "/experiments/dissolving-rate": [
+    { label: "Water (H₂O)", key: "H2O" },
+    { label: "Ethanol (C₂H₅OH)", key: "C2H5OH" }
+  ],
+  "/experiments/chemical-equilibrium": [
+    { label: "Water (H₂O)", key: "H2O" },
+    { label: "Carbon Dioxide (CO₂)", key: "CO2" }
+  ],
+  "/experiments/flame-test": [
+    { label: "Methane (CH₄)", key: "CH4" },
+    { label: "Ethylene (C₂H₄)", key: "C2H4" },
+    { label: "Acetylene (C₂H₂)", key: "C2H2" },
+    { label: "Carbon Tetrachloride (CCl₄)", key: "CCl4" }
+  ],
+  "/experiments/electrolysis": [
+    { label: "Water (H₂O)", key: "H2O" },
+    { label: "Oxygen Gas (O₂)", key: "O2" },
+    { label: "Nitrogen Gas (N₂)", key: "N2" }
+  ],
+  "/experiments/gas-laws": [
+    { label: "Methane (CH₄)", key: "CH4" },
+    { label: "Nitrogen Gas (N₂)", key: "N2" },
+    { label: "Carbon Dioxide (CO₂)", key: "CO2" },
+    { label: "Ammonia (NH₃)", key: "NH3" }
+  ],
+  "/experiments/titration": [
+    { label: "Hydrogen Chloride (HCl)", key: "HCl" },
+    { label: "Water (H₂O)", key: "H2O" },
+    { label: "Sodium Chloride (NaCl)", key: "NaCl" },
+    { label: "Acetic Acid (CH₃COOH)", key: "CH3COOH" }
+  ],
+  "/experiments/solubility": [
+    { label: "Sodium Chloride (NaCl)", key: "NaCl" },
+    { label: "Water (H₂O)", key: "H2O" },
+    { label: "Ethanol (C₂H₅OH)", key: "C2H5OH" }
+  ],
+  "/experiments/salt-analysis": [
+    { label: "Sodium Chloride (NaCl)", key: "NaCl" },
+    { label: "Water (H₂O)", key: "H2O" },
+    { label: "Carbon Dioxide (CO₂)", key: "CO2" },
+    { label: "Ammonia (NH₃)", key: "NH3" }
+  ],
+  "/experiments/functional-groups": [
+    { label: "Ethanol (C₂H₅OH)", key: "C2H5OH" },
+    { label: "Acetic Acid (CH₃COOH)", key: "CH3COOH" },
+    { label: "Benzene (C₆H₆)", key: "C6H6" },
+    { label: "Ethylene (C₂H₄)", key: "C2H4" }
+  ],
+  "/experiments/chromatography": [
+    { label: "Water (H₂O)", key: "H2O" },
+    { label: "Ethanol (C₂H₅OH)", key: "C2H5OH" }
+  ],
+  "/experiments/reaction-rate": [
+    { label: "Carbon Dioxide (CO₂)", key: "CO2" },
+    { label: "Water (H₂O)", key: "H2O" }
+  ],
+  "/experiments/calorimetry": [
+    { label: "Water (H₂O)", key: "H2O" }
+  ],
+  "/experiments/water-hardness": [
+    { label: "Water (H₂O)", key: "H2O" },
+    { label: "Carbon Dioxide (CO₂)", key: "CO2" }
+  ]
+};
+
 // Renders a premium card inside the lab env — same quality as home page LabPreview cards.
 export default function LabInfoCard() {
   const title      = useActiveLabStore((s) => s.title);
+  const href       = useActiveLabStore((s) => s.href);
   const accent     = useActiveLabStore((s) => s.accent);
   const bg         = useActiveLabStore((s) => s.bg);
   const difficulty = useActiveLabStore((s) => s.difficulty);
@@ -106,6 +186,38 @@ export default function LabInfoCard() {
             ))}
           </div>
         )}
+
+        {/* Related 3D Molecules inspect section */}
+        {(() => {
+          const related = LAB_MOLECULES[href] || [];
+          if (related.length === 0) return null;
+          return (
+            <div className="border-t pt-3" style={{ borderColor: accent + "18" }}>
+              <p className="text-[10px] font-black uppercase tracking-wider mb-2" style={{ color: accent }}>
+                3D Molecular Models
+              </p>
+              <div className="flex flex-col gap-1.5 mb-3">
+                {related.map((mol) => (
+                  <button
+                    key={mol.key}
+                    onClick={() => window.dispatchEvent(new CustomEvent("open-3d-builder", { detail: { molecule: mol.key } }))}
+                    className="flex items-center justify-between w-full px-3 py-1.5 rounded-xl border text-[11px] font-bold transition-all hover:bg-white/50 hover:-translate-y-0.5 active:scale-95 text-left cursor-pointer"
+                    style={{
+                      background: "rgba(255, 255, 255, 0.40)",
+                      borderColor: accent + "18",
+                      color: "var(--lab-text-secondary)"
+                    }}
+                  >
+                    <span>{mol.label}</span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded-md font-extrabold uppercase tracking-wide bg-cyan-500/10 text-cyan-500 border border-cyan-500/20">
+                      Inspect 3D
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Status row */}
         <div className="flex items-center justify-between pt-1 border-t"

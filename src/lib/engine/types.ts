@@ -1,4 +1,15 @@
-export type ExperimentMode   = "guided" | "free";
+import type {
+  InstrumentReading,
+  ExperimentalError,
+  TitrationMeasurements,
+  CalorimetryMeasurements,
+  GasLawsMeasurements,
+} from "@/lib/instruments/types";
+
+// Re-export so callers can import measurement types from either location.
+export type { InstrumentReading, ExperimentalError, TitrationMeasurements, CalorimetryMeasurements, GasLawsMeasurements };
+
+export type ExperimentMode   = "guided" | "free" | "exam" | "advanced";
 export type ExperimentStatus =
   | "idle"
   | "setup"
@@ -6,7 +17,10 @@ export type ExperimentStatus =
   | "running"
   | "paused"
   | "completed"
-  | "failed";
+  | "failed"
+  | "heating"
+  | "cooling"
+  | "reacting";
 
 export type IndicatorName    = "phenolphthalein" | "litmus" | "methylOrange";
 export type ElectrolyteId    =
@@ -44,7 +58,7 @@ export type SolutionId =
 export type SurfaceAreaType = "powder" | "granules" | "chips" | "solid";
 
 // ─── Gas Laws ─────────────────────────────────────────────────────────────────
-export type GasLaw = "boyle" | "charles";
+export type GasLaw = "boyle" | "charles" | "gay-lussac";
 
 export interface ObservationEvent {
   id:        string;
@@ -66,7 +80,13 @@ export interface ObservationEvent {
     | "equilibrium-shift"
     | "temperature-change"
     | "deposition"
-    | "heat-released";
+    | "heat-released"
+    | "leak-alert"
+    | "info"
+    | "warning"
+    | "error"
+    | "state_change"
+    | "chemical_added";
   message:  string;
   severity: "info" | "warning" | "success" | "error";
 }
@@ -129,6 +149,29 @@ export interface TitrationState {
   observations:      ObservationEvent[];
   result:            ExperimentResult | null;
   startedAt:         number | null;
+  /** Live instrument readings with uncertainty metadata. */
+  measurements:      TitrationMeasurements | null;
+  /** Experimental errors rolled at session start. */
+  activeErrors:      ExperimentalError[];
+  // ── Session-derived fields (sim-bridge) ────────────────────────────────────
+  /** Effective acid concentration in the flask (mol/L). */
+  acidConc:          number;
+  /** Effective base concentration in the burette (mol/L). */
+  baseConc:          number;
+  /** Volume of acid pipetted into the flask (mL). */
+  acidVolMl:         number;
+  /** True acid concentration for % error reporting. */
+  trueAcidConc:      number;
+  /** ±mL endpoint detection noise from burette apparatus. */
+  endpointNoiseMl:   number;
+  acidType:          "strong" | "weak";
+  baseType:          "strong" | "weak";
+  acidName:          "HCl" | "CH3COOH";
+  baseName:          "NaOH" | "NH3";
+  trialCount:        number;
+  trialVolumes:      number[];
+  /** Incremented each time user swirls the flask — drives animation. */
+  swirlCount:        number;
 }
 
 // ─── Electrolysis ─────────────────────────────────────────────────────────────
@@ -150,8 +193,8 @@ export interface ElectrolysisState {
   anode:            ElectrodeState;
   cathode:          ElectrodeState;
   circuitComplete:  boolean;
-  current:          number;   // derived from voltage + conductivity
-  voltage:          number;   // user-controlled (0–12 V)
+  current:          number;
+  voltage:          number;
   runTimeSeconds:   number;
   anodeGasMl:       number;
   cathodeGasMl:     number;
@@ -160,6 +203,15 @@ export interface ElectrolysisState {
   observations:     ObservationEvent[];
   result:           ExperimentResult | null;
   startedAt:        number | null;
+  temperatureC:     number;
+  _conductivityScale: number;  // apparatus-derived scaling factor
+  /** Additional overpotential from electrode surface condition (V). Added to thermodynamic minimum. */
+  _overpotentialOffset: number;
+  /** Minimum voltage required to drive this electrolyte (theoretical + overpotential). */
+  minVoltage:       number;
+  overpotentialActive: boolean;
+  cathodeMassGainG?: number;
+  anodeMassLossG?: number;
 }
 
 // ─── Flame Test ───────────────────────────────────────────────────────────────
@@ -183,12 +235,26 @@ export interface FlameTestState {
   contaminated:      boolean;
   lastTestedSample:  FlameTestSampleId | null;
   currentFlameColor: string | null;
+  /** Rendered colour intensity (0.3–1.0): varies by sample purity and technique. */
+  flameIntensity:    number;
   testHistory:       FlameTestRecord[];
   steps:             StepDef[];
   objectives:        ExperimentObjective[];
   observations:      ObservationEvent[];
   result:            ExperimentResult | null;
   startedAt:         number | null;
+  // ── Session-derived fields ─────────────────────────────────────────────────
+  /** Session-rolled probability (0–0.4) that a dirty loop contaminates a result. */
+  contaminationProbability: number;
+  /** Session-rolled unknown sample that the student must identify. null = open mode. */
+  unknownSampleId:   FlameTestSampleId | null;
+
+  // Overhaul variables
+  concentration:     number;    // M
+  airCollarOpen:     boolean;   // true = non-luminous blue, false = luminous yellow soot
+  contaminationLevel: number;   // %
+  cobaltGlass:       boolean;   // filter toggled
+  experimentalError: number;
 }
 
 // ─── Solubility / Precipitation ───────────────────────────────────────────────
@@ -224,6 +290,13 @@ export interface SolubilityState {
   observations:  ObservationEvent[];
   result:        ExperimentResult | null;
   startedAt:     number | null;
+  temperature:   number;
+  volumeA:       number;
+  volumeB:       number;
+  concA:         number;
+  concB:         number;
+  precipitateMass: number;
+  turbidity:     number;
 }
 
 // ─── Reaction Rate ────────────────────────────────────────────────────────────
@@ -236,18 +309,27 @@ export interface ReactionRateDataPoint {
 export interface ReactionRateState {
   mode:            ExperimentMode;
   status:          ExperimentStatus;
-  temperature:     number;        // °C, range 15–80
-  concentration:   number;        // mol/L, range 0.1–2.0
+  temperature:     number;
+  concentration:   number;
   surfaceArea:     SurfaceAreaType;
-  rateMultiplier:  number;        // computed from the three factors above
-  progress:        number;        // 0–100 %
-  timeElapsed:     number;        // seconds
+  rateMultiplier:  number;
+  progress:        number;
+  timeElapsed:     number;
   dataPoints:      ReactionRateDataPoint[];
   steps:           StepDef[];
   objectives:      ExperimentObjective[];
   observations:    ObservationEvent[];
   result:          ExperimentResult | null;
   startedAt:       number | null;
+  // ── Session-derived fields ─────────────────────────────────────────────────
+  _envRateMultiplier: number;   // Arrhenius multiplier from lab environment
+  _baseRatePctPerSec: number;   // Session-rolled base rate constant
+  /** Whether a catalyst has been added to the reaction vessel. */
+  catalystAdded:   boolean;
+  /** Rate multiplier from catalyst (session-rolled, 1.0 when no catalyst). */
+  _catalystFactor: number;
+  /** Fraction of reactant remaining (1.0 → 0.0 as reaction proceeds). Drives first-order kinetics. */
+  concFraction:    number;
 }
 
 // ─── Gas Laws ─────────────────────────────────────────────────────────────────
@@ -267,12 +349,22 @@ export interface GasLawsState {
   pressure:           number;   // atm
   referenceTemp:      number;   // K  – held constant in Boyle's
   referencePressure:  number;   // atm – held constant in Charles's
+  /** Volume held constant for Gay-Lussac's Law (L). */
+  referenceVolume:    number;
   dataPoints:         GasDataPoint[];
   steps:              StepDef[];
   objectives:         ExperimentObjective[];
   observations:       ObservationEvent[];
   result:             ExperimentResult | null;
   startedAt:          number | null;
+  measurements:       GasLawsMeasurements | null;
+  activeErrors:       ExperimentalError[];
+  gasType:            "he" | "n2" | "co2";
+  sealQuality:        number; // 0 to 1
+  pistonFriction:     number; // 0 to 1
+  calibrationBias:    number; // bias factor, e.g. 1.015
+  leakRate:           number; // calculated leak rate
+  lastVolumeChangeDirection: "up" | "down" | "none";
 }
 
 // ─── Chemical Equilibrium (Le Chatelier) ──────────────────────────────────────
@@ -288,20 +380,37 @@ export type EquilibriumPerturbation =
 export interface ChemicalEquilibriumState {
   mode:            ExperimentMode;
   status:          ExperimentStatus;
-  temperatureK:    number;    // 273–373 K
-  concFe3:         number;    // [Fe³⁺]  mol/L
-  concSCN:         number;    // [SCN⁻]  mol/L
-  concFeSCN:       number;    // [FeSCN²⁺] mol/L
-  keq:             number;    // equilibrium constant at current T
-  q:               number;    // current reaction quotient
+  temperatureK:    number;
+  concFe3:         number;
+  concSCN:         number;
+  concFeSCN:       number;
+  keq:             number;
+  q:               number;
   shiftDirection:  "forward" | "reverse" | "none";
   atEquilibrium:   boolean;
+  /**
+   * Fraction of equilibration complete after the last perturbation (0–1).
+   * The system moves from Q → Keq over multiple ticks; 1.0 = fully equilibrated.
+   * Drives smooth colour and concentration animation in the UI.
+   */
+  equilibrationFraction: number;
   perturbHistory:  string[];
   steps:           StepDef[];
   objectives:      ExperimentObjective[];
   observations:    ObservationEvent[];
   result:          ExperimentResult | null;
   startedAt:       number | null;
+  // ── Session-derived fields ─────────────────────────────────────────────────
+  _tempPerturbK:   number;   // K step for heat/cool perturbations
+  _addConc:        number;   // mol/L step for add-fe3/add-scn
+  /** Pre-equilibration concentrations — snapshot at moment of perturbation. */
+  _preEqFe3:       number;
+  _preEqSCN:       number;
+  _preEqFeSCN:     number;
+  /** Target concentrations after full equilibration. */
+  _targetFe3:      number;
+  _targetSCN:      number;
+  _targetFeSCN:    number;
 }
 
 // ─── Gas Collection ───────────────────────────────────────────────────────────
@@ -315,13 +424,22 @@ export interface GasCollectionState {
   caco3MolesLeft:    number;    // unreacted moles of CaCO₃
   hclMolesLeft:      number;    // unreacted moles of HCl
   co2CollectedMl:    number;    // mL of CO₂ collected
-  theoreticalCo2Ml: number;    // stoichiometric expected volume
+  theoreticalCo2Ml:  number;    // stoichiometric expected volume
   reactionComplete:  boolean;
   steps:             StepDef[];
   objectives:        ExperimentObjective[];
   observations:      ObservationEvent[];
   result:            ExperimentResult | null;
   startedAt:         number | null;
+
+  // Overhaul variables
+  temperature:       number;    // °C
+  pressure:          number;    // atm
+  leakRate:          number;    // %
+  gasPurity:         number;    // %
+  collectionEfficiency: number; // %
+  experimentalError: number;
+  bubbleRate:        number;    // scale factor for bubble generation animation
 }
 
 // ─── Redox Displacement ───────────────────────────────────────────────────────
@@ -349,6 +467,17 @@ export interface RedoxDisplacementState {
   observations:      ObservationEvent[];
   result:            ExperimentResult | null;
   startedAt:         number | null;
+  // session-derived
+  _cuConc:           number;
+  _metalMassG:       number;
+  _rateMultiplier:   number;
+
+  // Overhaul variables
+  temperature:       number;    // °C
+  metalConc:         number;    // [Mᶻ⁺] mol/L — increases during reaction
+  cellPotential:     number;    // V (Nernst calculated)
+  equilibriumReached: boolean;
+  experimentalError: number;
 }
 
 // ─── Calorimetry (Neutralization Heat) ───────────────────────────────────────
@@ -361,19 +490,24 @@ export interface CalorimetryDataPoint {
 export interface CalorimetryState {
   mode:              ExperimentMode;
   status:            ExperimentStatus;
-  hclVolumeMl:       number;    // fixed 100 mL
-  hclConc:           number;    // fixed 1.0 M
-  naohConc:          number;    // fixed 1.0 M
-  naohAddedMl:       number;    // mL of NaOH added so far
-  initialTempC:      number;    // 25°C
-  currentTempC:      number;    // rises as NaOH added
+  hclVolumeMl:       number;
+  hclConc:           number;
+  naohConc:          number;
+  naohAddedMl:       number;
+  initialTempC:      number;
+  currentTempC:      number;
   dataPoints:        CalorimetryDataPoint[];
-  calculatedDeltaH:  number | null;  // kJ/mol (negative, exothermic)
+  calculatedDeltaH:  number | null;
   steps:             StepDef[];
   objectives:        ExperimentObjective[];
   observations:      ObservationEvent[];
   result:            ExperimentResult | null;
   startedAt:         number | null;
+  measurements:      CalorimetryMeasurements | null;
+  activeErrors:      ExperimentalError[];
+  // ── Session-derived fields ─────────────────────────────────────────────────
+  heatLossProb:      number;   // 0-1, probability a heat loss error occurs per addition
+  heatLossMagnitude: number;   // fractional ΔT deduction when heat loss occurs
 }
 
 // ─── Density / Floating-Sinking (Class 6) ─────────────────────────────────────
@@ -400,6 +534,13 @@ export interface DensityState {
   observations:     ObservationEvent[];
   result:           ExperimentResult | null;
   startedAt:        number | null;
+  mass:             number;
+  volume:           number;
+  temperature:      number;
+  salinity:         number;
+  fluidDensity:     number;
+  solidDensity:     number;
+  displacementRatio: number;
 }
 
 // ─── Dissolving Rate (Class 6–7) ───────────────────────────────────────────────
@@ -427,6 +568,13 @@ export interface DissolvingRateState {
   observations:     ObservationEvent[];
   result:           ExperimentResult | null;
   startedAt:        number | null;
+  massAdded:        number;
+  dissolvedMass:    number;
+  waterVolume:      number;
+  celsius:          number;
+  solubilityLimit:  number;
+  surfaceArea:      number;
+  isSaturated:      boolean;
 }
 
 // ─── Indicator Test (Class 7) ──────────────────────────────────────────────────
@@ -500,6 +648,11 @@ export interface FiltrationState {
   observations:   ObservationEvent[];
   result:         ExperimentResult | null;
   startedAt:      number | null;
+  temperature:    number;
+  funnelVolume:   number;
+  viscosity:      number;
+  cloggingFactor: number;
+  flowRate:       number;
 }
 
 // ─── Neutralization Reaction ──────────────────────────────────────────────────
@@ -522,6 +675,17 @@ export interface NeutralizationState {
   observations:   ObservationEvent[];
   result:         ExperimentResult | null;
   startedAt:      number | null;
+
+  // Overhaul variables
+  acidType:       "strong" | "weak";
+  baseType:       "strong" | "weak";
+  acidConc:       number;    // M
+  baseConc:       number;    // M
+  beakerInsulated: boolean;  // true = calorimeter, false = glass beaker
+  currentPh:      number;    // pH value
+  heatEvolvedJ:   number;    // J
+  experimentalError: number;
+  indicator:      "universal" | "phenolphthalein" | "bromothymol" | "methyl-orange";
 }
 
 // ─── Qualitative Salt Analysis ────────────────────────────────────────────────
@@ -562,6 +726,33 @@ export interface SaltAnalysisState {
   observations:     ObservationEvent[];
   result:           ExperimentResult | null;
   startedAt:        number | null;
+  // Overhaul variables
+  temperature:      number;
+  reagentDrops:     number;
+  reagentConc:      number;
+  contamination:    number;
+  experimentalError: number;
+  
+  // Accumulated reagent variables
+  cationDropsAdded: number;
+  anionDropsAdded:  number;
+  cationReagentConc: number;
+  anionReagentConc: number;
+  
+  // Live tube properties
+  cationLiquidColor: string;
+  cationPptColor:    string | null;
+  cationPptMass:     number; // in mg
+  cationBubbles:     boolean;
+  cationGasLabel:    string;
+  
+  anionLiquidColor:  string;
+  anionPptColor:     string | null;
+  anionPptMass:      number; // in mg
+  anionBubbles:      boolean;
+  anionGasLabel:     string;
+  
+  flameColor:        string | null;
 }
 
 // ─── Water Hardness (EDTA Titration) ──────────────────────────────────────────
@@ -584,6 +775,21 @@ export interface WaterHardnessState {
   observations:     ObservationEvent[];
   result:           ExperimentResult | null;
   startedAt:        number | null;
+  // ── Session-derived fields ─────────────────────────────────────────────────
+  edtaConc:         number;   // mol/L (from session reagent)
+  endpointMl:       number;   // mL EDTA at equivalence (derived from true hardness)
+  trueHardnessMgL:  number;   // true hardness for % error reporting
+  sampleVolMl:      number;
+  /**
+   * ±noise on endpoint detection (mL). Simulates indicator colour change
+   * transition range — the endpoint appears slightly early or late each run.
+   * Session-rolled from Gaussian σ=0.4 mL.
+   */
+  endpointNoiseMl:  number;
+  /** Number of titration trials completed (supports repeat-trial workflow). */
+  trialCount:       number;
+  /** EDTA volumes recorded at endpoint for each trial (mL). */
+  trialVolumes:     number[];
 }
 
 // ─── Functional Group Identification ─────────────────────────────────────────
@@ -623,6 +829,12 @@ export interface FunctionalGroupsState {
   observations:     ObservationEvent[];
   result:           ExperimentResult | null;
   startedAt:        number | null;
+  // Overhaul variables
+  temperature:      number;
+  reagentConc:      number;
+  elapsedTime:      number;
+  turbidity:        number;
+  experimentalError: number;
 }
 
 // ─── Paper Chromatography ─────────────────────────────────────────────────────
@@ -652,4 +864,238 @@ export interface ChromatographyState {
   observations:   ObservationEvent[];
   result:         ExperimentResult | null;
   startedAt:      number | null;
+
+  // Overhaul variables
+  solventType:    "water" | "ethanol" | "ethyl-acetate" | "hexane";
+  temperature:    number;    // °C
+  chamberSealed:  boolean;   // true = sealed, false = unsealed (solvent evaporates)
+  spotWidths:     number[];  // parallel array matching dyes/inks
+  experimentalError: number;
 }
+
+// ─── Crystallization ──────────────────────────────────────────────────────────
+export interface CrystallizationState {
+  mode:                 ExperimentMode;
+  status:               ExperimentStatus;
+  impureSaltMass:       number; // in grams
+  waterVolume:          number; // in mL
+  temperature:          number; // in Celsius
+  dissolvedMass:        number; // in grams
+  undissolvedMass:      number; // in grams
+  crystalsFormedMass:   number; // in grams
+  crystalSize:          number; // in mm
+  impurityLevel:        number; // percentage (e.g. 5)
+  coolingRate:          "slow" | "medium" | "fast";
+  isHeating:            boolean;
+  isCooling:            boolean;
+  filtrateVolume:       number; // in mL
+  pureProductCollected: number; // final crystals collected after filtration
+  productPurity:        number; // final purity percentage
+  dissolvedImpurityMass: number;
+  solidImpurityMass:    number;
+  crystalColor:         string;
+  isFiltered:           boolean;
+  isCollected:          boolean;
+  stepProgress:         number; // 0 to 1
+  steps:                StepDef[];
+  objectives:           ExperimentObjective[];
+  observations:         ObservationEvent[];
+  result:               ExperimentResult | null;
+  startedAt:            number | null;
+}
+
+// ─── Natural Indicators ────────────────────────────────────────────────────────
+export interface NaturalIndicatorsState {
+  mode:                 ExperimentMode;
+  status:               ExperimentStatus;
+  selectedIndicator:    "turmeric" | "china-rose" | "red-cabbage" | null;
+  preparationStep:      "mortar" | "solvent" | "extracted" | null;
+  extractProgress:      number; // 0 to 1
+  extractConcentration: number; // 0 to 1
+  selectedSolution:     "hcl" | "vinegar" | "lemon-juice" | "water" | "soap" | "naoh" | null;
+  solutionPh:           number;
+  addedIndicatorDrops:  number;
+  liquidColor:          string;
+  colorMixProgress:     number; // 0 to 1
+  steps:                StepDef[];
+  objectives:           ExperimentObjective[];
+  observations:         ObservationEvent[];
+  result:               ExperimentResult | null;
+  startedAt:            number | null;
+}
+
+// ─── Acid-Metal Reactions ──────────────────────────────────────────────────────
+export interface AcidMetalState {
+  mode:                 ExperimentMode;
+  status:               ExperimentStatus;
+  selectedMetal:        "mg" | "zn" | "fe" | "cu" | null;
+  metalMass:            number; // in grams
+  particleSize:         "powder" | "turnings" | "ribbon" | "strip";
+  selectedAcid:         "hcl" | "h2so4" | null;
+  acidVolume:           number; // in mL
+  acidConcentration:    number; // in M
+  temperature:          number; // in Celsius
+  isReacting:           boolean;
+  metalLeft:            number; // in grams
+  gasVolumeCollected:   number; // in mL
+  reactionRate:         number; // in mL/s
+  elapsedTime:          number; // in seconds
+  experimentalError:    number; // stoichiometry variation
+  popTestTriggered:     boolean;
+  popTestSuccess:       boolean | null;
+  steps:                StepDef[];
+  objectives:           ExperimentObjective[];
+  observations:         ObservationEvent[];
+  result:               ExperimentResult | null;
+  startedAt:            number | null;
+}
+
+// ─── Acid-Carbonate Reactions ──────────────────────────────────────────────────
+export interface AcidCarbonateState {
+  mode:                 ExperimentMode;
+  status:               ExperimentStatus;
+  selectedCarbonate:    "marble-chips" | "caco3-powder" | "na2co3" | null;
+  carbonateMass:        number; // in grams
+  selectedAcid:         "hcl" | "h2so4" | null;
+  acidVolume:           number; // in mL
+  acidConcentration:    number; // in M
+  temperature:          number; // in Celsius
+  isReacting:           boolean;
+  stopperSealed:        boolean; // false = leak error
+  pressure:             number; // in atm
+  carbonateLeft:        number; // in grams
+  gasVolumeCollected:   number; // in mL
+  reactionRate:         number; // in mL/s
+  elapsedTime:          number; // in seconds
+  limeWaterMilky:       boolean; // test for CO2
+  limeWaterTestActive:  boolean;
+  steps:                StepDef[];
+  objectives:           ExperimentObjective[];
+  observations:         ObservationEvent[];
+  result:               ExperimentResult | null;
+  startedAt:            number | null;
+}
+
+// ─── States of Matter ──────────────────────────────────────────────────────────
+export interface StatesOfMatterState {
+  mode:                 ExperimentMode;
+  status:               ExperimentStatus;
+  selectedSubstance:    "water" | "ethanol" | "wax" | null;
+  temperature:          number; // in Celsius
+  phase:                "solid" | "liquid" | "gas" | "solid-liquid" | "liquid-gas";
+  heatingPower:         number; // in W
+  isHeating:            boolean;
+  isCooling:            boolean;
+  latentHeatProgress:   number; // 0 to 1
+  elapsedTime:          number; // in seconds
+  altitude:             number; // in meters
+  pressure:             number; // in atm
+  splatterTriggered:    boolean; // error if overheating liquid
+  thermometerEyeLevelOffset: number; // eye-level reading error
+  steps:                StepDef[];
+  objectives:           ExperimentObjective[];
+  observations:         ObservationEvent[];
+  result:               ExperimentResult | null;
+  startedAt:            number | null;
+}
+
+// ─── Diffusion in Liquids ──────────────────────────────────────────────────────
+export interface DiffusionLiquidsState {
+  mode:                 ExperimentMode;
+  status:               ExperimentStatus;
+  selectedSolute:       "kmno4" | "dye" | "cuso4" | null;
+  temperature:          number; // in Celsius (10 to 90)
+  stirringSpeed:        number; // in RPM (0 to 600)
+  addedDroplets:        number;
+  isStirring:           boolean;
+  diffusionProgress:    number; // 0 to 1
+  elapsedTime:          number; // in seconds
+  steps:                StepDef[];
+  objectives:           ExperimentObjective[];
+  observations:         ObservationEvent[];
+  result:               ExperimentResult | null;
+  startedAt:            number | null;
+}
+
+// ─── Separation of Mixtures ────────────────────────────────────────────────────
+export interface SeparationMixturesState {
+  mode:                 ExperimentMode;
+  status:               ExperimentStatus;
+  ironMass:             number; // in grams
+  sandMass:             number; // in grams
+  saltMass:             number; // in grams
+  separatedIron:        number; // in grams
+  separatedSand:        number; // in grams
+  separatedSalt:        number; // in grams
+  waterVolume:          number; // in mL
+  dissolvedSalt:        number; // in grams
+  isWet:                boolean;
+  currentVessel:        "beaker" | "magnet" | "filter" | "evaporate" | "complete";
+  separationStep:       "initial" | "magnetic" | "dissolving" | "filtration" | "evaporation";
+  magnetSweepTime:      number; // in seconds
+  filtrationProgress:   number; // 0 to 1
+  evaporationProgress:  number; // 0 to 1
+  temperature:          number; // in Celsius
+  steps:                StepDef[];
+  objectives:           ExperimentObjective[];
+  observations:         ObservationEvent[];
+  result:               ExperimentResult | null;
+  startedAt:            number | null;
+}
+
+// ─── Double Displacement Reactions ─────────────────────────────────────────────
+export interface DoubleDisplacementState {
+  mode:                 ExperimentMode;
+  status:               ExperimentStatus;
+  system:               "agno3-nacl" | "pbno3-ki" | "bacl2-na2so4" | null;
+  solution1Volume:      number; // in mL
+  solution2Volume:      number; // in mL
+  solution1Conc:        number; // in M
+  solution2Conc:        number; // in M
+  temperature:          number; // in Celsius
+  precipitateMass:      number; // in grams
+  mixingProgress:       number; // 0 to 1
+  steps:                StepDef[];
+  objectives:           ExperimentObjective[];
+  observations:         ObservationEvent[];
+  result:               ExperimentResult | null;
+  startedAt:            number | null;
+}
+
+// ─── Decomposition Reactions ───────────────────────────────────────────────────
+export interface DecompositionState {
+  mode:                 ExperimentMode;
+  status:               ExperimentStatus;
+  reactant:             "caco3" | "kclo3" | "h2o2" | null;
+  initialMass:          number; // in grams
+  remainingMass:        number; // in grams
+  hasCatalyst:          boolean;
+  temperature:          number; // in Celsius
+  gasVolumeEvolved:     number; // in mL
+  isHeating:            boolean;
+  heatingPower:         number; // in W
+  steps:                StepDef[];
+  objectives:           ExperimentObjective[];
+  observations:         ObservationEvent[];
+  result:               ExperimentResult | null;
+  startedAt:            number | null;
+}
+
+// ─── Physical vs Chemical Changes ─────────────────────────────────────────────
+export interface PhysicalChemicalState {
+  mode:                 ExperimentMode;
+  status:               ExperimentStatus;
+  selectedProcess:      "melting-wax" | "dissolving-sugar" | "freezing-water" | "burning-paper" | "rusting-iron" | "neutralization" | null;
+  processType:          "physical" | "chemical" | null;
+  temperature:          number; // in Celsius
+  reactionProgress:     number; // 0 to 1
+  heatReleasedJ:        number; // in Joules
+  reversibilityChecked: boolean;
+  isTriggered:          boolean;
+  steps:                StepDef[];
+  objectives:           ExperimentObjective[];
+  observations:         ObservationEvent[];
+  result:               ExperimentResult | null;
+  startedAt:            number | null;
+}
+
